@@ -49,10 +49,10 @@ Current progress is tracked in [MODERNIZATION_ROADMAP.md](MODERNIZATION_ROADMAP.
 - [x] Bison/Flex to mINI migration.
 - [x] Surgical Wine/Proton Bridge Injection.
 - [x] Automatic Steam/Proton Prefix Discovery.
+- [x] C++11/14 Modernization
+- [x] CMake Migration
 
 **Upcoming:**
 - [ ] Native UI for model scaling/offsets.
-- [ ] C++11/14 Modernization
-- [ ] CMake Migration
-- [ ] Appimage / Flatpack and maybe deb, rpm, Arch and Unbuntu packaging.
+- [ ] Appimage / Flatpack and maybe deb, rpm, Arch and Ubuntu packaging.
 
