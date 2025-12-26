@@ -51,7 +51,7 @@ private slots:
   void on_ViewLogButton_pressed();
   void on_XplanePluginButton_pressed();
   void on_PackageLogsButton_pressed();
-  void on_LALButton_pressed();
+  void onLALClicked();
   void logsPackaged(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:

@@ -104,6 +104,10 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent)
       showWineWarning = false;
     }
   }
+
+  connect(ui.LALButton, &QPushButton::clicked, this,
+          &LinuxtrackGui::onLALClicked);
+
   guiInit = false;
 }
 
@@ -351,7 +355,7 @@ void LinuxtrackGui::logsPackaged(int exitCode,
 
 #include "lal_dialog.h"
 
-void LinuxtrackGui::on_LALButton_pressed() {
+void LinuxtrackGui::onLALClicked() {
   LALDialog dlg(this);
   dlg.exec();
 }

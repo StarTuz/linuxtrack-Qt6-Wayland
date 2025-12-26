@@ -50,12 +50,24 @@ void LALDialog::setupUi() {
   mainLayout->addLayout(btnLayout);
 }
 
+#include <QCoreApplication>
+#include <QDir>
+
 void LALDialog::refreshTable() {
   auto &mgr = lal::LALManager::instance();
-  // Load manifest if not loaded (prototype path)
-  // TODO: In real app, load from standard location
+  // Load manifest if not loaded
   if (mgr.getAssetIds().empty()) {
-    mgr.loadManifest("src/lal/lal_manifest.json"); // Dev path
+    QString itemPath = QCoreApplication::applicationDirPath() +
+                       QStringLiteral("/../share/linuxtrack/lal_manifest.json");
+    if (!QFile::exists(itemPath)) {
+      itemPath =
+          QCoreApplication::applicationDirPath() +
+          QStringLiteral("/../../src/lal/lal_manifest.json"); // Build dir
+    }
+    if (!QFile::exists(itemPath)) {
+      itemPath = QStringLiteral("src/lal/lal_manifest.json"); // CWD fallback
+    }
+    mgr.loadManifest(itemPath.toStdString());
   }
 
   std::vector<std::string> ids = mgr.getAssetIds();
