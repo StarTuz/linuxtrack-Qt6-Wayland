@@ -1,0 +1,53 @@
+{
+  "wb_version": "1.0",
+  "comment": "Linuxtrack Licensed Asset Loader Manifest",
+  "assets": [
+    {
+      "id": "tir_firmware_v5",
+      "name": "TrackIR 5 Firmware",
+      "version": "5.4.2",
+      "vendor": "NaturalPoint",
+      "description": "Required for device initialization and game support.",
+      "license_type": "Proprietary",
+      "critical": true,
+      "sources": [
+        {
+          "type": "url",
+          "url": "https://naturalpoint.com/files/TrackIR_5.4.2.exe",
+          "sha256": "PENDING_VERIFICATION_OF_REAL_FILE_HASH"
+        }
+      ],
+      "extraction": {
+        "tool": "7z",
+        "container_format": "nsis_7z",
+        "map": {
+          "Drivers/USB/sgl.dat": "firmware.bin",
+          "NPClient.dll": "NPClient.dll",
+          "NPClient64.dll": "NPClient64.dll"
+        }
+      }
+    },
+    {
+      "id": "tobii_et5_driver",
+      "name": "Tobii Eye Tracker 5 Driver (Placeholder)",
+      "version": "1.0.0-linux-beta",
+      "vendor": "Tobii",
+      "description": "Proprietary driver blob for Linux support.",
+      "license_type": "Proprietary",
+      "critical": false,
+      "sources": [
+        {
+          "type": "manual_download",
+          "url": "https://tobii.com/support/linux",
+          "filename": "tobii_et5_linux.tar.gz"
+        }
+      ],
+      "extraction": {
+        "tool": "tar",
+        "map": {
+          "libtobii_stream_engine.so": "drivers/libtobii_stream_engine.so"
+        }
+      }
+    }
+  ]
+}
