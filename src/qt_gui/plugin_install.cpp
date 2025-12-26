@@ -1,4 +1,5 @@
 #include "extractor.h"
+#include "prefix_discovery_dialog.h"
 #include "utils.h"
 #include <QFileDialog>
 #include <QMessageBox>
@@ -126,9 +127,10 @@ void PluginInstall::installLinuxtrackWine() {
     dlmfc->hide();
   }
 #ifndef DARWIN
-  QString prefix = QFileDialog::getExistingDirectory(
-      NULL, QString::fromUtf8("Select Wine Prefix..."), QDir::homePath(),
-      QFileDialog::ShowDirsOnly);
+  PrefixDiscoveryDialog dlg;
+  if (dlg.exec() != QDialog::Accepted)
+    return;
+  QString prefix = dlg.getSelectedPath();
   if (prefix.isEmpty())
     return;
 

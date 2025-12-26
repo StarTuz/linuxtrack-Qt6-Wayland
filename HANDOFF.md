@@ -248,9 +248,13 @@ error: static assertion failed: "sizeof(\"FreeTrackClient\") <= sizeof(__wine_db
 **Fixes:**
 1.  **Surgical Injection**: Implemented a native "Surgical Injection" routine in `PluginInstall::installLinuxtrackWine`. It now directly copies compiled bridge files (`NPClient.dll`, `FreeTrackClient.dll`) to the prefix and updates the registry via native `wine reg` calls.
 2.  **Proton Tuning**: `WineLauncher` now automatically sets `PROTON_NO_FSYNC=1` and `PROTON_NO_ESYNC=1` to prevent race conditions in tracking data, based on successful real-world Proton 10 testing.
-3.  **Native Harvesting**: Refactored firmware extraction to prioritize native tools (`7z`). It can now unpack TrackIR installers and harvest firmware files without needing a Wine prefix for the extraction phase.
-4.  **Backward Compatibility**: The new system respects existing `C:\Program Files\Linuxtrack` folders in old prefixes, simply updating the binaries within them.
-5.  **Verification**: 
+3.  **Automatic Prefix Discovery**:
+    - ✅ (Feature) **Automatic Prefix Discovery**: Implemented smart scanning for Steam/Proton, Lutris, Bottles, and standard Wine prefixes.
+    - ✅ (Improvement) **X-Plane 12 Detection**: Added auto-detection for native X-Plane 12 installation paths.
+    - ⬜ (Future) AppImage/Flatpak distribution.
+4.  **Native Harvesting**: Refactored firmware extraction to prioritize native tools (`7z`). It can now unpack TrackIR installers and harvest firmware files without needing a Wine prefix for the extraction phase.
+5.  **Backward Compatibility**: The new system respects existing `C:\Program Files\Linuxtrack` folders in old prefixes, simply updating the binaries within them.
+6.  **Verification**: 
     - ✅ **Elite Dangerous**: Confirmed successful on **Proton 10**.
     - ✅ **X-Plane 12**: Native plugin confirmed working with modern build stack.
     - ✅ **Tracking Stability**: Blob adjustment (sizes/thresholds) verified working, resolving stability issues (e.g., reflections on glasses).
@@ -524,3 +528,12 @@ Tested with:
 ---
 
 *End of Handoff Document*
+
+### 3.11 Smart Prefix Discovery & UX Improvements
+We have implemented a `PrefixDiscovery` system that automatically finds potential Wine/Proton prefixes from:
+- **Steam**: Scans `libraryfolders.vdf` for all library paths and discovers installed games.
+- **Lutris**: Scans `.config/lutris/games` for YAML configurations.
+- **Bottles**: Scans Flatpak and native Bottles data stores.
+- **Standard Wine**: Checks `~/.wine`.
+
+Common paths for native simulators (like **X-Plane 12**) are also now checked to pre-fill installation dialogs.

@@ -8,8 +8,8 @@ TARGET = ltr_gui
 DEPENDPATH += .
 INCLUDEPATH += .
 INCLUDEPATH += ..
-INCLUDEPATH += @srcdir@
-INCLUDEPATH += @srcdir@/..
+INCLUDEPATH += .
+INCLUDEPATH += ./..
 RESOURCES = ltr_rc.qrc
 #QT          += opengl network webkit
 QT          += opengl network help
@@ -23,7 +23,7 @@ contains(QT_VERSION, ^6.*){
        QT += widgets openglwidgets
 }
 
-VPATH     = @srcdir@
+
 
 PRECOMPILED_HEADER = precomp_headers.h
 
@@ -61,8 +61,8 @@ SOURCES += main.cpp ltr_gui.cpp ltr_show.cpp ltr_dev_help.cpp \
            help_viewer.cpp ../extract.c ../digest.c prefix_discovery.cpp \
            prefix_discovery_dialog.cpp
 
-QMAKE_CXXFLAGS += -Wall -Wextra -DHAVE_CONFIG_H -DHELP_BASE="'\""ltr_gui/"\"'" -I @prefix@/include
-QMAKE_CFLAGS += -Wall -Wextra -DLTR_GUI  -I @prefix@/include
+QMAKE_CXXFLAGS += -Wall -Wextra -DHAVE_CONFIG_H -DHELP_BASE="'\""ltr_gui/"\"'" -I /opt/linuxtrack/include
+QMAKE_CFLAGS += -Wall -Wextra -DLTR_GUI  -I /opt/linuxtrack/include
 
 QMAKE_CXXFLAGS += $$(CXXFLAGS)
 QMAKE_CFLAGS += $$(CFLAGS)
@@ -76,15 +76,15 @@ unix:!macx {
   HEADERS += webcam_prefs.h webcam_info.h webcam_ft_prefs.h joy_prefs.h
   FORMS += l_wc_setup.ui l_wcft_setup.ui joy_setup.ui
   SOURCES += webcam_info.cpp webcam_prefs.cpp webcam_ft_prefs.cpp joy_prefs.cpp
-  LIBS += "-L../.libs" "-L@prefix@/lib" "-L$${LIBDIR}" -lm -lltr -lGLU -lmxml \
-           "-Wl,-rpath,$${LIBDIR}" "-Wl,-rpath,@prefix@/lib"
+  LIBS += "-L../.libs" "-L/opt/linuxtrack/lib" "-L$${LIBDIR}" -lm -lltr -lGLU -lmxml \
+           "-Wl,-rpath,$${LIBDIR}" "-Wl,-rpath,/opt/linuxtrack/lib"
 
-  data.path += @prefix@/share/linuxtrack
+  data.path += /opt/linuxtrack/share/linuxtrack
   data.files += sparow_opaq.obj sparow_glass.obj xm8_detail.png sources.txt spec.txt \
                  sphere.obj sphere.png sources_mfc.txt win7.reg
-  help.path += @prefix@/share/linuxtrack/help/ltr_gui
+  help.path += /opt/linuxtrack/share/linuxtrack/help/ltr_gui
   help.files += help.qhc help.qch 
-  target.path = @prefix@/bin
+  target.path = /opt/linuxtrack/bin
   INSTALLS += target data help
 }
 
@@ -95,7 +95,7 @@ macx {
   #QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
   #QMAKE_MAC_SDK=/Developer/SDKs/MacOSX10.6.sdk
   CONFIG+=x86_64
-  LIBS += -L../.libs "-L$${LIBDIR}" -L@prefix@/lib -lm -lltr -lmxml
+  LIBS += -L../.libs "-L$${LIBDIR}" -L/opt/linuxtrack/lib -lm -lltr -lmxml
   data.path += ltr_gui.app/Contents/Resources/linuxtrack
   data.files += sparow_opaq.obj sparow_glass.obj xm8_detail.png ../linuxtrack1.conf \
                 sources_mac.txt spec.txt sphere.obj sphere.png sources_mfc.txt win7.reg

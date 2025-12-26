@@ -77,8 +77,14 @@ static bool installPlugin(const QString sourceFile, const QString destFile) {
 }
 
 void XPluginInstall::on_BrowseXPlane_pressed() {
+  QString startDir = QDir::homePath();
+  QString userPath = QString::fromUtf8("/xplane/x-plane/X-Plane12/");
+  if (QDir(userPath).exists()) {
+    startDir = userPath;
+  }
+
   QString fileName = QFileDialog::getOpenFileName(
-      this, QString::fromUtf8("Find XPlane executable"), QDir::homePath(),
+      this, QString::fromUtf8("Find XPlane executable"), startDir,
       QString::fromUtf8("All Files (*)"));
   if (fileName.isEmpty()) {
     reject();
