@@ -14,9 +14,9 @@
 #endif
 
 PluginInstall::PluginInstall(const Ui::LinuxtrackMainForm &ui, QObject *parent)
-    : QObject(parent), state(DONE), gui(ui), inst(NULL), dlfw(NULL),
-      dlmfc(NULL), poem1(PREF.getRsrcDirPath() +
-                         QString::fromUtf8("/tir_firmware/poem1.txt")),
+    : QObject(parent), state(DONE), gui(ui), inst(nullptr), dlfw(nullptr),
+      dlmfc(nullptr), poem1(PREF.getRsrcDirPath() +
+                            QString::fromUtf8("/tir_firmware/poem1.txt")),
       poem2(PREF.getRsrcDirPath() +
             QString::fromUtf8("/tir_firmware/poem2.txt")),
       gameData(PREF.getRsrcDirPath() +
@@ -36,24 +36,24 @@ PluginInstall::PluginInstall(const Ui::LinuxtrackMainForm &ui, QObject *parent)
 }
 
 void PluginInstall::close() {
-  if (dlfw != NULL) {
+  if (dlfw != nullptr) {
     dlfw->close();
   }
-  if (dlmfc != NULL) {
+  if (dlmfc != nullptr) {
     dlmfc->close();
   }
 }
 
 PluginInstall::~PluginInstall() {
-  if (dlfw != NULL) {
+  if (dlfw != nullptr) {
     dlfw->close();
     delete dlfw;
-    dlfw = NULL;
+    dlfw = nullptr;
   }
-  if (dlmfc != NULL) {
+  if (dlmfc != nullptr) {
     dlmfc->close();
     delete dlmfc;
-    dlmfc = NULL;
+    dlmfc = nullptr;
   }
   delete inst;
 }
@@ -84,7 +84,7 @@ void PluginInstall::on_TIRViewsButton_pressed()
 void PluginInstall::installWinePlugin() {
   QMessageBox::StandardButton reply;
   reply = QMessageBox::question(
-      NULL, QString::fromUtf8("Linuxtrack-Wine Support"),
+      nullptr, QString::fromUtf8("Linuxtrack-Wine Support"),
       QString::fromUtf8(
           "Do you want to surgically inject the Linuxtrack-Wine bridge into a "
           "prefix?\n\n"
@@ -118,10 +118,10 @@ bool PluginInstall::isTirFirmwareInstalled() {
 bool PluginInstall::isMfc42uInstalled() { return QFile::exists(mfc42u); }
 
 void PluginInstall::installLinuxtrackWine() {
-  if (dlfw != NULL) {
+  if (dlfw != nullptr) {
     dlfw->hide();
   }
-  if (dlmfc != NULL) {
+  if (dlmfc != nullptr) {
     dlmfc->hide();
   }
 #ifndef DARWIN
@@ -152,7 +152,7 @@ void PluginInstall::installLinuxtrackWine() {
                {"NPClient64.dll.so", "NPClient64.dll", "client"},
                {"FreeTrackClient.dll.so", "FreeTrackClient.dll", "ft_client"},
                {"Controller.exe.so", "Controller.exe", "controller"},
-               {NULL, NULL, NULL}};
+               {nullptr, nullptr, nullptr}};
 
   // Build a list of potential source directories
   QStringList srcDirs;
@@ -163,15 +163,16 @@ void PluginInstall::installLinuxtrackWine() {
           << QString::fromUtf8("/opt/linuxtrack/lib")
           << appDir + QString::fromUtf8("/../share/linuxtrack");
 
-  // Also check the source build directories (for development)
-  srcDirs << appDir + QString::fromUtf8("/../../wine_bridge/client")
+  // Also check the source build directories (for development and CMake
+  // structure)
+  srcDirs << appDir + QString::fromUtf8("/../wine_bridge")
+          << appDir + QString::fromUtf8("/../../src/wine_bridge")
+          << appDir + QString::fromUtf8("/../../wine_bridge")
+          << appDir + QString::fromUtf8("/../../wine_bridge/client")
           << appDir + QString::fromUtf8("/../../wine_bridge/ft_client")
-          << appDir + QString::fromUtf8("/../../wine_bridge/controller")
-          << appDir + QString::fromUtf8("/../wine_bridge/client")
-          << appDir + QString::fromUtf8("/../wine_bridge/ft_client")
-          << appDir + QString::fromUtf8("/../wine_bridge/controller");
+          << appDir + QString::fromUtf8("/../../wine_bridge/controller");
 
-  for (int i = 0; files[i].src != NULL; ++i) {
+  for (int i = 0; files[i].src != nullptr; ++i) {
     QString srcPath;
 
     // Try to find the source file in various locations
@@ -226,11 +227,11 @@ void PluginInstall::installLinuxtrackWine() {
   }
 
   // Surgical Phase 2: Registry Updates via native wine reg call
-  // This bypasses the need for the NSIS installer's UI and Windows runtimes.
-  // Set keys for both 32-bit and 64-bit paths for maximum compatibility
+  // Restoration of proven HKCU configuration to minimize variables during
+  // regression testing.
   inst->setEnv(QString::fromUtf8("WINEPREFIX"), prefix);
 
-  // NaturalPoint key - 64-bit path
+  // NaturalPoint key - 64-bit
   QStringList npArgs;
   npArgs << QString::fromUtf8("add")
          << QString::fromUtf8(
@@ -242,7 +243,7 @@ void PluginInstall::installLinuxtrackWine() {
          << QString::fromUtf8("/f");
   inst->run(QString::fromUtf8("reg"), npArgs);
 
-  // NaturalPoint key - 32-bit path (WoW6432Node for 32-bit apps on 64-bit Wine)
+  // NaturalPoint key - 32-bit (WOW6432Node)
   QStringList np32Args;
   np32Args
       << QString::fromUtf8("add")
@@ -278,7 +279,7 @@ void PluginInstall::installLinuxtrackWine() {
   inst->run(QString::fromUtf8("reg"), ft32Args);
 
   QMessageBox::information(
-      NULL, QString::fromUtf8("Surgical Injection Complete"),
+      nullptr, QString::fromUtf8("Surgical Injection Complete"),
       QString::fromUtf8(
           "Linuxtrack support has been surgically injected into the prefix.\n\n"
           "Installed to:\n"
@@ -290,7 +291,7 @@ void PluginInstall::installLinuxtrackWine() {
 #else
   if (isTirFirmwareInstalled() && isMfc42uInstalled()) {
     QMessageBox::information(
-        NULL, QString::fromUtf8("Firmware extraction successfull"),
+        nullptr, QString::fromUtf8("Firmware extraction successfull"),
         QString::fromUtf8("Firmware extraction finished successfully!"
                           "\nNow you can install linuxtrack-wine.exe to the "
                           "Wine bottle/prefix of your choice."));
@@ -300,7 +301,7 @@ void PluginInstall::installLinuxtrackWine() {
 }
 
 void PluginInstall::tirFirmwareInstall() {
-  if (dlfw == NULL) {
+  if (dlfw == nullptr) {
     dlfw = new TirFwExtractor();
     QObject::connect(dlfw, SIGNAL(finished(bool)), this, SLOT(finished(bool)));
   }
@@ -309,13 +310,13 @@ void PluginInstall::tirFirmwareInstall() {
 
 void PluginInstall::mfc42uInstall() {
   if (!isTirFirmwareInstalled()) {
-    QMessageBox::warning(NULL, QString::fromUtf8("Mfc42u install"),
+    QMessageBox::warning(nullptr, QString::fromUtf8("Mfc42u install"),
                          QString::fromUtf8("Install TrackIR firmware first!"));
     state = TIR_FW;
     tirFirmwareInstall();
     return;
   }
-  if (dlmfc == NULL) {
+  if (dlmfc == nullptr) {
     dlmfc = new Mfc42uExtractor();
     QObject::connect(dlmfc, SIGNAL(finished(bool)), this, SLOT(finished(bool)));
   }
@@ -324,10 +325,10 @@ void PluginInstall::mfc42uInstall() {
 
 void PluginInstall::finished(bool ok) {
   (void)ok;
-  if (dlfw != NULL) {
+  if (dlfw != nullptr) {
     dlfw->hide();
   }
-  if (dlmfc != NULL) {
+  if (dlmfc != nullptr) {
     dlmfc->hide();
   }
   switch (state) {

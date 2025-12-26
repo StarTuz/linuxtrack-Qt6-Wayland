@@ -9,6 +9,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -79,7 +80,7 @@ void ltr_int_free_prefs(void) {
 bool ltr_int_read_prefs(const char *file, bool force_read) {
   ensure_init();
   if (!file) {
-    char *pfile = ltr_int_get_default_file_name(NULL);
+    char *pfile = ltr_int_get_default_file_name(nullptr);
     if (!pfile)
       return false;
     bool res = modern_prefs_read(pfile, false);
@@ -98,7 +99,7 @@ bool ltr_int_new_prefs(void) {
 bool ltr_int_save_prefs(const char *fname) {
   ensure_init();
   if (!fname) {
-    char *pfile = ltr_int_get_default_file_name(NULL);
+    char *pfile = ltr_int_get_default_file_name(nullptr);
     if (!pfile)
       return false;
     int res = modern_prefs_write(pfile);
@@ -146,26 +147,24 @@ void ltr_int_get_section_list(void *sections_ptr) {
 // called by modern code. If called, they bridge to the C API.
 
 prefs *prefs::prf = nullptr;
-static pthread_mutex_t sg_mutex = PTHREAD_MUTEX_INITIALIZER;
+static std::mutex sg_mutex;
 
 prefs &prefs::getPrefs() {
-  pthread_mutex_lock(&sg_mutex);
+  std::lock_guard<std::mutex> guard(sg_mutex);
   if (!prf)
     prf = new prefs();
-  pthread_mutex_unlock(&sg_mutex);
   return *prf;
 }
 
 void prefs::freePrefs() {
-  pthread_mutex_lock(&sg_mutex);
+  std::lock_guard<std::mutex> guard(sg_mutex);
   if (prf) {
     delete prf;
     prf = nullptr;
   }
-  pthread_mutex_unlock(&sg_mutex);
 }
 
-prefs::prefs() : changed_flag(false) { pthread_rwlock_init(&lock, NULL); }
+prefs::prefs() : changed_flag(false) { pthread_rwlock_init(&lock, nullptr); }
 
 prefs::~prefs() { pthread_rwlock_destroy(&lock); }
 

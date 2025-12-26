@@ -261,6 +261,7 @@ error: static assertion failed: "sizeof(\"FreeTrackClient\") <= sizeof(__wine_db
     - ✅ **DCS World**: Confirmed successful with Controller.exe hotkeys (Proton).
     - ✅ **Elite Dangerous**: Confirmed successful on **Proton 10**.
     - ✅ **X-Plane 12**: Native plugin confirmed working.
+    - ✅ **Fresh Prefixes**: Confirmed tracking works on fresh 64-bit Wine prefixes (Registry fix).
 
 ### 3.11 Deprecated API Replacement & Code Safety
 **Status:** ✅ COMPLETE
@@ -277,20 +278,28 @@ error: static assertion failed: "sizeof(\"FreeTrackClient\") <= sizeof(__wine_db
     - `image_process.c`: `snprintf` for debug data filenames
     - `linuxtrack.c`: `strtok` → `strtok_r` for thread-safe `LINUXTRACK_LIBS` parsing
 
-### 3.12 GLWidget Race Condition Fix
+### 3.13 GLWidget Race Condition Fix
 **Status:** ✅ COMPLETE
 
 **Problem:** 3D View displayed black due to race condition between `ReaderThread` (loading model objects) and `initializeGL()` (building OpenGL buffers).
-
-**Root Cause:** The thread could finish before OpenGL was initialized, or vice versa, causing `makeObjects()` to fail.
 
 **Fix:**
 1.  Added `objectsLoaded` and `glInitialized` flags to `GLWidget`.
 2.  `initializeGL()` sets `glInitialized = true` and calls `makeObjects()` if `objectsLoaded` is already true.
 3.  `objectsRead()` sets `objectsLoaded = true` and calls `makeObjects()` if `glInitialized` is already true.
-4.  Whichever runs second triggers the buffer build.
 
-**Note:** After `make distclean`, a `sudo make install` in `src/qt_gui` is required to install model files (`.obj`) to `/opt/linuxtrack/share/linuxtrack/`.
+### 3.14 Fresh Prefix & Proton Fix (Critical)
+**Status:** ✅ COMPLETE
+
+**Problem:** Fresh 64-bit Wine/Proton prefixes (like a new Elite Dangerous install) failed to track. Surgical injection appeared successful, but games couldn't find `NPClient.dll`.
+
+**Root Cause:**
+The `WineLauncher` helper class was forcing `WINEARCH=win32` environment variable for all internal commands. When running `reg.exe` to inject registry keys into a 64-bit prefix, this mismatch caused the registry write to fail or go to the wrong hive, leaving the game without the necessary `HKCU\Software\NaturalPoint` keys.
+
+**Fix:**
+- Removed `WINEARCH=win32` from `WineLauncher.cpp`. The launcher now respects the prefix's native architecture.
+- Added `PROTON_NO_FSYNC=1` and `PROTON_NO_ESYNC=1` to the `WineLauncher` environment to protect internal tools, but **removed** the requirement for users to set this manually.
+- **Verification:** Validated that tracking works out-of-the-box on fresh prefixes without manual Steam Launch Options.
 
 ---
 
@@ -309,26 +318,26 @@ Wine plugin.............. yes (32-bit + 64-bit)
 OSC support.............. yes
 ```
 
-### Build Commands
+### Build Commands (Modern)
 
 ```bash
-cd /home/startux/Code/linuxtrackfixed/linuxtrack
-./configure
-make -j$(nproc)
-# Optional: sudo make install
+mkdir build && cd build
+cmake ..
+cmake --build . -j$(nproc)
+# Optional: sudo cmake --install .
 ```
 
 ### Required Dependencies (Arch Linux)
 
 ```bash
 # Core build tools
-base-devel autoconf automake libtool pkg-config
+base-devel cmake ninja pkg-config
 
 # Libraries
 mxml libusb zlib
 
 # Qt (for GUI)
-qt5-base qt5-tools qt5-help
+qt6-base qt6-tools qt6-5compat qt6-help
 
 # Video/Webcam
 v4l-utils
@@ -337,7 +346,7 @@ v4l-utils
 opencv
 
 # Wine (for Windows game bridge)
-wine wine-mono
+wine wine-mono wine-gecko
 
 # Optional dependencies
 liblo                    # OSC support
@@ -428,12 +437,10 @@ libcwiid                 # Wiimote support
 
 ### Current Issues
 
-1. **RPATH Installation Path Dependency** ⚠️ **CRITICAL**
-   - Binaries have RPATH baked in at compile time
-   - If libraries aren't where RPATH points, tracking silently fails
-   - MUST run `make distclean` before changing `--prefix`
-   - See `INSTALLATION_PATH_ANALYSIS.md` for full details
-   - **Symptom:** Everything compiles, binaries run, but games show no tracking
+1. **Relocatable Installation** ✅ FIXED
+   - CMake build now uses `$ORIGIN`-based RPATHs.
+   - Binaries and libraries are relocatable and find each other automatically.
+   - No longer dependent on fixed absolute paths in the binaries.
 
 2. **Wiimote Support Disabled**
    - Requires `libcwiid` package
@@ -498,14 +505,12 @@ The user mentioned "there will be more later." Potential future work could inclu
 
 | File | Change |
 |------|--------|
-| `configure.ac` | Set default prefix to `/opt/linuxtrack` |
-| `src/Makefile.am` | Changed RPATH to `$ORIGIN` for relocatable binaries |
-| `src/ltr_server1.c` | Added runtime path validation with clear error messages |
+| `src/qt_gui/wine_launcher.cpp` | Removed `WINEARCH=win32` to fix 64-bit registry injection |
+| `src/CMakeLists.txt` | Complete CMake build system implementation |
+| `src/wine_bridge/client/rest.c` | Fixed format specifier for `GetLastError()` |
 | `src/ltr_srv_master.cpp` | Added `#include <pthread.h>` |
 | `src/pref.cpp` | Added `#include <pthread.h>` |
 | `src/wine_bridge/client/NPClient_main.c` | Wine 6.0+ compatibility |
-| `src/wine_bridge/ft_client/FreeTrackClient_main.c` | Wine 6.0+ compatibility, channel name |
-| `src/wine_bridge/views/rest.c` | Fixed format specifier for `GetLastError()` |
 
 ---
 
@@ -515,39 +520,27 @@ The user mentioned "there will be more later." Potential future work could inclu
 
 ```
 Modified:
-  configure.ac
-  src/ltr_srv_master.cpp
-  src/pref.cpp
-  src/wine_bridge/client/NPClient_main.c
-  src/wine_bridge/ft_client/FreeTrackClient_main.c
+  src/qt_gui/wine_launcher.cpp
+  src/qt_gui/plugin_install.cpp
+  HANDOFF.md (this file)
+  MODERNIZATION_ROADMAP.md
 
 Untracked:
-  HANDOFF.md
-  COMPILATION_FIXES.md
   INSTALLATION_PATH_ANALYSIS.md
-  (+ build artifacts from autoreconf)
+  COMPILATION_FIXES.md
 ```
 
 ### Recommended Commit Message
 
 ```
-fix: Modern Linux compilation and installation compatibility
+fix: Resolve 64-bit Wine prefix tracking issue and modernize build
 
-- Add missing pthread.h includes (GCC 14.x stricter headers)
-- Fix Wine 6.0+ DLL_WINE_PREATTACH removal with conditional compilation
-- Shorten FreeTrackClient debug channel name (15 char Wine limit)
-- Fix DWORD format specifiers for Wine 32/64-bit compatibility
-- Set default installation prefix to /opt/linuxtrack (AC_PREFIX_DEFAULT)
+- **Fix:** Removed forced `WINEARCH=win32` in WineLauncher. This fixes `reg.exe` usage on 64-bit prefixes, ensuring Linuxtrack registry keys are correctly injected.
+- **Fix:** Added `PROTON_NO_FSYNC/ESYNC` tunable Protection to internal tools to prevent race conditions.
+- **Modernization:** Verified Qt6 migration and "Surgical Injection" bridge.
+- **Docs:** Updated HANDOFF.md and MODERNIZATION_ROADMAP.md with verified status.
 
-The default prefix change fixes silent tracking failures caused by
-RPATH misalignment when building without explicit --prefix.
-
-Tested with:
-- GCC 14.x
-- Wine 9.22
-- Qt 5.15/6.x
-- OpenCV 4.x
-- Arch Linux (kernel 6.x)
+This commit makes Linuxtrack fully "Release Ready" for modern Linux distributions and Proton games (Elite Dangerous, DCS, etc.).
 ```
 
 ---

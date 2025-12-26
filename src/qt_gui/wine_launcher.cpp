@@ -79,29 +79,32 @@ void WineLauncher::setEnv(const QString &var, const QString &val) {
 }
 
 void WineLauncher::run(const QString &tgt) {
-  envSet(QString::fromUtf8("WINEARCH"), QString::fromUtf8("win32"));
   wine.setProcessEnvironment(env);
-  QString cmd(QString::fromUtf8("%1wine").arg(winePath));
-  QStringList args(tgt);
+  QString program = winePath + QString::fromUtf8("wine");
+  QStringList args;
+  args << tgt;
   std::ostringstream s;
-  s << "Launching wine command: '" << cmd.toUtf8().constData() << " "
+  s << "Launching wine command: '" << program.toUtf8().constData() << " "
     << tgt.toUtf8().constData() << "'\n";
   ltr_int_log_message(s.str().c_str());
   wine.setProcessChannelMode(QProcess::MergedChannels);
-  wine.start(cmd, args);
+  wine.start(program, args);
+  wine.waitForFinished();
 }
 
 void WineLauncher::run(const QString &tgt, const QStringList &params) {
-  envSet(QString::fromUtf8("WINEARCH"), QString::fromUtf8("win32"));
   wine.setProcessEnvironment(env);
-  QString cmd(QStringLiteral("\"%1wine\""));
-  cmd = cmd.arg(winePath).arg(tgt);
+  QString program = winePath + QString::fromUtf8("wine");
+  QStringList args;
+  args << tgt << params;
   std::ostringstream s;
-  s << "Launching wine command: '" << cmd.toUtf8().constData() << " "
+  s << "Launching wine command: '" << program.toUtf8().constData() << " "
+    << tgt.toUtf8().constData() << " "
     << params.join(QStringLiteral(" ")).toUtf8().constData() << "'\n";
   ltr_int_log_message(s.str().c_str());
   wine.setProcessChannelMode(QProcess::MergedChannels);
-  wine.start(cmd, params);
+  wine.start(program, args);
+  wine.waitForFinished();
 }
 
 void WineLauncher::finished(int exitCode, QProcess::ExitStatus exitStatus) {
@@ -169,16 +172,8 @@ bool WineLauncher::wineAvailable() { return available; }
 
 bool WineLauncher::check() {
   run(QString::fromUtf8("--version"));
-  while (!wine.waitForFinished()) {
-    if (wine.error() != QProcess::Timedout) {
-      std::ostringstream s;
-      s << "Process error: " << errorStr(wine.error()).toUtf8().constData()
-        << "\n";
-      ltr_int_log_message(s.str().c_str());
-      return false;
-    }
-  }
-  if (wine.exitCode() == 0) {
+  // run() already calls waitForFinished(), so we just check the result
+  if (wine.state() == QProcess::NotRunning && wine.exitCode() == 0) {
     return true;
   }
   return false;
@@ -188,8 +183,8 @@ bool WineLauncher::check() {
 void PluginInstall::installWinePlugin()
 {
   gui.pushButton_2->setEnabled(false);
-  QString prefix = QFileDialog::getExistingDirectory(NULL, QString("Select Wine
-Prefix..."), QDir::homePath()+"/.wine", QFileDialog::ShowDirsOnly); QString
+  QString prefix = QFileDialog::getExistingDirectory(nullptr, QString("Select
+Wine Prefix..."), QDir::homePath()+"/.wine", QFileDialog::ShowDirsOnly); QString
 installerPath = PREF.getDataPath("linuxtrack-wine.exe");
 
   QString program = "/bin/bash";
