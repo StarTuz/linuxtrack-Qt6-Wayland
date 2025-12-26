@@ -54,17 +54,18 @@ WineLauncher::WineLauncher()
   } else {
     available = true;
   }
-  QObject::connect(&wine, SIGNAL(finished(int, QProcess::ExitStatus)), this,
-                   SLOT(finished(int, QProcess::ExitStatus)));
-  QObject::connect(&wine, SIGNAL(error(QProcess::ProcessError)), this,
-                   SLOT(error(QProcess::ProcessError)));
+  QObject::connect(&wine, &QProcess::finished, this,
+                   (void (WineLauncher::*)(
+                       int, QProcess::ExitStatus))&WineLauncher::finished);
+  QObject::connect(&wine, &QProcess::errorOccurred, this, &WineLauncher::error);
 }
 
 WineLauncher::~WineLauncher() {
-  QObject::disconnect(&wine, SIGNAL(finished(int, QProcess::ExitStatus)), this,
-                      SLOT(finished(int, QProcess::ExitStatus)));
-  QObject::disconnect(&wine, SIGNAL(error(QProcess::ProcessError)), this,
-                      SLOT(error(QProcess::ProcessError)));
+  QObject::disconnect(&wine, &QProcess::finished, this,
+                      (void (WineLauncher::*)(
+                          int, QProcess::ExitStatus))&WineLauncher::finished);
+  QObject::disconnect(&wine, &QProcess::errorOccurred, this,
+                      &WineLauncher::error);
   if (wine.state() != QProcess::NotRunning) {
     wine.waitForFinished(10000);
   }

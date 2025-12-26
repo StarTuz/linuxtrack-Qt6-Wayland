@@ -26,11 +26,9 @@ PluginInstall::PluginInstall(const Ui::LinuxtrackMainForm &ui, QObject *parent)
       tirViews(PREF.getRsrcDirPath() +
                QString::fromUtf8("/tir_firmware/TIRViews.dll")) {
 #ifndef DARWIN
-  if (!QFile::exists(
-          PREF.getDataPath(QString::fromUtf8("linuxtrack-wine.exe")))) {
-    enableButtons(false);
-    return;
-  }
+  // Since we now use surgical injection, we don't strictly need the legacy
+  // installer exe to be present. We'll enable the buttons and let the
+  // surgical logic handle the missing files later if needed.
 #endif
   inst = new WineLauncher();
   gui.LinuxtrackWineButton->setEnabled(true);

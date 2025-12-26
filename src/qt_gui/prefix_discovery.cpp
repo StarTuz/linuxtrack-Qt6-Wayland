@@ -1,34 +1,39 @@
 #include "prefix_discovery.h"
+#include "utils.h"
 #include <QDebug>
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTextStream>
 
 QList<DetectedPrefix> PrefixDiscovery::discover() {
+  ltr_int_log_message("Starting prefix discovery...\n");
   QList<DetectedPrefix> list;
   scanSteam(list);
   scanLutris(list);
   scanBottles(list);
   scanStardardWine(list);
+  ltr_int_log_message("Prefix discovery completed. Total found: %d\n",
+                      list.size());
   return list;
 }
 
 void PrefixDiscovery::scanSteam(QList<DetectedPrefix> &list) {
   QString home = QDir::homePath();
-  QStringList potentialVdfs;
-  potentialVdfs
-      << home + QString::fromUtf8("/.steam/steam/steamapps/libraryfolders.vdf")
-      << home + QString::fromUtf8(
-                    "/.local/share/Steam/steamapps/libraryfolders.vdf")
-      << home + QString::fromUtf8("/.var/app/com.valvesoftware.Steam/.steam/"
-                                  "steam/steamapps/libraryfolders.vdf");
-
   QStringList libraryPaths;
-  // Always add the most common base paths just in case VDF parsing fails
-  libraryPaths << home + QString::fromUtf8("/.steam/steam")
-               << home + QString::fromUtf8("/.local/share/Steam");
+
+  // Add primary fallbacks
+  libraryPaths << home + QString::fromUtf8("/.local/share/Steam");
+
+  QStringList potentialVdfs;
+  potentialVdfs << home + QString::fromUtf8(
+                              "/.steam/steam/steamapps/libraryfolders.vdf")
+                << home +
+                       QString::fromUtf8(
+                           "/.local/share/Steam/steamapps/libraryfolders.vdf");
 
   for (const QString &vdfPath : potentialVdfs) {
     if (!QFile::exists(vdfPath))
@@ -37,7 +42,6 @@ void PrefixDiscovery::scanSteam(QList<DetectedPrefix> &list) {
     QFile file(vdfPath);
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
       QTextStream in(&file);
-      // More robust regex for VDF paths, handling tabs and spaces
       QRegularExpression re(QString::fromUtf8("\"path\"\\s+\"([^\"]+)\""),
                             QRegularExpression::CaseInsensitiveOption);
       while (!in.atEnd()) {
@@ -52,34 +56,71 @@ void PrefixDiscovery::scanSteam(QList<DetectedPrefix> &list) {
 
   libraryPaths.removeDuplicates();
 
-  for (const QString &libPath : libraryPaths) {
-    QDir steamapps(libPath + QString::fromUtf8("/steamapps"));
-    if (!steamapps.exists())
-      continue;
+  // Resolve the main library path (where compatdata typically lives)
+  QString mainCompatData =
+      home + QString::fromUtf8("/.local/share/Steam/steamapps/compatdata");
 
-    QStringList manifests = steamapps.entryList(
-        QStringList() << QString::fromUtf8("appmanifest_*.acf"), QDir::Files);
-    for (const QString &manifest : manifests) {
+  for (const QString &libPath : libraryPaths) {
+    QString steamappsPath = libPath + QString::fromUtf8("/steamapps");
+    QDir steamappsDir(steamappsPath);
+    if (!steamappsDir.exists()) {
+      steamappsPath = libPath + QString::fromUtf8("/SteamApps");
+      steamappsDir = QDir(steamappsPath);
+      if (!steamappsDir.exists())
+        continue;
+    }
+
+    ltr_int_log_message("Scanning Steam library: %s\n",
+                        steamappsPath.toUtf8().constData());
+
+    // Use QDir::entryInfoList to get all files and filter manually
+    QFileInfoList allFiles =
+        steamappsDir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    ltr_int_log_message("  Total files in directory: %d\n", allFiles.size());
+
+    for (const QFileInfo &fileInfo : allFiles) {
+      QString fileName = fileInfo.fileName();
+
+      // Check if it's an appmanifest file
+      if (!fileName.startsWith(QString::fromUtf8("appmanifest_")) ||
+          !fileName.endsWith(QString::fromUtf8(".acf"))) {
+        continue;
+      }
+
       QString appId =
-          manifest.section(QLatin1Char('_'), 1).section(QLatin1Char('.'), 0);
+          fileName.section(QLatin1Char('_'), 1).section(QLatin1Char('.'), 0, 0);
       if (appId.isEmpty())
         continue;
 
-      // Prefix is in compatdata/<appid>/pfx
-      QString pfxPath = libPath + QString::fromUtf8("/steamapps/compatdata/") +
-                        appId + QString::fromUtf8("/pfx");
+      // Check multiple possible prefix locations
+      QStringList potentialPfxPaths;
+      potentialPfxPaths << steamappsPath + QString::fromUtf8("/compatdata/") +
+                               appId + QString::fromUtf8("/pfx");
+      potentialPfxPaths << mainCompatData + QString::fromUtf8("/") + appId +
+                               QString::fromUtf8("/pfx");
 
-      // For Steam/Proton, we want to be sure it's a valid prefix
-      if (QDir(pfxPath + QString::fromUtf8("/drive_c")).exists()) {
-        QString name = getSteamName(steamapps.absoluteFilePath(manifest));
+      QString activePfx;
+      for (const QString &p : potentialPfxPaths) {
+        QFileInfo fi(p);
+        if (fi.exists() && fi.isDir()) {
+          activePfx = p;
+          break;
+        }
+      }
+
+      if (!activePfx.isEmpty()) {
+        QString name = getSteamName(fileInfo.absoluteFilePath());
         if (name.isEmpty())
           name = QString::fromUtf8("Steam App ") + appId;
 
         DetectedPrefix dp;
         dp.name = name;
-        dp.path = pfxPath;
+        dp.path = activePfx;
         dp.type = QString::fromUtf8("Steam/Proton");
         list << dp;
+        ltr_int_log_message("  [Steam] Found: %s (%s)\n",
+                            name.toUtf8().constData(),
+                            activePfx.toUtf8().constData());
       }
     }
   }
@@ -126,9 +167,7 @@ void PrefixDiscovery::scanLutris(QList<DetectedPrefix> &list) {
         if ((m = prefixRe.match(line)).hasMatch())
           prefix = m.captured(1).trimmed();
       }
-
-      if (!name.isEmpty() && !prefix.isEmpty() &&
-          QDir(prefix + QString::fromUtf8("/drive_c")).exists()) {
+      if (!name.isEmpty() && !prefix.isEmpty() && QDir(prefix).exists()) {
         DetectedPrefix dp;
         dp.name = name;
         dp.path = prefix;
@@ -146,12 +185,10 @@ void PrefixDiscovery::scanBottles(QList<DetectedPrefix> &list) {
              QString::fromUtf8(
                  "/.var/app/com.usebottles.bottles/data/bottles/bottles")
       << QDir::homePath() + QString::fromUtf8("/.local/share/bottles/bottles");
-
   for (const QString &dirPath : potentialDirs) {
     QDir dir(dirPath);
     if (!dir.exists())
       continue;
-
     QStringList bottles = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const QString &bottle : bottles) {
       QString path = dir.absoluteFilePath(bottle);
@@ -180,13 +217,9 @@ void PrefixDiscovery::scanStardardWine(QList<DetectedPrefix> &list) {
 QStringList PrefixDiscovery::discoverXPlane() {
   QStringList paths;
   QString home = QDir::homePath();
-
-  // 1. Search X-Plane install files (Standalone)
   QStringList installFiles;
   installFiles << home + QString::fromUtf8("/.x-plane/x-plane_install_12.txt")
-               << home + QString::fromUtf8("/.x-plane/x-plane_install_11.txt")
-               << home + QString::fromUtf8("/.x-plane/x-plane_install.txt");
-
+               << home + QString::fromUtf8("/.x-plane/x-plane_install_11.txt");
   for (const QString &file : installFiles) {
     if (QFile::exists(file)) {
       QFile f(file);
@@ -196,51 +229,11 @@ QStringList PrefixDiscovery::discoverXPlane() {
           QString line = in.readLine().trimmed();
           if (line.isEmpty() || line.startsWith(QLatin1Char('#')))
             continue;
-          if (QDir(line).exists()) {
+          if (QDir(line).exists())
             paths << line;
-          }
         }
       }
     }
   }
-
-  // 2. Search Steam Libraries (Native Steam version)
-  // We can reuse the library searching logic if we refactored, but for now just
-  // improve the regex here too
-  QStringList potentialVdfs;
-  potentialVdfs << home + QString::fromUtf8(
-                              "/.steam/steam/steamapps/libraryfolders.vdf")
-                << home +
-                       QString::fromUtf8(
-                           "/.local/share/Steam/steamapps/libraryfolders.vdf");
-
-  for (const QString &vdfPath : potentialVdfs) {
-    if (!QFile::exists(vdfPath))
-      continue;
-
-    QFile file(vdfPath);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-      QTextStream in(&file);
-      QRegularExpression re(QString::fromUtf8("\"path\"\\s+\"([^\"]+)\""),
-                            QRegularExpression::CaseInsensitiveOption);
-      while (!in.atEnd()) {
-        QString line = in.readLine();
-        QRegularExpressionMatch match = re.match(line);
-        if (match.hasMatch()) {
-          QString libPath = match.captured(1);
-          QString xp12 =
-              libPath + QString::fromUtf8("/steamapps/common/X-Plane 12");
-          QString xp11 =
-              libPath + QString::fromUtf8("/steamapps/common/X-Plane 11");
-          if (QDir(xp12).exists())
-            paths << xp12;
-          if (QDir(xp11).exists())
-            paths << xp11;
-        }
-      }
-    }
-  }
-
-  paths.removeDuplicates();
   return paths;
 }
