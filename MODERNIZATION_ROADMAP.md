@@ -120,6 +120,8 @@ TRACE("Value: %lu\n", (unsigned long)GetLastError());
 - ✅ 2.1.14 Modernized Wine Support: Replaced fragile NSIS installer with native "Surgical Injection" (Direct file copy + Registry updates)
 - ✅ 2.1.15 Proton-Aware Environment: Implemented automatic tuning (`PROTON_NO_FSYNC/ESYNC`) in `WineLauncher`
 - ✅ 2.1.16 Native Firmware Harvesting: Implemented native `7z`-based extraction for firmware files, avoiding Wine for harvesting
+- [x] (Verification) **X-Plane 12**: Verified native plugin functionality with modernize stack.
+- [x] (Verification) **Tracking Controls**: Confirmed real-time blob/threshold adjustments working on modern Qt6/Server bridge.
 
 **Problem:** Many modern distros are moving to Qt6 as default. Current code only supports Qt4/Qt5.
 

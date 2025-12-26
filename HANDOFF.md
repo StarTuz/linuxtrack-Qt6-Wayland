@@ -250,7 +250,10 @@ error: static assertion failed: "sizeof(\"FreeTrackClient\") <= sizeof(__wine_db
 2.  **Proton Tuning**: `WineLauncher` now automatically sets `PROTON_NO_FSYNC=1` and `PROTON_NO_ESYNC=1` to prevent race conditions in tracking data, based on successful real-world Proton 10 testing.
 3.  **Native Harvesting**: Refactored firmware extraction to prioritize native tools (`7z`). It can now unpack TrackIR installers and harvest firmware files without needing a Wine prefix for the extraction phase.
 4.  **Backward Compatibility**: The new system respects existing `C:\Program Files\Linuxtrack` folders in old prefixes, simply updating the binaries within them.
-5.  **Verification**: Operation confirmed successful on **Elite Dangerous** running on **Proton 10**, with reliable tracking and no race conditions.
+5.  **Verification**: 
+    - ✅ **Elite Dangerous**: Confirmed successful on **Proton 10**.
+    - ✅ **X-Plane 12**: Native plugin confirmed working with modern build stack.
+    - ✅ **Tracking Stability**: Blob adjustment (sizes/thresholds) verified working, resolving stability issues (e.g., reflections on glasses).
 
 ---
 
