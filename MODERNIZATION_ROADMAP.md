@@ -351,10 +351,14 @@ int x = static_cast<int>(y);
 | Format specifiers | P1 | ✅ | 15 min | Cleanup warnings |
 | Qt6 support | P2 | ✅ | 4-6 hrs | Ported 3D view to Modern OpenGL/Shaders |
 | GitHub Actions CI | P2 | ✅ | 1 hr | Automated testing |
+| Wine Prefix Discovery | P1 | ✅ | 2 hrs | Automatic Steam/Lutris/Bottles detection |
+| Surgical Wine Injection | P1 | ✅ | 2 hrs | Bypass NSIS installer, install to both PF directories |
+| Controller.exe Hotkeys | P1 | ✅ | 30 min | Include Controller.exe for Pause/Recenter |
 | Deprecated APIs | P2 | 🔲 | 1-2 hrs | Thread safety |
 | C++11/14 modernization | P3 | 🔲 | 4-8 hrs | Code quality |
 | CMake migration | P3 | 🔲 | 8-16 hrs | Build system |
 | Unit tests | P3 | 🔲 | 4-8 hrs | Code quality |
+| Linux Hotkey Daemon | P4 | 💡 | 4-8 hrs | Future: Native global hotkeys |
 
 ---
 
@@ -369,6 +373,61 @@ After any modernization change, verify:
 - [ ] Tracking works in a test application
 - [ ] Wine bridge works with a Windows game (if applicable)
 - [ ] Both Qt5 and Qt6 build (after Qt6 migration)
+
+---
+
+## Future Enhancement Ideas
+
+### Native Linux Global Hotkey Daemon
+
+**Status:** 💡 Future Idea  
+**Priority:** Low (Controller.exe works for Wine games)  
+**Use Case:** Native Linux games, centralized control across all prefixes
+
+**Current State:**
+- `Controller.exe` runs inside Wine prefixes and provides hotkey support for Windows games
+- `ltr_recenter` is a CLI tool that must be called externally
+- No unified solution for Linux-native games or cross-prefix control
+
+**Proposed Solution:**
+Create a lightweight Linux daemon (`ltr_hotkeyd`) that:
+1. Listens for global hotkeys on both X11 (XGrabKey) and Wayland (if possible)
+2. Sends commands to the Linuxtrack server via shared memory or IPC
+3. Works regardless of which game (Wine or native) has focus
+4. Configurable via ltr_gui or config file
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    User's System                        │
+├─────────────────────────────────────────────────────────┤
+│  ┌──────────────┐   ┌──────────────┐   ┌─────────────┐ │
+│  │  ltr_hotkeyd │──▶│ ltr_server1  │──▶│   Games     │ │
+│  │  (global kbd)│   │ (tracking)   │   │ (Wine/Native)│ │
+│  └──────────────┘   └──────────────┘   └─────────────┘ │
+│         │                                               │
+│         ▼                                               │
+│  ~/.config/linuxtrack/hotkeys.conf                      │
+│  pause_key=F11                                          │
+│  recenter_key=F12                                       │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Benefits:**
+- Works for native Linux games (IL-2 Sturmovik, X-Plane Linux, etc.)
+- Single configuration for all games
+- No need to run Controller.exe per-prefix
+- Could integrate with desktop environment (KDE/GNOME shortcuts)
+
+**Challenges:**
+- Wayland's security model restricts global key capture
+- May need different backends for X11/Wayland
+- Needs careful integration with existing `ltr_recenter` command
+
+**Implementation Notes:**
+- Could use `libevdev` for raw keyboard access
+- Or rely on compositor-specific protocols (KWin, wlroots)
+- Start simple: X11-only, with Wayland as stretch goal
 
 ---
 
