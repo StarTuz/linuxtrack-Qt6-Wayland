@@ -39,6 +39,18 @@ bool LALManager::loadManifest(const std::string &manifestPath) {
         s.filename = src.value("filename", "");
         def.sources.push_back(s);
       }
+
+      if (item.contains("extraction")) {
+        def.extractionTool = item["extraction"].value("tool", "7z");
+        if (item["extraction"].contains("map")) {
+          for (auto &[key, val] : item["extraction"]["map"].items()) {
+            def.fileMap[key] = val;
+          }
+        }
+      } else {
+        def.extractionTool = "7z"; // Default
+      }
+
       assets[def.id] = def;
     }
     return true;
@@ -92,9 +104,9 @@ bool LALManager::installAssetFromArchive(const std::string &id,
   fs::path installDir = fs::path(home) / ".local/share/linuxtrack/lal" / id;
   fs::create_directories(installDir);
 
-  // TODO: Look up tool from manifest JSON "extraction" block once we parse it
-  // fully For now, assume "7z" default
-  std::string tool = "7z";
+  std::string tool = it->second.extractionTool;
+  if (tool.empty())
+    tool = "7z";
 
   return extractFiles(tool, archivePath, installDir.string());
 }

@@ -25,6 +25,8 @@ struct AssetDefinition {
   std::string description;
   bool critical;
   std::vector<AssetSource> sources;
+  std::string extractionTool; // "7z", "tar", etc.
+  std::map<std::string, std::string> fileMap;
   // ... extraction logic details
 };
 

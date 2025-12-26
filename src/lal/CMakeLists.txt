@@ -13,4 +13,10 @@ if(NLOHMANN_JSON_INCLUDE_DIR)
 endif()
 
 # Since we use std::filesystem (C++17), ensure standards
-target_compile_features(lal PUBLIC cxx_std_17)
+# Test Executable
+add_executable(test_lal test_lal.cpp)
+target_include_directories(test_lal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} "../tests/catch2")
+target_link_libraries(test_lal PRIVATE lal)
+# Link amalgamated Catch2 implementation
+target_sources(test_lal PRIVATE ../tests/catch2/catch_amalgamated.cpp)
+
