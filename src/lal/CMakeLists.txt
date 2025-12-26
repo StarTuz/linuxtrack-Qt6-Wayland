@@ -20,3 +20,6 @@ target_link_libraries(test_lal PRIVATE lal)
 # Link amalgamated Catch2 implementation
 target_sources(test_lal PRIVATE ../tests/catch2/catch_amalgamated.cpp)
 
+
+# Install the manifest
+install(FILES lal_manifest.json DESTINATION ${CMAKE_INSTALL_DATADIR}/linuxtrack)
