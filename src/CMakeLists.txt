@@ -144,6 +144,11 @@ if(LIBLO_FOUND)
     target_link_libraries(osc_server ${LIBLO_LIBRARIES} ${LTR_LIBPTHREAD} ${LTR_LIBDL})
 endif()
 
+# ltr_udp (Bridge for X4: Foundations / OpenTrack games)
+add_executable(ltr_udp ltr_udp.c linuxtrack.c)
+target_include_directories(ltr_udp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ..)
+target_link_libraries(ltr_udp ${LTR_LIBPTHREAD} ${LTR_LIBDL})
+
 # LAL (Licensed Asset Loader)
 add_subdirectory(lal)
 
@@ -160,7 +165,7 @@ foreach(DRV wc tir joy ft ltusb1 xlinuxtrack9 xlinuxtrack9_32)
 endforeach()
 
 # 3. Executables (Binaries)
-set(BIN_TARGETS ltr_server1 ltr_recenter ltr_pipe ltr_extractor)
+set(BIN_TARGETS ltr_server1 ltr_recenter ltr_pipe ltr_extractor ltr_udp)
 if(TARGET osc_server)
     list(APPEND BIN_TARGETS osc_server)
 endif()
