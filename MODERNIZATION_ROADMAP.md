@@ -642,20 +642,20 @@ Create a lightweight Linux daemon (`ltr_hotkeyd`) that:
 
 ### Project LAL (Licensed Asset Loader)
 
-**Status:** 💡 Feasibility Study Complete (See `LAL_FEASIBILITY.md`)
-**Priority:** Medium
+**Status:** ✅ Phase 3 Complete (Prototype Active)
+**Priority:** High
 **Use Case:** Legal, user-friendly installation of proprietary firmware and game DLLs.
 
-**Proposed Solution:**
-Create a data-driven system to replace the legacy `extractor.cpp`:
-1.  **Manifest:** `lal_manifest.json` defines assets (URLs, SHA256 hashes, file mappings).
-2.  **Manager:** `LALManager` checks installation status and performs native extraction (using `7z` or `cabextract` directly, NO Wine dependency).
-3.  **UI:** Unified "Assets" dashboard in `ltr_gui`.
+**Implementation:**
+- **Manifest:** `src/lal/lal_manifest.json` defines assets (Firmware, DLLs).
+- **Backend:** `LALManager` implements native extraction using `7z` and `tar` (NO Wine required).
+- **Frontend:** `LALDialog` integrated into `ltr_gui` (Misc Tab -> "Manage Assets (LAL)...").
+- **Verification:** Unit tests (`test_lal`) passed.
 
-**Benefits:**
-- Removes "hacky" Wine dependency for firmware installation.
-- Clearly separates open-source code from proprietary assets.
-- Provides a verifiable chain of custody for downloaded binaries.
+**Future Work (Phase 4):**
+- Real SHA-256 verification (currently stubbed).
+- Automatic download support (currently manual file selection).
+- "Reinstall Firmware" button migration.
 
 ---
 

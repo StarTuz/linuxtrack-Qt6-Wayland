@@ -301,6 +301,17 @@ The `WineLauncher` helper class was forcing `WINEARCH=win32` environment variabl
 - Added `PROTON_NO_FSYNC=1` and `PROTON_NO_ESYNC=1` to the `WineLauncher` environment to protect internal tools, but **removed** the requirement for users to set this manually.
 - **Verification:** Validated that tracking works out-of-the-box on fresh prefixes without manual Steam Launch Options.
 
+### 3.15 Project LAL (Licensed Asset Loader)
+**Status:** ✅ COMPLETE (Prototype)
+
+**Problem:** The legacy method of extracting proprietary firmware (TIRViews.dll) relied on a fragile Wine-based "fake environment" that was hard to maintain and security-prone.
+
+**Fix:**
+1.  **LALManager**: Implemented a new C++ backend that natively extracts assets using `7z` or `tar`, with no Wine dependency.
+2.  **Manifest-Driven**: Assets are defined in `lal_manifest.json`, making updates easy without recompiling.
+3.  **LALDialog**: Added a native Qt GUI dialog ("Manage Assets (LAL)...") to the Misc tab, allowing users to browse and install firmware archives easily.
+4.  **Verification**: Verified UI functionality and native extraction logic via unit tests.
+
 ---
 
 ## 4. Build Configuration
