@@ -55,6 +55,7 @@ bool ltr_int_tir_init_prefs() {
   } else {
     grayscale = false;
   }
+  free((void *)dev);
   return true;
 }
 
@@ -65,8 +66,10 @@ bool ltr_int_tir_set_max_blob(int val) {
     val = 0;
   }
   max_blob = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), max_blob_key,
-                                val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, max_blob_key, val);
+  free(dev);
+  return res;
 }
 
 int ltr_int_tir_get_min_blob() { return min_blob; }
@@ -76,8 +79,10 @@ bool ltr_int_tir_set_min_blob(int val) {
     val = 0;
   }
   min_blob = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), min_blob_key,
-                                val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, min_blob_key, val);
+  free(dev);
+  return res;
 }
 
 int ltr_int_tir_get_status_brightness() { return status_bright; }
@@ -90,8 +95,10 @@ bool ltr_int_tir_set_status_brightness(int val) {
     val = 3;
   }
   status_bright = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), status_bright_key,
-                                val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, status_bright_key, val);
+  free(dev);
+  return res;
 }
 
 int ltr_int_tir_get_ir_brightness() { return ir_bright; }
@@ -104,8 +111,10 @@ bool ltr_int_tir_set_ir_brightness(int val) {
     val = 7;
   }
   ir_bright = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), ir_bright_key,
-                                val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, ir_bright_key, val);
+  free(dev);
+  return res;
 }
 
 int ltr_int_tir_get_threshold() { return threshold; }
@@ -118,8 +127,10 @@ bool ltr_int_tir_set_threshold(int val) {
     val = 253;
   }
   threshold = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), threshold_key,
-                                val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, threshold_key, val);
+  free(dev);
+  return res;
 }
 
 bool ltr_int_tir_get_status_indication() { return status; }
@@ -129,7 +140,10 @@ bool ltr_int_tir_set_status_indication(bool ind) {
   char off_val[] = "Off";
   char *res = ind ? on_val : off_val;
   status = ind;
-  return ltr_int_change_key(ltr_int_get_device_section(), status_key, res);
+  char *dev = ltr_int_get_device_section();
+  bool result = ltr_int_change_key(dev, status_key, res);
+  free(dev);
+  return result;
 }
 
 bool ltr_int_tir_set_use_grayscale(bool gs) {
@@ -137,7 +151,10 @@ bool ltr_int_tir_set_use_grayscale(bool gs) {
   char off_val[] = "No";
   char *res = gs ? on_val : off_val;
   grayscale = gs;
-  return ltr_int_change_key(ltr_int_get_device_section(), grayscale_key, res);
+  char *dev = ltr_int_get_device_section();
+  bool result = ltr_int_change_key(dev, grayscale_key, res);
+  free(dev);
+  return result;
 }
 
 bool ltr_int_tir_get_use_grayscale() { return grayscale; }

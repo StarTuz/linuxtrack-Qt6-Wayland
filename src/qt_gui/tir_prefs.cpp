@@ -128,7 +128,7 @@ bool TirPrefs::Activate(const QString &ID, bool init) {
                           "firmware installed."));
     // on_TirInstallFirmware_pressed();
   }
-  printf("Type: %d\n", tirType);
+  std::cerr << "TirPrefs: Activate start, Type: " << tirType << std::endl;
   if (ui.TirIrBright == nullptr) {
     std::cerr << "TirPrefs: ui.TirIrBright is NULL!\n";
     return false;
@@ -139,6 +139,7 @@ bool TirPrefs::Activate(const QString &ID, bool init) {
   }
 
   if ((tirType < TIR5) || (tirType == SMARTNAV4)) {
+    std::cerr << "TirPrefs: Disabling IR/Status bright controls" << std::endl;
     ui.TirIrBright->setDisabled(true);
     ui.TirIrBright->setHidden(true);
     ui.TirStatusBright->setDisabled(true);
@@ -151,17 +152,21 @@ bool TirPrefs::Activate(const QString &ID, bool init) {
     ui.IRBrightLabelHigh->setHidden(true);
   }
   if (tirType != SMARTNAV4) {
+    std::cerr << "TirPrefs: Disabling Grayscale checkbox" << std::endl;
     ui.TirUseGrayscale->setDisabled(true);
     ui.TirUseGrayscale->setHidden(true);
     ui.TirUseGrayscaleLabel->setHidden(true);
   }
   if (tirType == SMARTNAV3) {
+    std::cerr << "TirPrefs: Setting threshold for SMARTNAV3" << std::endl;
     ui.TirThreshold->setMinimum(40);
     ui.TirThresholdMin->setText(QString::fromUtf8("40"));
   } else {
+    std::cerr << "TirPrefs: Setting default threshold limits" << std::endl;
     ui.TirThreshold->setMinimum(30);
     ui.TirThresholdMin->setText(QString::fromUtf8("30"));
   }
+  std::cerr << "TirPrefs: Activate finished" << std::endl;
   initializing = false;
   return true;
 }
