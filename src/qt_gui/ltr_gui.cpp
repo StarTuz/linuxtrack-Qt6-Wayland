@@ -138,6 +138,8 @@ void LinuxtrackGui::show() {
       std::cerr << "LinuxtrackGui: ERROR - helper is NULL!" << std::endl;
     }
   }
+  std::cerr << "LinuxtrackGui: ds pointer: " << ds << std::endl;
+  std::cerr << "LinuxtrackGui: showWindow pointer: " << showWindow << std::endl;
   std::cerr << "LinuxtrackGui: Calling QWidget::show()..." << std::endl;
   QWidget::show();
   std::cerr << "LinuxtrackGui: QWidget::show() returned." << std::endl;
@@ -151,238 +153,239 @@ void LinuxtrackGui::show() {
     HelpViewer::ChangePage(QString::fromUtf8("news.htm"));
     HelpViewer::ShowWindow();
   } else {
-    std::cerr << "LinuxtrackGui: setting default help page..." << std::endl;
+    std::cerr << "LinuxtrackGui: Setting default help page..." << std::endl;
     HelpViewer::ChangePage(QString::fromUtf8("dev_setup.htm"));
+    std::cerr << "LinuxtrackGui: show() finished." << std::endl;
   }
-  std::cerr << "LinuxtrackGui: show() finished." << std::endl;
-}
 
-LinuxtrackGui::~LinuxtrackGui() {
-  PrefProxy::ClosePrefs();
-  delete pi;
-  pi = nullptr;
-  delete showWindow;
-  showWindow = nullptr;
-  delete me;
-  me = nullptr;
-  delete helper;
-  helper = nullptr;
-  delete gui_settings;
-  gui_settings = nullptr;
-  delete ps;
-  ps = nullptr;
-  delete grd;
-  grd = nullptr;
-  delete lv;
-  lv = nullptr;
-  delete ds;
-  ds = nullptr;
-  if (xpInstall != nullptr) {
+  LinuxtrackGui::~LinuxtrackGui() {
+    PrefProxy::ClosePrefs();
+    delete pi;
+    pi = nullptr;
+    delete showWindow;
+    showWindow = nullptr;
+    delete me;
+    me = nullptr;
+    delete helper;
+    helper = nullptr;
+    delete gui_settings;
+    gui_settings = nullptr;
+    delete ps;
+    ps = nullptr;
+    delete grd;
+    grd = nullptr;
+    delete lv;
+    lv = nullptr;
+    delete ds;
+    ds = nullptr;
+    if (xpInstall != nullptr) {
+    }
   }
-}
 
-void LinuxtrackGui::closeEvent(QCloseEvent *event) {
-  static bool invokedAlready = false;
-  if (invokedAlready) {
+  void LinuxtrackGui::closeEvent(QCloseEvent * event) {
+    static bool invokedAlready = false;
+    if (invokedAlready) {
+      event->accept();
+      return;
+    }
+    invokedAlready = true;
+    TRACKER.stop();
+    PREF.SavePrefsOnExit();
+    HelpViewer::CloseWindow();
+    gui_settings->beginGroup(QString::fromUtf8("MainWindow"));
+    gui_settings->setValue(QString::fromUtf8("size"), size());
+    gui_settings->setValue(QString::fromUtf8("pos"), pos());
+    gui_settings->setValue(QString::fromUtf8("welcome"), false);
+    gui_settings->setValue(QString::fromUtf8("news"), NEWS_SERIAL);
+    gui_settings->setValue(QString::fromUtf8("wine_warning"), showWineWarning);
+    gui_settings->endGroup();
+    gui_settings->beginGroup(QString::fromUtf8("TrackingWindow"));
+    gui_settings->setValue(QString::fromUtf8("size"), showWindow->size());
+    gui_settings->setValue(QString::fromUtf8("pos"), showWindow->pos());
+    gui_settings->endGroup();
+    gui_settings->beginGroup(QString::fromUtf8("HelperWindow"));
+    gui_settings->setValue(QString::fromUtf8("size"), helper->size());
+    gui_settings->setValue(QString::fromUtf8("pos"), helper->pos());
+    gui_settings->endGroup();
+    HelpViewer::StorePrefs(*gui_settings);
+    showWindow->StorePrefs(*gui_settings);
+    showWindow->allowCloseWindow();
+    showWindow->close();
+    helper->close();
+    lv->close();
+    ps->close();
+    pi->close();
     event->accept();
-    return;
   }
-  invokedAlready = true;
-  TRACKER.stop();
-  PREF.SavePrefsOnExit();
-  HelpViewer::CloseWindow();
-  gui_settings->beginGroup(QString::fromUtf8("MainWindow"));
-  gui_settings->setValue(QString::fromUtf8("size"), size());
-  gui_settings->setValue(QString::fromUtf8("pos"), pos());
-  gui_settings->setValue(QString::fromUtf8("welcome"), false);
-  gui_settings->setValue(QString::fromUtf8("news"), NEWS_SERIAL);
-  gui_settings->setValue(QString::fromUtf8("wine_warning"), showWineWarning);
-  gui_settings->endGroup();
-  gui_settings->beginGroup(QString::fromUtf8("TrackingWindow"));
-  gui_settings->setValue(QString::fromUtf8("size"), showWindow->size());
-  gui_settings->setValue(QString::fromUtf8("pos"), showWindow->pos());
-  gui_settings->endGroup();
-  gui_settings->beginGroup(QString::fromUtf8("HelperWindow"));
-  gui_settings->setValue(QString::fromUtf8("size"), helper->size());
-  gui_settings->setValue(QString::fromUtf8("pos"), helper->pos());
-  gui_settings->endGroup();
-  HelpViewer::StorePrefs(*gui_settings);
-  showWindow->StorePrefs(*gui_settings);
-  showWindow->allowCloseWindow();
-  showWindow->close();
-  helper->close();
-  lv->close();
-  ps->close();
-  pi->close();
-  event->accept();
-}
 
-void LinuxtrackGui::on_QuitButton_pressed() { close(); }
+  void LinuxtrackGui::on_QuitButton_pressed() { close(); }
 
-void LinuxtrackGui::on_XplanePluginButton_pressed() {
-  if (xpInstall == nullptr) {
-    xpInstall = new XPluginInstall();
+  void LinuxtrackGui::on_XplanePluginButton_pressed() {
+    if (xpInstall == nullptr) {
+      xpInstall = new XPluginInstall();
+    }
+    xpInstall->exec();
   }
-  xpInstall->exec();
-}
 
-void LinuxtrackGui::on_SaveButton_pressed() { PREF.savePrefs(); }
+  void LinuxtrackGui::on_SaveButton_pressed() { PREF.savePrefs(); }
 
-void LinuxtrackGui::on_ViewLogButton_pressed() { lv->show(); }
+  void LinuxtrackGui::on_ViewLogButton_pressed() { lv->show(); }
 
-void LinuxtrackGui::rereadPrefs() {
-  PREF.rereadPrefs();
-  if (initialized) {
-    ds->refresh();
-    // track->refresh();
+  void LinuxtrackGui::rereadPrefs() {
+    PREF.rereadPrefs();
+    if (initialized) {
+      ds->refresh();
+      // track->refresh();
+    }
   }
-}
 
-void LinuxtrackGui::on_DefaultsButton_pressed() {
-  if (warnQuestion(QString::fromUtf8("You are about to load default settings, "
-                                     "removing all changes you ever did!\n") +
-                   QString::fromUtf8("Do you really want to do that?")) ==
-      QMessageBox::Ok) {
-    PREF.copyDefaultPrefs();
-    rereadPrefs();
-    ds->refresh();
+  void LinuxtrackGui::on_DefaultsButton_pressed() {
+    if (warnQuestion(
+            QString::fromUtf8("You are about to load default settings, "
+                              "removing all changes you ever did!\n") +
+            QString::fromUtf8("Do you really want to do that?")) ==
+        QMessageBox::Ok) {
+      PREF.copyDefaultPrefs();
+      rereadPrefs();
+      ds->refresh();
+    }
   }
-}
 
-void LinuxtrackGui::on_DiscardChangesButton_pressed() {
-  if (warnQuestion(QString::fromUtf8("You are about to discard modifications "
-                                     "you did since last save!\n") +
-                   QString::fromUtf8("Do you really want to do that?")) ==
-      QMessageBox::Ok) {
-    rereadPrefs();
+  void LinuxtrackGui::on_DiscardChangesButton_pressed() {
+    if (warnQuestion(QString::fromUtf8("You are about to discard modifications "
+                                       "you did since last save!\n") +
+                     QString::fromUtf8("Do you really want to do that?")) ==
+        QMessageBox::Ok) {
+      rereadPrefs();
+    }
   }
-}
 
-void LinuxtrackGui::on_HelpButton_pressed() { HelpViewer::ShowWindow(); }
+  void LinuxtrackGui::on_HelpButton_pressed() { HelpViewer::ShowWindow(); }
 
-void LinuxtrackGui::on_LtrTab_currentChanged(int index) {
-  switch (index) {
-  case 0:
-    HelpViewer::ChangePage(QString::fromUtf8("dev_setup.htm"));
-    break;
-  case 1:
-    HelpViewer::ChangePage(QString::fromUtf8("model_setup.htm"));
-    break;
-  case 2:
-    HelpViewer::ChangePage(QString::fromUtf8("axes_setup.htm"));
-    break;
-  case 3:
-    HelpViewer::ChangePage(QString::fromUtf8("misc.htm"));
-    break;
-  default:
-    break;
+  void LinuxtrackGui::on_LtrTab_currentChanged(int index) {
+    switch (index) {
+    case 0:
+      HelpViewer::ChangePage(QString::fromUtf8("dev_setup.htm"));
+      break;
+    case 1:
+      HelpViewer::ChangePage(QString::fromUtf8("model_setup.htm"));
+      break;
+    case 2:
+      HelpViewer::ChangePage(QString::fromUtf8("axes_setup.htm"));
+      break;
+    case 3:
+      HelpViewer::ChangePage(QString::fromUtf8("misc.htm"));
+      break;
+    default:
+      break;
+    }
   }
-}
 
-void LinuxtrackGui::trackerStateHandler(linuxtrack_state_type current_state) {
-  switch (current_state) {
-  case INITIALIZING:
-  case RUNNING:
-  case PAUSED:
-    // ui.DeviceSelector->setDisabled(true);
-    // ui.CameraOrientation->setDisabled(true);
-    // ui.ModelSelector->setDisabled(true);
-    // ui.Profiles->setDisabled(true);
-    ui.DefaultsButton->setDisabled(true);
-    ui.DiscardChangesButton->setDisabled(true);
-    // ui.LegacyPose->setDisabled(true);
-    // ui.LegacyRotation->setDisabled(true);
-    break;
-  default:
-    // ui.DeviceSelector->setEnabled(true);
-    // ui.CameraOrientation->setEnabled(true);
-    // ui.ModelSelector->setEnabled(true);
-    // ui.Profiles->setEnabled(true);
-    ui.DefaultsButton->setEnabled(true);
-    ui.DiscardChangesButton->setEnabled(true);
-    // ui.LegacyPose->setEnabled(true);
-    // ui.LegacyRotation->setEnabled(true);
-    break;
-    break;
+  void LinuxtrackGui::trackerStateHandler(linuxtrack_state_type current_state) {
+    switch (current_state) {
+    case INITIALIZING:
+    case RUNNING:
+    case PAUSED:
+      // ui.DeviceSelector->setDisabled(true);
+      // ui.CameraOrientation->setDisabled(true);
+      // ui.ModelSelector->setDisabled(true);
+      // ui.Profiles->setDisabled(true);
+      ui.DefaultsButton->setDisabled(true);
+      ui.DiscardChangesButton->setDisabled(true);
+      // ui.LegacyPose->setDisabled(true);
+      // ui.LegacyRotation->setDisabled(true);
+      break;
+    default:
+      // ui.DeviceSelector->setEnabled(true);
+      // ui.CameraOrientation->setEnabled(true);
+      // ui.ModelSelector->setEnabled(true);
+      // ui.Profiles->setEnabled(true);
+      ui.DefaultsButton->setEnabled(true);
+      ui.DiscardChangesButton->setEnabled(true);
+      // ui.LegacyPose->setEnabled(true);
+      // ui.LegacyRotation->setEnabled(true);
+      break;
+      break;
+    }
   }
-}
 
-void LinuxtrackGui::on_LegacyPose_stateChanged(int state) {
-  if (guiInit)
-    return;
-  if (state == Qt::Checked) {
-    ltr_int_set_use_alter(true);
-    TRACKER.miscChange(MISC_ALTER, true);
-  } else {
-    ltr_int_set_use_alter(false);
-    TRACKER.miscChange(MISC_ALTER, false);
+  void LinuxtrackGui::on_LegacyPose_stateChanged(int state) {
+    if (guiInit)
+      return;
+    if (state == Qt::Checked) {
+      ltr_int_set_use_alter(true);
+      TRACKER.miscChange(MISC_ALTER, true);
+    } else {
+      ltr_int_set_use_alter(false);
+      TRACKER.miscChange(MISC_ALTER, false);
+    }
   }
-}
 
-void LinuxtrackGui::on_LegacyRotation_stateChanged(int state) {
-  if (guiInit)
-    return;
-  if (state == Qt::Checked) {
-    ltr_int_set_use_oldrot(true);
-    TRACKER.miscChange(MISC_LEGR, true);
-  } else {
-    ltr_int_set_use_oldrot(false);
-    TRACKER.miscChange(MISC_LEGR, false);
+  void LinuxtrackGui::on_LegacyRotation_stateChanged(int state) {
+    if (guiInit)
+      return;
+    if (state == Qt::Checked) {
+      ltr_int_set_use_oldrot(true);
+      TRACKER.miscChange(MISC_LEGR, true);
+    } else {
+      ltr_int_set_use_oldrot(false);
+      TRACKER.miscChange(MISC_LEGR, false);
+    }
   }
-}
 
-void LinuxtrackGui::on_TransRotDisable_stateChanged(int state) {
-  if (guiInit)
-    return;
-  if (state == Qt::Checked) {
-    ltr_int_set_tr_align(false);
-    TRACKER.miscChange(MISC_ALIGN, false);
-  } else {
-    ltr_int_set_tr_align(true);
-    TRACKER.miscChange(MISC_ALIGN, true);
+  void LinuxtrackGui::on_TransRotDisable_stateChanged(int state) {
+    if (guiInit)
+      return;
+    if (state == Qt::Checked) {
+      ltr_int_set_tr_align(false);
+      TRACKER.miscChange(MISC_ALIGN, false);
+    } else {
+      ltr_int_set_tr_align(true);
+      TRACKER.miscChange(MISC_ALIGN, true);
+    }
   }
-}
 
-void LinuxtrackGui::on_FocalLength_valueChanged(double val) {
-  if (guiInit)
-    return;
-  ltr_int_set_focal_length(val);
-  TRACKER.miscChange(MISC_FOCAL_LENGTH, (float)val);
-}
-
-void LinuxtrackGui::on_PackageLogsButton_pressed() {
-  QString fname;
-  ui.PackageLogsButton->setEnabled(false);
-  fname = QFileDialog::getSaveFileName(
-      this, QStringLiteral("Save the package as..."), QDir::homePath(),
-      QStringLiteral("Zip (*.zip)"));
-  if (fname.isEmpty()) {
-    return;
+  void LinuxtrackGui::on_FocalLength_valueChanged(double val) {
+    if (guiInit)
+      return;
+    ltr_int_set_focal_length(val);
+    TRACKER.miscChange(MISC_FOCAL_LENGTH, (float)val);
   }
-  QStringList args;
-  args << QStringLiteral("-c")
-       << QStringLiteral("zip %1 /tmp/linuxtrack*").arg(fname);
-  zipper.start(QStringLiteral("bash"), args);
-}
 
-void LinuxtrackGui::logsPackaged(int exitCode,
-                                 QProcess::ExitStatus exitStatus) {
-  (void)exitCode;
-  if ((exitCode == 0) && (exitStatus == QProcess::NormalExit)) {
-    infoMessage(QString::fromUtf8("Package created successfully..."));
-  } else {
-    warningMessage(QString::fromUtf8("Couldn't create the package!\n"
-                                     "Please check that you have write access "
-                                     "to the destination directory!"));
+  void LinuxtrackGui::on_PackageLogsButton_pressed() {
+    QString fname;
+    ui.PackageLogsButton->setEnabled(false);
+    fname = QFileDialog::getSaveFileName(
+        this, QStringLiteral("Save the package as..."), QDir::homePath(),
+        QStringLiteral("Zip (*.zip)"));
+    if (fname.isEmpty()) {
+      return;
+    }
+    QStringList args;
+    args << QStringLiteral("-c")
+         << QStringLiteral("zip %1 /tmp/linuxtrack*").arg(fname);
+    zipper.start(QStringLiteral("bash"), args);
   }
-  ui.PackageLogsButton->setEnabled(true);
-}
+
+  void LinuxtrackGui::logsPackaged(int exitCode,
+                                   QProcess::ExitStatus exitStatus) {
+    (void)exitCode;
+    if ((exitCode == 0) && (exitStatus == QProcess::NormalExit)) {
+      infoMessage(QString::fromUtf8("Package created successfully..."));
+    } else {
+      warningMessage(
+          QString::fromUtf8("Couldn't create the package!\n"
+                            "Please check that you have write access "
+                            "to the destination directory!"));
+    }
+    ui.PackageLogsButton->setEnabled(true);
+  }
 
 #include "lal_dialog.h"
 
-void LinuxtrackGui::onLALClicked() {
-  LALDialog dlg(this);
-  dlg.exec();
-}
+  void LinuxtrackGui::onLALClicked() {
+    LALDialog dlg(this);
+    dlg.exec();
+  }
 
 #include "moc_ltr_gui.cpp"

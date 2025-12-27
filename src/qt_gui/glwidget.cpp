@@ -125,7 +125,10 @@ GLWidget::GLWidget(QWidget *parent)
 #endif
 
   connect(rt.get(), SIGNAL(done()), this, SLOT(objectsRead()));
-  rt->start();
+  // Delay thread start until initializeGL to ensure valid state
+  std::cerr
+      << "GLWidget: Constructor finished, thread will start in initializeGL"
+      << std::endl;
 }
 
 GLWidget::~GLWidget() {
@@ -184,8 +187,13 @@ void GLWidget::setYTrans(float val) { yTrans = val; }
 void GLWidget::setZTrans(float val) { zTrans = val; }
 
 void GLWidget::initializeGL() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   std::cerr << "GLWidget: initializeGL start" << std::endl;
+  if (!rt->isRunning()) {
+    std::cerr << "GLWidget: Starting object reader thread..." << std::endl;
+    rt->start();
+  }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  std::cerr << "GLWidget: initializeOpenGLFunctions()..." << std::endl;
   initializeOpenGLFunctions();
   std::cerr << "GLWidget: initializeOpenGLFunctions() finished" << std::endl;
 
