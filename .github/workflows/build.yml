@@ -28,7 +28,7 @@ jobs:
             libmxml-dev libusb-1.0-0-dev zlib1g-dev \
             libv4l-dev liblo-dev libopencv-dev \
             wine64-tools wine-stable \
-            wget file
+            wget file gcc-multilib g++-multilib
 
       - name: Install Qt6 dependencies
         run: |
