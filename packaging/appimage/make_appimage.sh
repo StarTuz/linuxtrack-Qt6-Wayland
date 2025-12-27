@@ -22,6 +22,14 @@ DESTDIR=$(pwd)/"$APP_DIR" cmake --install "$BUILD_DIR" --prefix "/usr"
 
 # 2. Setup AppImage resources
 echo "--> Setting up AppImage resources..."
+
+# If dist32 exists (from a 2-pass CI build), copy those libs into the AppDir
+if [ -d "dist32" ]; then
+    echo "--> Found 32-bit libraries in dist32, copying to AppDir..."
+    mkdir -p "$APP_DIR/usr/lib/linuxtrack/"
+    cp -v dist32/*.so "$APP_DIR/usr/lib/linuxtrack/" 2>/dev/null || true
+fi
+
 # Copy icon and desktop file to standard request locations if not already there managed by install
 # (Our install step usually puts them in /usr/share/applications and /usr/share/pixmaps)
 
@@ -64,18 +72,31 @@ fi
 echo "--> Generating AppImage..."
 
 # We need to set QMAKE path for the plugin to find Qt6
-# Try to find qmake6 or qmake
-export QMAKE=$(which qmake6 || which qmake)
-echo "Using qmake: $QMAKE"
+# Try to find qmake6, qmake in common locations
+export QMAKE=$(which qmake6 || which qmake || find /usr/lib/qt6/bin -name qmake 2>/dev/null | head -n 1)
+if [ -z "$QMAKE" ]; then
+    echo "Warning: qmake not found. Attempting to use default Qt plugin detection."
+else
+    echo "Using qmake: $QMAKE"
+fi
 
 # Run linuxdeploy
 # --appdir: target AppDir
 # --plugin qt: use Qt plugin to bundle Qt libs
 # --output appimage: create the actual file
+# --library-path: help linuxdeploy find internal libraries
 export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib:$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
+
+# Validate 32-bit libs if they were injected by CI
+if [ -d "$APP_DIR/usr/lib/linuxtrack" ]; then
+    echo "Files in $APP_DIR/usr/lib/linuxtrack/:"
+    ls -F "$APP_DIR/usr/lib/linuxtrack/"
+fi
+
 "$LINUXDEPLOY" --appdir "$APP_DIR" \
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
-    --icon-file "$APP_DIR/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg" \
+    --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
+    --library-path "$(pwd)/$APP_DIR/usr/lib:$(pwd)/$APP_DIR/usr/lib/linuxtrack" \
     --plugin qt \
     --output appimage
 

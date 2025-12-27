@@ -312,7 +312,12 @@ char *ltr_int_get_lib_path(const char *libname) {
     return NULL;
   }
 #else
-  char *app_path = ltr_int_my_strdup(LIB_PATH);
+  // Try to get prefix from config first (for relocatability)
+  char *app_path = ltr_int_get_app_path("/../lib/linuxtrack/");
+  if (app_path == NULL) {
+    // Fallback to compiled-in default if config is missing
+    app_path = ltr_int_my_strdup(LIB_PATH);
+  }
 #endif
   char *lib_path1 = ltr_int_my_strcat(app_path, libname);
   char *lib_path = ltr_int_my_strcat(lib_path1, LIB_SUFFIX);

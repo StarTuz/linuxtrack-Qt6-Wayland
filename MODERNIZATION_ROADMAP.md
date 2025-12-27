@@ -95,6 +95,22 @@ TRACE("Value: %lu\n", (unsigned long)GetLastError());
 
 ---
 
+### 1.4 Relocatable Library Discovery in C Core
+
+**Status:** ✅ COMPLETE (2025-12-26)  
+**Effort:** 30 minutes  
+**Risk:** Low
+
+**Problem:** While RPATH handles linked libraries, `dlopen` calls in `utils.c` used a hardcoded `LIB_PATH` macro, which breaks in AppImages.
+
+**Solution:** Updated `ltr_int_get_lib_path` in `src/utils.c` to use `ltr_int_get_app_path` (which respects the user's config prefix) before falling back to the compiled-in default.
+
+**Benefits:**
+- Tracking now works inside AppImages without a global system install.
+- Users can move the installation folder and tracking will still find its drivers.
+
+---
+
 ## Tier 2: Moderate Effort, Good Payoff
 
 ### 2.1 Qt6 Support
