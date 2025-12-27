@@ -11,6 +11,8 @@
 #include "ltr_gui_prefs.h"
 #include "objreader.h"
 #include "pathconfig.h"
+#include <QMutex>
+#include <QMutexLocker>
 
 std::vector<object_t> object_table;
 QMutex object_table_mutex;

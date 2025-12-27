@@ -13,8 +13,9 @@
 #include <string>
 #include <vector>
 
-// Static initialization flag
+// Static initialization flag and mutex
 static bool prefs_initialized = false;
+static std::mutex prefs_mutex;
 
 static void ensure_init() {
   if (!prefs_initialized) {
@@ -28,6 +29,7 @@ static void ensure_init() {
 // ----------------------------------------------------------------------------
 
 char *ltr_int_get_key(const char *section_name, const char *key_name) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   return modern_prefs_get_key(section_name, key_name);
 }
@@ -54,6 +56,7 @@ bool ltr_int_get_key_int(const char *section_name, const char *key_name,
 
 bool ltr_int_change_key(const char *section_name, const char *key_name,
                         const char *new_value) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   return modern_prefs_set_key(section_name, key_name, new_value) != 0;
 }
@@ -73,11 +76,13 @@ bool ltr_int_change_key_int(const char *section_name, const char *key_name,
 }
 
 void ltr_int_free_prefs(void) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   modern_prefs_free();
   prefs_initialized = false;
 }
 
 bool ltr_int_read_prefs(const char *file, bool force_read) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   if (!file) {
     char *pfile = ltr_int_get_default_file_name(nullptr);
@@ -91,12 +96,14 @@ bool ltr_int_read_prefs(const char *file, bool force_read) {
 }
 
 bool ltr_int_new_prefs(void) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   modern_prefs_mark_changed();
   return true;
 }
 
 bool ltr_int_save_prefs(const char *fname) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   if (!fname) {
     char *pfile = ltr_int_get_default_file_name(nullptr);
@@ -113,14 +120,19 @@ bool ltr_int_dump_prefs(const char *file_name) {
   return ltr_int_save_prefs(file_name);
 }
 
-bool ltr_int_need_saving(void) { return modern_prefs_need_save() != 0; }
+bool ltr_int_need_saving(void) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
+  return modern_prefs_need_save() != 0;
+}
 
 char *ltr_int_find_section(const char *key_name, const char *value) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   return modern_prefs_find_section(key_name, value);
 }
 
 bool ltr_int_find_sections(const char *key_name, void *result) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   modern_prefs_find_sections(key_name, result);
   auto *vec = static_cast<std::vector<std::string> *>(result);
@@ -128,13 +140,18 @@ bool ltr_int_find_sections(const char *key_name, void *result) {
 }
 
 char *ltr_int_add_unique_section(const char *name_template) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   return modern_prefs_add_section(name_template);
 }
 
-void ltr_int_prefs_changed(void) { modern_prefs_mark_changed(); }
+void ltr_int_prefs_changed(void) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
+  modern_prefs_mark_changed();
+}
 
 void ltr_int_get_section_list(void *sections_ptr) {
+  std::lock_guard<std::mutex> lock(prefs_mutex);
   ensure_init();
   modern_prefs_get_all_sections(sections_ptr);
 }

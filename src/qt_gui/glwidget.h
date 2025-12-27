@@ -7,6 +7,8 @@
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 // Qt6: Use modern OpenGL with shaders (required for Wayland/EGL)
 #include <QMatrix4x4>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>

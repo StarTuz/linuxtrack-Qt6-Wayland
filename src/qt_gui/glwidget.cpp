@@ -75,13 +75,14 @@ void ReaderThread::run() {
 }
 
 void GLWidget::objectsRead() {
+  std::cerr << "GLWidget: objectsRead signal received in thread "
+            << QThread::currentThreadId() << "\n";
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-  std::cerr << "GLWidget: Objects loaded from thread.\n";
   objectsLoaded = true;
   if (glInitialized && program && program->isLinked()) {
-    std::cerr << "OpenGL context ready, building buffers...\n";
+    std::cerr << "GLWidget: context initialized, building buffers now.\n";
     if (!isValid()) {
-      std::cerr << "GLWidget not valid yet, building buffers later.\n";
+      std::cerr << "GLWidget: not valid yet, deferring.\n";
       return;
     }
     makeCurrent();
