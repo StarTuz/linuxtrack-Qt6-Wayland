@@ -62,7 +62,7 @@ Current progress is tracked in [MODERNIZATION_ROADMAP.md](MODERNIZATION_ROADMAP.
 
 **Upcoming:**
 - [ ] Native UI for model scaling/offsets.
-- [ ] AppImage/Flatpak distribution.
+- [-] AppImage/Flatpak distribution (Arch AppImage verified).
 - [ ] Linux-native global hotkey daemon.
 
 ---

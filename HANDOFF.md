@@ -1,6 +1,6 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2025-12-26
+**Last Updated:** 2025-12-27
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
@@ -103,6 +103,7 @@ The project now compiles successfully on modern Linux with:
 - **Hotkey GUI:** ltr_hotkey_gui for configuring hotkeys (similar to Controller.exe for Wine)
 - **Profile Management:** "New Profile" button in ltr_gui for creating custom profiles
 - **Build Cleanup:** Removed stale pre-generated ui_*.h and moc_*.cpp files from source tree
+- **Distribution:** Verified working AppImage for Arch Linux systems (built against system Qt6)
 
 ---
 

@@ -583,6 +583,7 @@ int x = static_cast<int>(y);
 | **Phase 4: Unit Tests** | P3 | ✅ | 2 hrs | Catch2 + modern_prefs tests |
 | **Phase 5: CMake** | P3 | ✅ | 8-16 hrs | Complete (Core + GUI + Wine + All Drivers) |
 | Linux Hotkey Daemon | P4 | ✅ | 4-8 hrs | Native global hotkeys (ltr_hotkeyd + GUI) |
+| AppImage Distribution | P3 | 🟡 | 4-8 hrs | Arch verified, Generic CI experimental |
 
 ---
 
