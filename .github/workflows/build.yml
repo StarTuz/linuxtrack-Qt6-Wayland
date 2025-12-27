@@ -34,7 +34,13 @@ jobs:
         run: |
           sudo apt-get install -y \
             qt6-base-dev qt6-tools-dev qt6-tools-dev-tools \
-            libgl1-mesa-dev qt6-l10n-tools libxkbcommon-dev
+            libgl1-mesa-dev libglu1-mesa-dev qt6-l10n-tools libxkbcommon-dev
+
+      - name: Download Catch2 for tests
+        run: |
+          mkdir -p src/tests/catch2
+          wget -q https://github.com/catchorg/Catch2/releases/download/v3.4.0/catch_amalgamated.hpp -O src/tests/catch2/catch_amalgamated.hpp
+          wget -q https://github.com/catchorg/Catch2/releases/download/v3.4.0/catch_amalgamated.cpp -O src/tests/catch2/catch_amalgamated.cpp
 
       - name: Configure CMake
         run: |
