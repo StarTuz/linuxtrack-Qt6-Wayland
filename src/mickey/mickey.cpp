@@ -1,7 +1,7 @@
 #define NEWS_SERIAL 1
 
 #ifdef HAVE_CONFIG_H
-#include "../../config.h"
+#include "config.h"
 #endif
 
 #include <QMessageBox>
@@ -243,7 +243,7 @@ void MickeyThread::on_mouseHotKey_activated(int button, bool pressed) {
   // std::cout<<(pressed ? "Button pressed!!!" : "Button released!!!")<<"\n";
   sn4_btn_event_t ev;
   ev.btns = pressed ? button : 0;
-  gettimeofday(&(ev.timestamp), NULL);
+  gettimeofday(&(ev.timestamp), nullptr);
   processClick(ev);
 }
 
@@ -279,7 +279,7 @@ Mickey::Mickey()
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
       calDlg(), aplDlg(), recenterFlag(true), primaryScreen(nullptr)
 #else
-      calDlg(), aplDlg(), recenterFlag(true), dw(NULL)
+      calDlg(), aplDlg(), recenterFlag(true), dw(nullptr)
 #endif
 {
   trans = new MickeyTransform();
@@ -328,7 +328,7 @@ Mickey::~Mickey() {
   }
   updateTimer.stop();
   delete trans;
-  trans = NULL;
+  trans = nullptr;
   btnThread.setFinish();
   btnThread.wait();
 }
@@ -592,10 +592,10 @@ bool Mickey::setShortcut(QKeySequence seq)
 }
 */
 
-MickeyGUI *MickeyGUI::instance = NULL;
+MickeyGUI *MickeyGUI::instance = nullptr;
 
 MickeyGUI &MickeyGUI::getInstance() {
-  if (instance == NULL) {
+  if (instance == nullptr) {
     instance = new MickeyGUI();
     instance->init();
   }
@@ -603,9 +603,9 @@ MickeyGUI &MickeyGUI::getInstance() {
 }
 
 void MickeyGUI::deleteInstance() {
-  if (instance != NULL) {
+  if (instance != nullptr) {
     MickeyGUI *tmp = instance;
-    instance = NULL;
+    instance = nullptr;
     delete tmp;
   }
 }
@@ -626,12 +626,12 @@ static HotKey *addHotKey(const QString &label, const QString &prefId, int id,
     return hk;
   } else {
     delete hk;
-    return NULL;
+    return nullptr;
   }
 }
 
 MickeyGUI::MickeyGUI(QWidget *parent)
-    : QWidget(parent), mickey(NULL),
+    : QWidget(parent), mickey(nullptr),
       settings(QString::fromUtf8("linuxtrack"), QString::fromUtf8("mickey")),
       changed(false), hotkeySet(false) {
   ui.setupUi(this);
