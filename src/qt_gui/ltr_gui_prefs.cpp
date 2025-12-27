@@ -11,6 +11,8 @@
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QStringList>
 #include <iostream>
 

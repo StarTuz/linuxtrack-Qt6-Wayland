@@ -142,9 +142,13 @@ static int my_x_errhandler(Display *display, XErrorEvent *event) {
   return 0;
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+static unsigned int getModifiers(QKeyCombination combined) {
+  Qt::KeyboardModifiers mod = combined.keyboardModifiers();
+#else
 static unsigned int getModifiers(int key) {
-  int mod = Qt::NoModifier;
-  mod = key & (Qt::KeyboardModifierMask);
+  int mod = key & (Qt::KeyboardModifierMask);
+#endif
   unsigned int modifiers = 0;
 
   modifiers |= (mod & Qt::ShiftModifier) ? ShiftMask : 0;
@@ -176,7 +180,11 @@ static bool removeIdFromHash(shortcut *shortcutId, keyPair_t *kp = nullptr) {
 
 static bool translateSequence(const QKeySequence &s, KeyCode &code,
                               unsigned int &modifiers) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+  QKeySequence key = QKeySequence(s[0].key());
+#else
   QKeySequence key = QKeySequence(s[0] & (~Qt::KeyboardModifierMask));
+#endif
   modifiers = getModifiers(s[0]);
   KeySym sym = XStringToKeysym(qPrintable(key.toString()));
   if (sym == NoSymbol) {
