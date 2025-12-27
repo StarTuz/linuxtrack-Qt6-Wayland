@@ -19,6 +19,8 @@
 #include "tir_prefs.h"
 #include "tracking.h"
 #include "wiimote_prefs.h"
+#include <QPaintEvent>
+#include <QShowEvent>
 #include <iostream>
 
 /* Coding:

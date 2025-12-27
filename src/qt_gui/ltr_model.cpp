@@ -2,6 +2,8 @@
 #include "guardian.h"
 #include "help_view.h"
 #include "ltr_gui_prefs.h"
+#include <QPaintEvent>
+#include <QShowEvent>
 #include <QtGlobal>
 #include <iostream>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

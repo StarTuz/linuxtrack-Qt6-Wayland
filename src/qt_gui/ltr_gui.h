@@ -6,7 +6,9 @@
 #endif
 
 #include <QCloseEvent>
+#include <QPaintEvent>
 #include <QProcess>
+#include <QShowEvent>
 #include <linuxtrack.h>
 
 #include "ui_ltr.h"

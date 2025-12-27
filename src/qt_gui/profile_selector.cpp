@@ -1,6 +1,8 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPaintEvent>
+#include <QShowEvent>
 #include <QTextStream>
 
 #include "ltr_gui_prefs.h"

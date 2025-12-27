@@ -6,6 +6,8 @@
 #include "ui_tir_setup.h"
 #include <QFile>
 #include <QMessageBox>
+#include <QPaintEvent>
+#include <QShowEvent>
 #include <iostream>
 
 static QString currentId = QString::fromUtf8("None");

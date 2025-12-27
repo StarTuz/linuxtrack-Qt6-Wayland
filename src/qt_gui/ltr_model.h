@@ -2,6 +2,8 @@
 #define LTR_MODEL__H
 
 #include <QObject>
+#include <QPaintEvent>
+#include <QShowEvent>
 #include <QString>
 #include <QtGlobal>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

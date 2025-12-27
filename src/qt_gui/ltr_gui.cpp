@@ -14,7 +14,9 @@
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPaintEvent>
 #include <QSettings>
+#include <QShowEvent>
 #include <iostream>
 
 #include "device_setup.h"
