@@ -18,16 +18,19 @@ QMutex object_table_mutex;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 static void process_line(const QString &line, object_t &obj, bool &glass) {
   static QRegularExpression vt_line(
-      "^\\s*VT\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)"
-      "\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$");
-  static QRegularExpression idx10_line(
+      QString::fromUtf8("^\\s*VT\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)"
+                        "\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$"));
+  static QRegularExpression idx10_line(QString::fromUtf8(
       "^\\s*IDX10\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)"
       "\\s+"
-      "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$");
-  static QRegularExpression idx_line("^\\s*IDX\\s+(\\S+)\\s*$");
-  static QRegularExpression tris_line("^\\s*TRIS\\s+(\\S+)\\s+(\\S+)\\s*$");
-  static QRegularExpression texture_line("^\\s*TEXTURE\\s+(.*)\\s*$");
-  static QRegularExpression glass_line("^\\s*GLASS\\s*$");
+      "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$"));
+  static QRegularExpression idx_line(
+      QString::fromUtf8("^\\s*IDX\\s+(\\S+)\\s*$"));
+  static QRegularExpression tris_line(
+      QString::fromUtf8("^\\s*TRIS\\s+(\\S+)\\s+(\\S+)\\s*$"));
+  static QRegularExpression texture_line(
+      QString::fromUtf8("^\\s*TEXTURE\\s+(.*)\\s*$"));
+  static QRegularExpression glass_line(QString::fromUtf8("^\\s*GLASS\\s*$"));
 
   QRegularExpressionMatch match;
   match = vt_line.match(line);
@@ -62,16 +65,18 @@ static void process_line(const QString &line, object_t &obj, bool &glass) {
 }
 #else
 static void process_line(const QString &line, object_t &obj, bool &glass) {
-  static QRegExp vt_line("^\\s*VT\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)"
-                         "\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$");
-  static QRegExp idx10_line(
+  static QRegExp vt_line(
+      QString::fromUtf8("^\\s*VT\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)"
+                        "\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$"));
+  static QRegExp idx10_line(QString::fromUtf8(
       "^\\s*IDX10\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)"
       "\\s+"
-      "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$");
-  static QRegExp idx_line("^\\s*IDX\\s+(\\S+)\\s*$");
-  static QRegExp tris_line("^\\s*TRIS\\s+(\\S+)\\s+(\\S+)\\s*$");
-  static QRegExp texture_line("^\\s*TEXTURE\\s+(.*)\\s*$");
-  static QRegExp glass_line("^\\s*GLASS\\s*$");
+      "(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$"));
+  static QRegExp idx_line(QString::fromUtf8("^\\s*IDX\\s+(\\S+)\\s*$"));
+  static QRegExp tris_line(
+      QString::fromUtf8("^\\s*TRIS\\s+(\\S+)\\s+(\\S+)\\s*$"));
+  static QRegExp texture_line(QString::fromUtf8("^\\s*TEXTURE\\s+(.*)\\s*$"));
+  static QRegExp glass_line(QString::fromUtf8("^\\s*GLASS\\s*$"));
 
   if (vt_line.indexIn(line) != -1) {
     float x, y, z, nx, ny, nz, s, t;
