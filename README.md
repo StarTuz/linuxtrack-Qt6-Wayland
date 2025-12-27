@@ -29,6 +29,8 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 **Prerequisites:** Qt6 (likely 6.10+ recommended), OpenGLES/OpenGL drivers, libusb-1.0, libmxml, liblo.
 
 ```bash
+git clone https://github.com/StarTuz/linuxtrack.git
+cd linuxtrack
 mkdir build && cd build
 cmake -DCMAKE_INSTALL_PREFIX=/opt/linuxtrack ..
 make -j$(nproc)
