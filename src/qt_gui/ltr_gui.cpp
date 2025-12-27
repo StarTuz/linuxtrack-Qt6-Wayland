@@ -112,9 +112,16 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent)
 }
 
 void LinuxtrackGui::show() {
+  std::cerr << "LinuxtrackGui: show() start" << std::endl;
+  std::cerr << "LinuxtrackGui: Creating DeviceSetup..." << std::endl;
   ds = new DeviceSetup(grd, ui.DeviceSetupSite, this);
+  std::cerr << "LinuxtrackGui: DeviceSetup created, inserting into layout..."
+            << std::endl;
   ui.DeviceSetupSite->insertWidget(0, ds);
+  std::cerr << "LinuxtrackGui: DeviceSetup inserted, showing showWindow..."
+            << std::endl;
   showWindow->show();
+  std::cerr << "LinuxtrackGui: showWindow shown." << std::endl;
   QString dbg = QProcessEnvironment::systemEnvironment().value(
       QString::fromUtf8("LINUXTRACK_DBG"));
   if (dbg.contains(QChar::fromLatin1('d'))) {
