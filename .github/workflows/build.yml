@@ -48,7 +48,7 @@ jobs:
           sudo apt-get install -y wine32-tools libwine-dev:i386
           mkdir build32
           cd build32
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_WINE32=ON
           make NPClient32 FreeTrackClient32
           mkdir -p ../dist32
           # Use find to locate and copy shared objects, handling potential subdirectory changes
@@ -63,7 +63,7 @@ jobs:
           sudo apt-get install -y wine64-tools libwine-dev
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_WINE32=OFF
           make -j$(nproc)
 
       - name: Generate AppImage

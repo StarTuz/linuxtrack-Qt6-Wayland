@@ -11,6 +11,9 @@ else()
     set(HAS_WINE64 OFF)
 endif()
 
+option(ENABLE_WINE32 "Build 32-bit Wine bridge" ON)
+
+
 # Helper to build a wine dll/exe
 function(add_wine_binary TARGET_NAME)
     set(options SHARED)
@@ -97,6 +100,8 @@ function(add_wine_binary TARGET_NAME)
 endfunction()
 
 # 1. NPClient
+# 1. NPClient
+if(ENABLE_WINE32)
 add_wine_binary(NPClient32
     OUTPUT NPClient.dll.so
     BITNESS 32
@@ -105,6 +110,7 @@ add_wine_binary(NPClient32
     SOURCES client/NPClient_main.c linuxtrack.c client/rest.c
     LIBS -ldl
 )
+endif()
 
 if(HAS_WINE64)
     add_wine_binary(NPClient64
@@ -118,6 +124,8 @@ if(HAS_WINE64)
 endif()
 
 # 2. FreeTrackClient
+# 2. FreeTrackClient
+if(ENABLE_WINE32)
 add_wine_binary(FreeTrackClient32
     OUTPUT FreeTrackClient.dll.so
     BITNESS 32
@@ -126,8 +134,11 @@ add_wine_binary(FreeTrackClient32
     SOURCES ft_client/FreeTrackClient_main.c linuxtrack.c
     LIBS -ldl
 )
+endif()
 
 # 3. Controller
+# 3. Controller
+if(ENABLE_WINE32)
 add_wine_binary(Controller
     TYPE CXX
     OUTPUT Controller.exe.so
@@ -135,8 +146,11 @@ add_wine_binary(Controller
     SOURCES controller/main.cpp controller/resources.rc controller/dinput.cpp linuxtrack.c
     LIBS -lshell32 -ldxguid -ldinput -ldinput8 -luuid -ldl
 )
+endif()
 
 # 4. Tester
+# 4. Tester
+if(ENABLE_WINE32)
 add_wine_binary(Tester32
     TYPE CXX
     OUTPUT Tester.exe.so
@@ -144,6 +158,7 @@ add_wine_binary(Tester32
     SOURCES tester/main.cpp tester/npview.rc tester/rest.c tester/npifc.c
     LIBS -ldl
 )
+endif()
 
 if(HAS_WINE64)
     add_wine_binary(Tester64
@@ -156,27 +171,36 @@ if(HAS_WINE64)
 endif()
 
 # 5. TrackIR (views stub)
+# 5. TrackIR (views stub)
+if(ENABLE_WINE32)
 add_wine_binary(TrackIR_stub
     TYPE CXX
     OUTPUT TrackIR.exe.so
     BITNESS 32
     SOURCES views/main.cpp views/rest.c
 )
+endif()
 
 # 6. FTC (FreeTrack Tester)
+# 6. FTC (FreeTrack Tester)
+if(ENABLE_WINE32)
 add_wine_binary(FTC
     TYPE CXX
     OUTPUT ftc.exe.so
     BITNESS 32
     SOURCES ft_tester/main.cpp ft_tester/fttester.rc
 )
+endif()
 
 # 7. CheckData
+# 7. CheckData
+if(ENABLE_WINE32)
 add_wine_binary(CheckData
     OUTPUT check_data.exe.so
     BITNESS 32
     SOURCES client/check_data.c client/rest.c
 )
+endif()
 
 # Documentation and icons
 install(FILES README.wine DESTINATION share/doc/linuxtrack)
