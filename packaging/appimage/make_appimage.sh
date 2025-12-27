@@ -84,19 +84,12 @@ fi
 # --appdir: target AppDir
 # --plugin qt: use Qt plugin to bundle Qt libs
 # --output appimage: create the actual file
-# --library-path: help linuxdeploy find internal libraries
+# Note: we use LD_LIBRARY_PATH to help linuxdeploy find our internal libraries
 export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib:$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
-
-# Validate 32-bit libs if they were injected by CI
-if [ -d "$APP_DIR/usr/lib/linuxtrack" ]; then
-    echo "Files in $APP_DIR/usr/lib/linuxtrack/:"
-    ls -F "$APP_DIR/usr/lib/linuxtrack/"
-fi
 
 "$LINUXDEPLOY" --appdir "$APP_DIR" \
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
     --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
-    --library-path "$(pwd)/$APP_DIR/usr/lib:$(pwd)/$APP_DIR/usr/lib/linuxtrack" \
     --plugin qt \
     --output appimage
 
