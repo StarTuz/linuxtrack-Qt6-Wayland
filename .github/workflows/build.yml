@@ -69,10 +69,11 @@ jobs:
       - name: Generate AppImage
         env:
           BUILD_DIR: "build"
+          APP_DIR: "AppDir"
         run: |
           chmod +x packaging/appimage/make_appimage.sh
-          # Inject 32-bit library copy into make_appimage.sh before linuxdeploy runs
-          sed -i '/Setting up AppImage resources/a mkdir -p "$APP_DIR/usr/lib/linuxtrack/" && cp -v dist32/*.so "$APP_DIR/usr/lib/linuxtrack/" 2>/dev/null || true' packaging/appimage/make_appimage.sh
+          # The script creates AppDir, so we run it, then if we needed to inject we would.
+          # But it's better if make_appimage.sh handles dist32.
           ./packaging/appimage/make_appimage.sh
 
       - name: Upload AppImage
