@@ -49,6 +49,11 @@ if [ ! -f "$APP_DIR/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg" ] && [ 
     cp src/$APP_NAME.svg "$APP_DIR/usr/share/icons/hicolor/scalable/apps/"
 fi
 
+# Copy custom AppRun script that sets environment before Qt loads
+echo "--> Installing custom AppRun script..."
+cp packaging/appimage/AppRun "$APP_DIR/AppRun"
+chmod +x "$APP_DIR/AppRun"
+
 # 3. Download LinuxDeploy tools (if not present)
 TOOLS_DIR="packaging/tools"
 mkdir -p "$TOOLS_DIR"

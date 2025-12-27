@@ -1,0 +1,26 @@
+#!/bin/bash
+# AppRun wrapper for Linuxtrack AppImage
+# Sets environment variables BEFORE Qt libraries are loaded
+
+SELF=$(readlink -f "$0")
+HERE=${SELF%/*}
+
+# Force software rendering for Qt's RHI to avoid OpenGL context issues
+# between bundled Qt and system graphics stack
+export QSG_RHI_BACKEND=software
+
+# Force xcb platform (skip wayland lookup)
+export QT_QPA_PLATFORM=xcb
+
+# Disable Qt's hardware acceleration features that conflict with bundled libs
+export QT_QUICK_BACKEND=software
+export QMLSCENE_DEVICE=softwarecontext
+
+# Set library paths
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/linuxtrack:${LD_LIBRARY_PATH}"
+
+# Set Qt plugin path
+export QT_PLUGIN_PATH="${HERE}/usr/plugins"
+
+# Run the actual binary
+exec "${HERE}/usr/bin/ltr_gui" "$@"
