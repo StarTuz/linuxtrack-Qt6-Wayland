@@ -61,11 +61,12 @@ Current progress is tracked in [MODERNIZATION_ROADMAP.md](MODERNIZATION_ROADMAP.
 - [x] Project LAL (Native Firmware Manager) Phase 3 Integration.
 - [x] Automatic Steam/Proton/Lutris/Bottles Prefix Discovery.
 - [x] Controller.exe for customizable Pause/Recenter hotkeys.
+- [x] Linux-native global hotkey daemon.
 
 **Upcoming:**
 - [ ] Native UI for model scaling/offsets.
 - [-] AppImage/Flatpak distribution (Arch AppImage verified).
-- [ ] Linux-native global hotkey daemon.
+
 
 ---
 
