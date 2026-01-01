@@ -18,7 +18,7 @@ option(ENABLE_WINE32 "Build 32-bit Wine bridge" ON)
 function(add_wine_binary TARGET_NAME)
     set(options SHARED)
     set(oneValueArgs OUTPUT BITNESS SPEC TYPE)
-    set(multiValueArgs SOURCES LIBS)
+    set(multiValueArgs SOURCES LIBS DEFINES)
     cmake_parse_arguments(WINE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set(WINE_ARCH_FLAG "")
@@ -72,7 +72,7 @@ function(add_wine_binary TARGET_NAME)
 
             add_custom_command(
                 OUTPUT ${OBJ_FILE}
-                COMMAND ${COMP} -c ${WINE_ARCH_FLAG} ${WINE_CPPFLAGS} ${EXTRA_DEF} -o ${OBJ_FILE} ${SRC_PATH}
+                COMMAND ${COMP} -c ${WINE_ARCH_FLAG} ${WINE_CPPFLAGS} ${EXTRA_DEF} ${WINE_DEFINES} -o ${OBJ_FILE} ${SRC_PATH}
                 DEPENDS ${SRC_PATH} ${CMAKE_BINARY_DIR}/config.h
                 COMMENT "Compiling Wine object ${SRC} (${WINE_BITNESS}-bit) for ${TARGET_NAME}"
             )
@@ -134,6 +134,7 @@ add_wine_binary(NPClientUDP32
     SPEC client/NPClient.spec
     SOURCES client/NPClient_udp_main.c client/linuxtrack_udp.c client/rest.c
     LIBS -lws2_32
+    DEFINES -DUDP_BRIDGE
 )
 endif()
 
@@ -145,6 +146,7 @@ if(HAS_WINE64)
         SPEC client/NPClient.spec
         SOURCES client/NPClient_udp_main.c client/linuxtrack_udp.c client/rest.c
         LIBS -lws2_32
+        DEFINES -DUDP_BRIDGE
     )
 endif()
 

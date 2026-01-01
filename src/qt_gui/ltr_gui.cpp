@@ -30,6 +30,8 @@
 #include "wine_launcher.h"
 #include "wine_warn.h"
 #include "xplugin.h"
+#include "udp_bridge.h"
+#include "udp_settings.h"
 
 static QMessageBox::StandardButton warnQuestion(const QString &message) {
   return QMessageBox::warning(nullptr, QString::fromUtf8("Linuxtrack"), message,
@@ -108,6 +110,18 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent)
   connect(ui.LALButton, &QPushButton::clicked, this,
           &LinuxtrackGui::onLALClicked);
 
+  // Initialize UDP Bridge
+  udpBridge = new UdpBridge(this);
+  QSettings udpSettings(QString::fromLatin1("linuxtrack"), QString::fromLatin1("ltr_gui"));
+  udpSettings.beginGroup(QString::fromLatin1("UDP"));
+  udpBridge->setTarget(
+      udpSettings.value(QString::fromLatin1("TargetIP"), QString::fromLatin1("127.0.0.1")).toString(),
+      udpSettings.value(QString::fromLatin1("Port"), 4242).toInt());
+  udpBridge->setProtocol(
+      static_cast<UdpBridge::Protocol>(udpSettings.value(QString::fromLatin1("Protocol"), 0).toInt()));
+  ui.UdpBridgeCheck->setChecked(udpSettings.value(QString::fromLatin1("Enabled"), false).toBool());
+  udpSettings.endGroup();
+
   guiInit = false;
 }
 
@@ -154,6 +168,8 @@ LinuxtrackGui::~LinuxtrackGui() {
   ds = nullptr;
   if (xpInstall != nullptr) {
   }
+  delete udpBridge;
+  udpBridge = nullptr;
 }
 
 void LinuxtrackGui::closeEvent(QCloseEvent *event) {
@@ -361,3 +377,23 @@ void LinuxtrackGui::onLALClicked() {
 }
 
 #include "moc_ltr_gui.cpp"
+
+void LinuxtrackGui::on_UdpBridgeCheck_stateChanged(int state) {
+  if (guiInit) return;
+  
+  QSettings settings(QString::fromLatin1("linuxtrack"), QString::fromLatin1("ltr_gui"));
+  settings.beginGroup(QString::fromLatin1("UDP"));
+  settings.setValue(QString::fromLatin1("Enabled"), state == Qt::Checked);
+  settings.endGroup();
+  
+  if (state == Qt::Checked) {
+    udpBridge->start();
+  } else {
+    udpBridge->stop();
+  }
+}
+
+void LinuxtrackGui::on_UdpSettingsButton_pressed() {
+  UdpSettings dialog(udpBridge, this);
+  dialog.exec();
+}

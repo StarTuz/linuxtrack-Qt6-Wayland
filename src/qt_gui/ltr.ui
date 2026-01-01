@@ -287,6 +287,20 @@
                </item>
               </layout>
              </item>
+             <item row="2" column="0">
+              <widget class="QCheckBox" name="UdpBridgeCheck">
+               <property name="text">
+                <string>Enable UDP Bridge</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QPushButton" name="UdpSettingsButton">
+               <property name="text">
+                <string>Configure UDP...</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>

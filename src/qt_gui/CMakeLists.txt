@@ -18,6 +18,7 @@ set(LTR_GUI_HEADERS
     macps3eye_prefs.h macwebcam_info.h macps3eyeft_prefs.h 
     help_viewer.h prefix_discovery.h prefix_discovery_dialog.h
     webcam_prefs.h webcam_info.h webcam_ft_prefs.h joy_prefs.h
+    udp_bridge.h udp_settings.h
 )
 
 # Common forms
@@ -29,6 +30,7 @@ set(LTR_GUI_FORMS
     extractor.ui progress.ui xplugin.ui wine_warn.ui m_ps3eye_setup.ui m_ps3eye_ft_setup.ui 
     prefix_discovery_dialog.ui
     l_wc_setup.ui l_wcft_setup.ui joy_setup.ui
+    udp_settings.ui
 )
 
 # Common sources
@@ -47,6 +49,7 @@ set(LTR_GUI_SOURCES
     prefix_discovery_dialog.cpp
     webcam_info.cpp webcam_prefs.cpp webcam_ft_prefs.cpp joy_prefs.cpp
     lal_dialog.cpp
+    udp_bridge.cpp udp_settings.cpp
     
     # Files from parent directory
     ../ltr_srv_master.cpp

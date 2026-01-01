@@ -24,6 +24,7 @@ class DeviceSetup;
 class ProfileSelector;
 class Guardian;
 class XPluginInstall;
+class UdpBridge;
 
 class LinuxtrackGui : public QWidget {
   Q_OBJECT
@@ -53,6 +54,8 @@ private slots:
   void on_PackageLogsButton_pressed();
   void onLALClicked();
   void logsPackaged(int exitCode, QProcess::ExitStatus exitStatus);
+  void on_UdpBridgeCheck_stateChanged(int state);
+  void on_UdpSettingsButton_pressed();
 
 private:
   Ui::LinuxtrackMainForm ui;
@@ -75,6 +78,7 @@ private:
   QProcess zipper;
   bool guiInit;
   bool showWineWarning;
+  UdpBridge *udpBridge;
 };
 
 #endif

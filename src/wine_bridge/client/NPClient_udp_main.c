@@ -237,8 +237,12 @@ int __stdcall NPCLIENT_NP_RegisterProgramProfileID(unsigned short id) {
   }
 
   udp_log("UDP Bridge: NP_RegisterProgramProfileID called with ID %u\n", id);
+  
+  const char *profile_name = "Default";
+  
   if (game_data_get_desc(id, &cached_gd)) {
     udp_log("UDP Bridge: Game identified: %s (encrypted=%d)\n", cached_gd.name, cached_gd.encrypted);
+    profile_name = cached_gd.name; /* Use game-specific profile */
     
     /* Emergency fallback for Elite Dangerous if keys are missing in gamedata.txt */
     if (id == 3475 && !cached_gd.encrypted) {
@@ -264,17 +268,19 @@ int __stdcall NPCLIENT_NP_RegisterProgramProfileID(unsigned short id) {
       table[7] = (unsigned char)((k2 >> 24) & 0xff);
     }
   } else {
-    udp_log("UDP Bridge: Game ID %d unknown, using default\n", id);
+    udp_log("UDP Bridge: Game ID %d unknown, using default profile\n", id);
     crypted = false;
     gd_cached = true;
     last_id = id;
   }
 
-  /* UDP version: tracking is already initialized in DllMain */
+  /* Initialize linuxtrack with the game-specific profile (or Default) */
+  udp_log("UDP Bridge: Initializing linuxtrack with profile '%s'\n", profile_name);
   if (!initialized) {
-    if (linuxtrack_init("Default") >= LINUXTRACK_OK) {
+    if (linuxtrack_init(profile_name) >= LINUXTRACK_OK) {
       initialized = true;
     } else {
+      udp_log("UDP Bridge: linuxtrack_init failed!\n");
       return 1;
     }
   }

@@ -132,10 +132,21 @@ static DWORD WINAPI receiver_thread_func(LPVOID param) {
             }
             LeaveCriticalSection(&pose_mutex);
         } else if (bytes == 4) {
-             /* Handle commands */
+             /* Handle commands from ltr_udp server */
              if (memcmp(buffer, "RECN", 4) == 0) {
-                 udp_log("UDP Bridge: Received RECENTER command\n");
-                 linuxtrack_recenter();
+                 /* Server has recentered - reset our client-side offsets to zero.
+                  * This is important: server sends already-recentered data after RECN,
+                  * so we must NOT add more offset on top.
+                  */
+                 udp_log("UDP Bridge: Received RECENTER command - resetting client offsets\n");
+                 EnterCriticalSection(&pose_mutex);
+                 recenter_yaw = 0.0f;
+                 recenter_pitch = 0.0f;
+                 recenter_roll = 0.0f;
+                 recenter_tx = 0.0f;
+                 recenter_ty = 0.0f;
+                 recenter_tz = 0.0f;
+                 LeaveCriticalSection(&pose_mutex);
              } else if (memcmp(buffer, "PAUS", 4) == 0) {
                  udp_log("UDP Bridge: Received PAUSE command (currently paused=%d)\n", paused);
                  if (paused) {
@@ -370,7 +381,11 @@ int linuxtrack_get_pose(float *heading, float *pitch, float *roll,
     
     EnterCriticalSection(&pose_mutex);
     
-    /* Apply recenter offset */
+    /* Apply client-side recenter offset.
+     * This provides in-game recentering capability via NP_ReCenter().
+     * The offsets are set to 0 initially and only change when
+     * linuxtrack_recenter() is explicitly called.
+     */
     *heading = current_yaw - recenter_yaw;
     *pitch = current_pitch - recenter_pitch;
     *roll = current_roll - recenter_roll;

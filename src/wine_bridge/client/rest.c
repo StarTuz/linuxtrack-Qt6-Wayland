@@ -10,7 +10,18 @@
 #include <config.h>
 #endif
 
+#ifdef UDP_BRIDGE
 extern void udp_log(const char *fmt, ...);
+#else
+/* Non-UDP builds: stub out udp_log to printf */
+#include <stdarg.h>
+static inline void udp_log(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+}
+#endif
 
 static ssize_t my_getline(char **lineptr, size_t *n, FILE *f) {
 #ifndef DARWIN

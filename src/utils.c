@@ -264,6 +264,7 @@ char *ltr_int_get_ipc_path(const char *fname) {
   // Strategy 2: ~/.config/linuxtrack/run (Fallback, definitely shared)
   char *home = getenv("HOME");
   if (home != NULL) {
+    struct stat st;
     char *dir_path = NULL;
     if (asprintf(&dir_path, "%s/.config/linuxtrack/run", home) != -1) {
        if (stat(dir_path, &st) == -1) {

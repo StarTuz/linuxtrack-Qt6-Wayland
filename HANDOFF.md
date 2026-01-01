@@ -14,6 +14,7 @@
 There are THREE related head tracking projects in this workspace:
 
 ### linuxtrackfixed (THIS PROJECT)
+
 **Path:** `/home/startux/Code/linuxtrackfixed/linuxtrack`  
 **Philosophy:** Slow, methodical modernization of the original linuxtrack  
 **Goal:** Get linuxtrack compiling and working on modern Linux without breaking existing functionality  
@@ -21,9 +22,11 @@ There are THREE related head tracking projects in this workspace:
 **Status:** Active - ✅ Qt6 Migration Complete, TrackIR Game Support Fixed. Follow MODERNIZATION_ROADMAP.md
 
 ### tuxtracksold
+
 **Path:** `/home/startux/Code/tuxtracksold/`  
 **Philosophy:** First aggressive modernization attempt  
 **What Worked:**
+
 - Qt6 compatibility
 - Tracking window with camera view and 3D view (modernized for Wayland, backwards compatible with X11)
 - X-Plane integration improvements  
@@ -33,6 +36,7 @@ There are THREE related head tracking projects in this workspace:
 **Access Rule:** Only access when explicitly instructed
 
 ### tuxtracks (NEW)
+
 **Path:** `/home/startux/Code/tuxtracks/` (when created)  
 **Philosophy:** Completely new, modern system built from the ground up  
 **Goal:** Modern Linux TrackIR head tracking for today and the future  
@@ -40,6 +44,7 @@ There are THREE related head tracking projects in this workspace:
 **Status:** New project - will have its own documentation and workflow rules
 
 ### Shared Documentation
+
 **Path:** `/home/startux/Code/HEAD_TRACKING_PROTOCOL.md`  
 **Purpose:** Protocol specifications that ALL projects must follow for game compatibility
 
@@ -89,6 +94,7 @@ Fix Linuxtrack to compile on modern Linux systems and add native game support.
 ### Status: ✅ COMPLETE
 
 The project now compiles successfully on modern Linux with:
+
 - GCC 14.x
 - Wine 9.x  
 - Qt 6.x
@@ -96,6 +102,7 @@ The project now compiles successfully on modern Linux with:
 - CMake (Standard build system)
 
 **Recent Additions (2025-12-26):**
+
 - **Native Games Support:** ltr_udp bridge for X4: Foundations and other OpenTrack-compatible games
 - **Global Hotkeys:** ltr_hotkeyd daemon for recenter/pause without alt-tabbing
 - **CI Modernization:** Fully automated AppImage build via GitHub Actions, including 32-bit Wine support (multi-pass build).
@@ -104,6 +111,10 @@ The project now compiles successfully on modern Linux with:
 - **Profile Management:** "New Profile" button in ltr_gui for creating custom profiles
 - **Build Cleanup:** Removed stale pre-generated ui_*.h and moc_*.cpp files from source tree
 - **Distribution:** Verified working AppImage for Arch Linux systems (built against system Qt6)
+
+**Recent Additions (2026-01-01):**
+
+- **UDP Bridge GUI Integration:** Full UDP stack control from ltr_gui with Start/Stop, hotkey configuration, and Wine/Proton installer
 
 ---
 
@@ -116,16 +127,19 @@ The project now compiles successfully on modern Linux with:
 **Files Modified:**
 
 1. **`src/ltr_srv_master.cpp`** (Line 3)
+
    ```cpp
    #include <pthread.h>
    ```
 
 2. **`src/pref.cpp`** (Line 5)
+
    ```cpp
    #include <pthread.h>
    ```
 
 **Error Fixed:**
+
 ```
 error: 'PTHREAD_MUTEX_INITIALIZER' was not declared in this scope
 ```
@@ -139,6 +153,7 @@ error: 'PTHREAD_MUTEX_INITIALIZER' was not declared in this scope
 **Files Modified:**
 
 1. **`src/wine_bridge/client/NPClient_main.c`** (Lines 55-58)
+
    ```c
    #ifdef DLL_WINE_PREATTACH
        case DLL_WINE_PREATTACH:
@@ -147,6 +162,7 @@ error: 'PTHREAD_MUTEX_INITIALIZER' was not declared in this scope
    ```
 
 2. **`src/wine_bridge/ft_client/FreeTrackClient_main.c`** (Lines 63-67)
+
    ```c
    #ifdef DLL_WINE_PREATTACH
    case DLL_WINE_PREATTACH:
@@ -155,6 +171,7 @@ error: 'PTHREAD_MUTEX_INITIALIZER' was not declared in this scope
    ```
 
 **Error Fixed:**
+
 ```
 error: 'DLL_WINE_PREATTACH' undeclared (first use in this function)
 ```
@@ -170,6 +187,7 @@ error: 'DLL_WINE_PREATTACH' undeclared (first use in this function)
 **File Modified:**
 
 **`src/wine_bridge/ft_client/FreeTrackClient_main.c`** (Line 22)
+
 ```c
 // Before:
 WINE_DEFAULT_DEBUG_CHANNEL(FreeTrackClient);
@@ -179,6 +197,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(FreeTrackCli);
 ```
 
 **Error Fixed:**
+
 ```
 error: static assertion failed: "sizeof(\"FreeTrackClient\") <= sizeof(__wine_dbch_FreeTrackClient.name)"
 ```
@@ -190,115 +209,134 @@ error: static assertion failed: "sizeof(\"FreeTrackClient\") <= sizeof(__wine_db
 **Problem:** `DWORD` type is `unsigned int` on 32-bit Wine and `unsigned long` on 64-bit Wine.
 
 **Files Partially Fixed:**
+
 - `NPClient_main.c`: Changed `%d` to `%ld` for DWORD
 - `FreeTrackClient_main.c`: Changed to `%lu` with cast
 
 **Remaining Warnings (Non-blocking):**
+
 - `src/wine_bridge/views/rest.c:219` - `%d` for `GetLastError()`
 
 ---
 
 ### 3.5 Qt6 Migration & 3D View Modernization
+
 **Status:** ✅ COMPLETE
 
 **Problem:** `QGLWidget` and fixed-function OpenGL (`glBegin`, `glCallList`) are deprecated in Qt6 and do not work on Wayland/EGL.
 
 **Fixes:**
-1.  **Dual Support**: Updated headers and `.pro` files to support both Qt5 and Qt6.
-2.  **Modern OpenGL**: Completely refactored `GLWidget` for Qt6 to use `QOpenGLWidget`, `QOpenGLVertexArrayObject`, `QOpenGLBuffer`, and `QOpenGLShaderProgram`.
-3.  **Shaders**: Implemented GLSL ES 3.0 shaders for vertex and fragment processing.
-4.  **Transformation Logic**: Migrated from OpenGL matrix stack to `QMatrix4x4` for MVP and normal matrices.
-5.  **Geometry**: Converted on-the-fly OBJ parsing into static VBO/VAO buffers for performance and Wayland compatibility.
+
+1. **Dual Support**: Updated headers and `.pro` files to support both Qt5 and Qt6.
+2. **Modern OpenGL**: Completely refactored `GLWidget` for Qt6 to use `QOpenGLWidget`, `QOpenGLVertexArrayObject`, `QOpenGLBuffer`, and `QOpenGLShaderProgram`.
+3. **Shaders**: Implemented GLSL ES 3.0 shaders for vertex and fragment processing.
+4. **Transformation Logic**: Migrated from OpenGL matrix stack to `QMatrix4x4` for MVP and normal matrices.
+5. **Geometry**: Converted on-the-fly OBJ parsing into static VBO/VAO buffers for performance and Wayland compatibility.
 
 ### 3.6 Wine Bridge & Path Fixes
+
 **Status:** ✅ COMPLETE
 
 **Problem:** Typos in `Makefile.am` and missing RPATH logic in the Wine bridge bridge caused games (like Elite Dangerous) to fail to find tracking libraries after the rebuild.
 
 **Fixes:**
-1.  **Global Fix**: Fixed typos in `src/Makefile.am` (`LINUXLDLFAGS` -> `LINUXLDFLAGS`).
-2.  **Bridge Fix**: Added `-Wl,-rpath` flags to `src/wine_bridge/client/Makefile.am` and `src/wine_bridge/ft_client/Makefile.am`.
-3.  **Relocatable Binaries**: Used `$ORIGIN` to ensure binaries can find libraries in both build and install (`/opt/linuxtrack/lib/linuxtrack`) locations.
+
+1. **Global Fix**: Fixed typos in `src/Makefile.am` (`LINUXLDLFAGS` -> `LINUXLDFLAGS`).
+2. **Bridge Fix**: Added `-Wl,-rpath` flags to `src/wine_bridge/client/Makefile.am` and `src/wine_bridge/ft_client/Makefile.am`.
+3. **Relocatable Binaries**: Used `$ORIGIN` to ensure binaries can find libraries in both build and install (`/opt/linuxtrack/lib/linuxtrack`) locations.
 
 ### 3.7 Segmentation Fault Fixes
+
 **Status:** ✅ COMPLETE
 
 **Problem:** `ltr_gui` crashed on exit during cleanup.
 
 **Fixes:**
-1.  **ProfileSelector**: Added null check for `ProfileSetup` pointer during close event.
-2.  **GLWidget Destructor**: Implemented safe, unique-pointer deletion for textures to avoid double-free errors.
-3.  **Context Management**: Ensured `makeCurrent()` / `doneCurrent()` calls wrap GL resource deletion.
+
+1. **ProfileSelector**: Added null check for `ProfileSetup` pointer during close event.
+2. **GLWidget Destructor**: Implemented safe, unique-pointer deletion for textures to avoid double-free errors.
+3. **Context Management**: Ensured `makeCurrent()` / `doneCurrent()` calls wrap GL resource deletion.
 
 ---
 
 ### 3.8 Preference System Modernization (Bison Removal)
+
 **Status:** ✅ COMPLETE
 
 **Problem:** The legacy Bison/Flex parser for `.conf` files was brittle, hard to maintain, and prone to build issues with modern tools.
 
 **Fixes:**
-1.  **Modern Backend**: Migrated to the `mINI` header-only library for robust INI file parsing.
-2.  **Bridge Layer**: Implemented a bridge in `pref.cpp` that maintains compatibility with the existing C API (`ltr_int_get_key`, etc.) and the legacy C++ `prefs` class used by the GUI.
-3.  **Cleanup**: Removed `pref_bison.ypp` and `pref_flex.lpp` from the build system, simplifying project dependencies.
+
+1. **Modern Backend**: Migrated to the `mINI` header-only library for robust INI file parsing.
+2. **Bridge Layer**: Implemented a bridge in `pref.cpp` that maintains compatibility with the existing C API (`ltr_int_get_key`, etc.) and the legacy C++ `prefs` class used by the GUI.
+3. **Cleanup**: Removed `pref_bison.ypp` and `pref_flex.lpp` from the build system, simplifying project dependencies.
 
 ### 3.9 GUI Polish & Qt6 Fixes
+
 **Status:** ✅ COMPLETE
 
 **Problem:** Deprecated Qt5 signals or broken auto-connections in Qt6.
 
 **Fixes:**
-1.  **Model Setup**: Fixed the "Model Setup" images not updating by manually connecting `QComboBox::textActivated` to a new slot, bypassing the removed `activated(QString)` signal.
+
+1. **Model Setup**: Fixed the "Model Setup" images not updating by manually connecting `QComboBox::textActivated` to a new slot, bypassing the removed `activated(QString)` signal.
 
 ### 3.10 Wine Support Modernization (Proton Compatibility)
+
 **Status:** ✅ COMPLETE
 
 **Problem:** The legacy Wine bridge installation relied on a fragile NSIS installer, downloading 20-year-old Microsoft runtimes (VC6), and using "Fake Wine" environments to extract firmware, which is incompatible with modern Proton/Steam Deck environments.
 
 **Fixes:**
-1.  **Surgical Injection**: Implemented a native "Surgical Injection" routine in `PluginInstall::installLinuxtrackWine`. It now directly copies compiled bridge files (`NPClient.dll`, `FreeTrackClient.dll`, `Controller.exe`) to the prefix and updates the registry via native `wine reg` calls.
-2.  **Controller.exe for Hotkeys**: Now includes `Controller.exe` in surgical injection for customizable Pause/Recenter hotkeys. Uses DirectInput for global keyboard capture that works even when games have focus.
-3.  **Dual Program Files Installation**: Installs to both `C:\Program Files\Linuxtrack\` and `C:\Program Files (x86)\Linuxtrack\` for 32-bit and 64-bit game compatibility.
-4.  **Proton Tuning**: `WineLauncher` now automatically sets `PROTON_NO_FSYNC=1` and `PROTON_NO_ESYNC=1` to prevent race conditions in tracking data.
-5.  **Automatic Prefix Discovery**:
+
+1. **Surgical Injection**: Implemented a native "Surgical Injection" routine in `PluginInstall::installLinuxtrackWine`. It now directly copies compiled bridge files (`NPClient.dll`, `FreeTrackClient.dll`, `Controller.exe`) to the prefix and updates the registry via native `wine reg` calls.
+2. **Controller.exe for Hotkeys**: Now includes `Controller.exe` in surgical injection for customizable Pause/Recenter hotkeys. Uses DirectInput for global keyboard capture that works even when games have focus.
+3. **Dual Program Files Installation**: Installs to both `C:\Program Files\Linuxtrack\` and `C:\Program Files (x86)\Linuxtrack\` for 32-bit and 64-bit game compatibility.
+4. **Proton Tuning**: `WineLauncher` now automatically sets `PROTON_NO_FSYNC=1` and `PROTON_NO_ESYNC=1` to prevent race conditions in tracking data.
+5. **Automatic Prefix Discovery**:
     - ✅ **Qt6 entryList Fix**: Fixed Steam game discovery by switching from Qt's glob patterns (broken in Qt6 with C locale) to `entryInfoList` with manual filtering.
     - ✅ **Steam/Proton**: Scans all Steam library folders including custom mount points.
     - ✅ **Lutris**: Parses game YAML configs for Wine prefixes.
     - ✅ **Bottles**: Detects Flatpak and native Bottles installations.
     - ✅ **X-Plane 12**: Auto-detection for native X-Plane installation paths.
-6.  **Native Harvesting**: Refactored firmware extraction to prioritize native tools (`7z`). Can unpack TrackIR installers without Wine.
-7.  **Verification**: 
+6. **Native Harvesting**: Refactored firmware extraction to prioritize native tools (`7z`). Can unpack TrackIR installers without Wine.
+7. **Verification**:
     - ✅ **DCS World**: Confirmed successful with Controller.exe hotkeys (Proton).
     - ✅ **Elite Dangerous**: Confirmed successful on **Proton 10**.
     - ✅ **X-Plane 12**: Native plugin confirmed working.
     - ✅ **Fresh Prefixes**: Confirmed tracking works on fresh 64-bit Wine prefixes (Registry fix).
 
 ### 3.11 Deprecated API Replacement & Code Safety
+
 **Status:** ✅ COMPLETE
 
 **Problem:** Several deprecated C APIs (`sprintf`, `strtok`) posed buffer overflow and thread-safety risks.
 
 **Fixes:**
-1.  **Wine Bridge (High Priority)**:
+
+1. **Wine Bridge (High Priority)**:
     - `wine_bridge/client/check_data.c`: `sprintf` → `snprintf` with tracked buffer size
     - `wine_bridge/client/rest.c`: All path construction now uses `snprintf`
     - `wine_bridge/ft_tester/main.cpp`: `sprintf` → `snprintf` for DLL path
-2.  **Core Library**:
+2. **Core Library**:
     - `webcam_driver.c`: `snprintf` for debug frame filenames
     - `image_process.c`: `snprintf` for debug data filenames
     - `linuxtrack.c`: `strtok` → `strtok_r` for thread-safe `LINUXTRACK_LIBS` parsing
 
 ### 3.13 GLWidget Race Condition Fix
+
 **Status:** ✅ COMPLETE
 
 **Problem:** 3D View displayed black due to race condition between `ReaderThread` (loading model objects) and `initializeGL()` (building OpenGL buffers).
 
 **Fix:**
-1.  Added `objectsLoaded` and `glInitialized` flags to `GLWidget`.
-2.  `initializeGL()` sets `glInitialized = true` and calls `makeObjects()` if `objectsLoaded` is already true.
-3.  `objectsRead()` sets `objectsLoaded = true` and calls `makeObjects()` if `glInitialized` is already true.
+
+1. Added `objectsLoaded` and `glInitialized` flags to `GLWidget`.
+2. `initializeGL()` sets `glInitialized = true` and calls `makeObjects()` if `objectsLoaded` is already true.
+3. `objectsRead()` sets `objectsLoaded = true` and calls `makeObjects()` if `glInitialized` is already true.
 
 ### 3.14 Fresh Prefix & Proton Fix (Critical)
+
 **Status:** ✅ COMPLETE
 
 **Problem:** Fresh 64-bit Wine/Proton prefixes (like a new Elite Dangerous install) failed to track. Surgical injection appeared successful, but games couldn't find `NPClient.dll`.
@@ -307,30 +345,35 @@ error: static assertion failed: "sizeof(\"FreeTrackClient\") <= sizeof(__wine_db
 The `WineLauncher` helper class was forcing `WINEARCH=win32` environment variable for all internal commands. When running `reg.exe` to inject registry keys into a 64-bit prefix, this mismatch caused the registry write to fail or go to the wrong hive, leaving the game without the necessary `HKCU\Software\NaturalPoint` keys.
 
 **Fix:**
+
 - Removed `WINEARCH=win32` from `WineLauncher.cpp`. The launcher now respects the prefix's native architecture.
 - Added `PROTON_NO_FSYNC=1` and `PROTON_NO_ESYNC=1` to the `WineLauncher` environment to protect internal tools, but **removed** the requirement for users to set this manually.
 - **Verification:** Validated that tracking works out-of-the-box on fresh prefixes without manual Steam Launch Options.
 
 ### 3.15 Project LAL (Licensed Asset Loader)
+
 **Status:** ✅ COMPLETE (Prototype)
 
 **Problem:** The legacy method of extracting proprietary firmware (TIRViews.dll) relied on a fragile Wine-based "fake environment" that was hard to maintain and security-prone.
 
 **Fix:**
-1.  **LALManager**: Implemented a new C++ backend that natively extracts assets using `7z` or `tar`, with no Wine dependency.
-2.  **Manifest-Driven**: Assets are defined in `lal_manifest.json`, making updates easy without recompiling.
-3.  **LALDialog**: Added a native Qt GUI dialog ("Manage Assets (LAL)...") to the Misc tab, allowing users to browse and install firmware archives easily.
-4.  **Verification**: Verified UI functionality and native extraction logic via unit tests.
+
+1. **LALManager**: Implemented a new C++ backend that natively extracts assets using `7z` or `tar`, with no Wine dependency.
+2. **Manifest-Driven**: Assets are defined in `lal_manifest.json`, making updates easy without recompiling.
+3. **LALDialog**: Added a native Qt GUI dialog ("Manage Assets (LAL)...") to the Misc tab, allowing users to browse and install firmware archives easily.
+4. **Verification**: Verified UI functionality and native extraction logic via unit tests.
 
 ### 3.16 AppImage Packaging
+
 **Status:** ✅ COMPLETE
 
 **Problem:** Running `ltr_gui` from the build directory caused permissions/loading issues, and the traditional `sudo make install` approach is difficult to distribute to end users.
 
 **Fix:**
-1.  **Workflow**: Created `.github/workflows/build.yml` to automatically build an AppImage on every push.
-2.  **Script**: Added `packaging/appimage/make_appimage.sh` which uses `linuxdeploy` and `linuxdeploy-plugin-qt`.
-3.  **Result**: Users can now download a single, portable `Linuxtrack-x86_64.AppImage` executable that works on most modern Linux distributions (Ubuntu 22.04+, Fedora, Arch, etc.).
+
+1. **Workflow**: Created `.github/workflows/build.yml` to automatically build an AppImage on every push.
+2. **Script**: Added `packaging/appimage/make_appimage.sh` which uses `linuxdeploy` and `linuxdeploy-plugin-qt`.
+3. **Result**: Users can now download a single, portable `Linuxtrack-x86_64.AppImage` executable that works on most modern Linux distributions (Ubuntu 22.04+, Fedora, Arch, etc.).
 
 ---
 
@@ -492,6 +535,7 @@ libcwiid                 # Wiimote support
 ### Historical Note
 
 This codebase was last actively maintained around 2015-2018. The original author is "uglyDwarf" (GitHub). The fixes in this session address API changes in:
+
 - GCC (stricter headers)
 - Wine 6.0+ (removed internal APIs)
 - Modern autotools
@@ -548,6 +592,79 @@ The user mentioned "there will be more later." Potential future work could inclu
 
 ---
 
+## 9.5 UDP Bridge User Guide
+
+### Startup Workflow
+
+> ⚠️ **Follow these steps in order:**
+
+1. **Start the camera** in the Tracking Window (click Start button)
+2. **Start UDP Stack** from the UDP Bridge Settings dialog
+3. **Start your game**
+
+### Accessing UDP Settings
+
+**Misc tab → Enable UDP Bridge → Configure UDP...**
+
+### Settings Reference
+
+| Setting | Description |
+|---------|-------------|
+| Target IP | Usually `127.0.0.1` for local games |
+| Port | Default `4242` (OpenTrack standard) |
+| Protocol | OpenTrack (6 doubles) or FreeTrack |
+| Auto-start | Start UDP when tracking begins |
+
+### Controls
+
+| Button | Action |
+|--------|--------|
+| Start UDP Stack | Spawns `ltr_udp`, optionally starts hotkey utility |
+| Stop UDP Stack | Terminates all UDP processes |
+| Recenter | Sends recenter command |
+| Pause/Resume | Toggles tracking pause |
+
+### Troubleshooting
+
+```bash
+# Verify ltr_udp is running
+ps -e | grep ltr
+
+# Check for UDP traffic
+ss -ulnp | grep 4242
+```
+
+### Per-Game Hotkey Customization
+
+When you install the UDP Bridge to a Wine prefix, the current hotkey settings are copied to:
+
+```
+<prefix>/drive_c/Program Files/Linuxtrack/ltr_hotkeys.ini
+```
+
+**To customize hotkeys for a specific game:**
+
+1. Navigate to the game's Wine prefix
+2. Edit `drive_c/Program Files/Linuxtrack/ltr_hotkeys.ini`:
+
+   ```ini
+   [Hotkeys]
+   Recenter=121   ; 121 = F10 (VK_F10)
+   Pause=120      ; 120 = F9 (VK_F9)
+   ```
+
+**Common VK codes:**
+
+| Key | VK Code |
+|-----|---------|
+| F9  | 120     |
+| F10 | 121     |
+| F11 | 122     |
+| F12 | 123     |
+| Pause | 19    |
+
+---
+
 ## 10. Git Status
 
 ### Repository Status
@@ -566,10 +683,21 @@ nothing to commit, working tree clean
 
 ## 11. Contact & Resources
 
-- **Original Project:** https://github.com/uglyDwarf/linuxtrack
-- **Wiki:** https://github.com/uglyDwarf/linuxtrack/wiki
-- **Issue Tracker:** https://github.com/uglyDwarf/linuxtrack/issues
+- **Original Project:** <https://github.com/uglyDwarf/linuxtrack>
+- **Wiki:** <https://github.com/uglyDwarf/linuxtrack/wiki>
+- **Issue Tracker:** <https://github.com/uglyDwarf/linuxtrack/issues>
 
 ---
+
+### Manual Hotkey Configuration (VK Codes)
+
+If editing `ltr_hotkeys.ini` manually, use these decimal codes:
+
+| Key | Code | Key | Code |
+| :--- | :--- | :--- | :--- |
+| **F1-F12** | 112-123 | **Pause** | 19 |
+| **Home** | 36 | **Insert** | 45 |
+| **Delete** | 46 | **End** | 35 |
+| **PageUp** | 33 | **PageDn** | 34 |
 
 *End of Handoff Document*
