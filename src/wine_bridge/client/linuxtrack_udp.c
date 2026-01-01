@@ -95,7 +95,7 @@ void udp_log(const char *fmt, ...) {
 /* Receiver thread function */
 static DWORD WINAPI receiver_thread_func(LPVOID param) {
     (void)param;
-    opentrack_udp_t packet;
+    char buffer[100];
     struct sockaddr_in sender_addr;
     int sender_len = sizeof(sender_addr);
     int timeout_count = 0;
@@ -106,52 +106,90 @@ static DWORD WINAPI receiver_thread_func(LPVOID param) {
     
     while (running) {
         loop_count++;
-        int bytes = recvfrom(udp_socket, (char*)&packet, sizeof(packet), 0,
+        int bytes = recvfrom(udp_socket, buffer, sizeof(buffer), 0,
                              (struct sockaddr*)&sender_addr, &sender_len);
         
-        if (bytes == sizeof(packet)) {
+        if (bytes == sizeof(opentrack_udp_t)) {
+            opentrack_udp_t *packet = (opentrack_udp_t *)buffer;
             packet_count++;
-            if (packet_count <= 5 || packet_count % 100 == 0) {
-                udp_log("Received packet #%d: yaw=%.2f pitch=%.2f roll=%.2f\n",
-                        packet_count, packet.yaw, packet.pitch, packet.roll);
+            if (packet_count <= 5 || packet_count % 500 == 0) {
+                udp_log("Received pose #%d: yaw=%.2f pitch=%.2f roll=%.2f\n",
+                        packet_count, packet->yaw, packet->pitch, packet->roll);
             }
             
             EnterCriticalSection(&pose_mutex);
-            
-            /* Convert OpenTrack format (cm) to linuxtrack format (mm) */
-            current_tx = (float)(packet.x * 10.0);
-            current_ty = (float)(packet.y * 10.0);
-            current_tz = (float)(packet.z * 10.0);
-            current_yaw = (float)packet.yaw;
-            current_pitch = (float)packet.pitch;
-            current_roll = (float)packet.roll;
+            current_tx = (float)(packet->x * 10.0);
+            current_ty = (float)(packet->y * 10.0);
+            current_tz = (float)(packet->z * 10.0);
+            current_yaw = (float)packet->yaw;
+            current_pitch = (float)packet->pitch;
+            current_roll = (float)packet->roll;
             frame_counter++;
             
             if (tracking_state != RUNNING && !paused) {
                 tracking_state = RUNNING;
                 udp_log("Tracking state changed to RUNNING\n");
             }
-            
             LeaveCriticalSection(&pose_mutex);
+        } else if (bytes == 4) {
+             /* Handle commands */
+             if (memcmp(buffer, "RECN", 4) == 0) {
+                 udp_log("UDP Bridge: Received RECENTER command\n");
+                 linuxtrack_recenter();
+             } else if (memcmp(buffer, "PAUS", 4) == 0) {
+                 udp_log("UDP Bridge: Received PAUSE command\n");
+                 if (paused) linuxtrack_wakeup();
+                 else linuxtrack_suspend();
+             }
         } else if (bytes == SOCKET_ERROR) {
             int err = WSAGetLastError();
             if (err == WSAETIMEDOUT) {
                 timeout_count++;
-                if (timeout_count <= 3 || timeout_count % 50 == 0) {
-                    udp_log("Timeout #%d waiting for UDP data (loops=%d, packets=%d)\n",
-                            timeout_count, loop_count, packet_count);
-                }
             } else if (err != WSAEWOULDBLOCK) {
                 udp_log("recvfrom error: %d\n", err);
             }
-        } else if (bytes > 0) {
-            udp_log("Unexpected packet size: got %d, expected %d\n", bytes, (int)sizeof(packet));
         }
     }
     
-    udp_log("Receiver thread exiting (loops=%d, timeouts=%d, packets=%d)\n",
-            loop_count, timeout_count, packet_count);
+    udp_log("Receiver thread exiting...\n");
     return 0;
+}
+
+static void auto_launch_hotkeys(void) {
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    char *cmd = "ltr_wine_hotkeys.exe";
+    
+    /* 
+     * Try to find ltr_wine_hotkeys.exe in the same directory as the game 
+     * or Program Files\Linuxtrack
+     */
+    STARTUPINFOA si = { sizeof(si) };
+    PROCESS_INFORMATION pi;
+    
+    udp_log("UDP Bridge: Attempting to launch hotkey utility...\n");
+    
+    /* 1. Try Linuxtrack directory */
+    char hotkey_path[MAX_PATH];
+    if (GetEnvironmentVariableA("ProgramFiles", hotkey_path, MAX_PATH)) {
+        strcat(hotkey_path, "\\Linuxtrack\\ltr_wine_hotkeys.exe");
+        if (CreateProcessA(hotkey_path, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+            udp_log("UDP Bridge: Launched hotkeys from %s\n", hotkey_path);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+            return;
+        }
+    }
+    
+    /* 2. Try current directory as fallback */
+    if (CreateProcessA(cmd, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+        udp_log("UDP Bridge: Launched hotkeys from current directory\n");
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        return;
+    }
+    
+    udp_log("UDP Bridge: Could not find or launch ltr_wine_hotkeys.exe\n");
 }
 
 linuxtrack_state_type linuxtrack_init(const char *cust_section) {
@@ -239,6 +277,7 @@ linuxtrack_state_type linuxtrack_init(const char *cust_section) {
     }
     
     udp_log("Initialization complete\n");
+    auto_launch_hotkeys();
     return LINUXTRACK_OK;
 }
 

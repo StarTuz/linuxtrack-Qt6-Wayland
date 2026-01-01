@@ -148,6 +148,17 @@ if(HAS_WINE64)
     )
 endif()
 
+# 1c. Hotkey Utility (Native Win32 EXE for Proton/Wine)
+# Built as 32-bit for maximum compatibility across prefixes
+if(ENABLE_WINE32)
+add_wine_binary(ltr_wine_hotkeys
+    OUTPUT ltr_wine_hotkeys.exe
+    BITNESS 32
+    SOURCES client/ltr_wine_hotkeys.c
+    LIBS -lws2_32 -luser32 -lgdi32
+)
+endif()
+
 # 2. FreeTrackClient
 # 2. FreeTrackClient
 if(ENABLE_WINE32)
