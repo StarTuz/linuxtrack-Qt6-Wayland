@@ -1,8 +1,11 @@
 /*
  * ltr_wine_hotkeys.c - Native Win32 Hotkey Utility for Linuxtrack
  * 
- * Captures global hotkeys and sends UDP commands ("RECN", "PAUS") 
- * to the Linuxtrack bridge DLL on localhost:4242.
+ * Captures global hotkeys using low-level keyboard hook and sends 
+ * UDP commands ("RECN", "PAUS") to the Linuxtrack bridge DLL on localhost:4242.
+ * 
+ * Uses WH_KEYBOARD_LL hook instead of RegisterHotKey for better 
+ * compatibility with Wine/Proton under Wayland/XWayland.
  */
 
 #define WIN32_LEAN_AND_MEAN
@@ -17,12 +20,11 @@
 #define IDC_ST_RECENTER  103
 #define IDC_ST_PAUSE     104
 
-#define HOTKEY_ID_RECENTER 1
-#define HOTKEY_ID_PAUSE    2
-
 /* Config */
 UINT cfg_vk_recenter = VK_F12;
 UINT cfg_vk_pause    = VK_PAUSE;
+
+char ini_path[MAX_PATH] = "";
 
 SOCKET client_sock = INVALID_SOCKET;
 struct sockaddr_in bridge_addr;
@@ -33,6 +35,17 @@ int bind_state = STATE_IDLE;
 HWND hMain;
 HWND hRecenterBtn, hPauseBtn;
 HWND hRecenterText, hPauseText;
+HHOOK hKeyboardHook = NULL;
+
+void init_ini_path(HINSTANCE hInst) {
+    GetModuleFileNameA(hInst, ini_path, MAX_PATH);
+    char *last_slash = strrchr(ini_path, '\\');
+    if (last_slash) {
+        strcpy(last_slash + 1, "ltr_hotkeys.ini");
+    } else {
+        strcpy(ini_path, "ltr_hotkeys.ini");
+    }
+}
 
 void send_command(const char *cmd) {
     if (client_sock == INVALID_SOCKET) return;
@@ -40,16 +53,16 @@ void send_command(const char *cmd) {
 }
 
 void load_config() {
-    cfg_vk_recenter = GetPrivateProfileIntA("Hotkeys", "Recenter", VK_F12, ".\\ltr_hotkeys.ini");
-    cfg_vk_pause    = GetPrivateProfileIntA("Hotkeys", "Pause", VK_PAUSE, ".\\ltr_hotkeys.ini");
+    cfg_vk_recenter = GetPrivateProfileIntA("Hotkeys", "Recenter", VK_F12, ini_path);
+    cfg_vk_pause    = GetPrivateProfileIntA("Hotkeys", "Pause", VK_PAUSE, ini_path);
 }
 
 void save_config() {
     char buf[16];
     sprintf(buf, "%u", cfg_vk_recenter);
-    WritePrivateProfileStringA("Hotkeys", "Recenter", buf, ".\\ltr_hotkeys.ini");
+    WritePrivateProfileStringA("Hotkeys", "Recenter", buf, ini_path);
     sprintf(buf, "%u", cfg_vk_pause);
-    WritePrivateProfileStringA("Hotkeys", "Pause", buf, ".\\ltr_hotkeys.ini");
+    WritePrivateProfileStringA("Hotkeys", "Pause", buf, ini_path);
 }
 
 void update_labels() {
@@ -68,11 +81,30 @@ void update_labels() {
     if (bind_state == STATE_BIND_PAUSE)    SetWindowTextA(hPauseText, "Press any key...");
 }
 
-void re_register_hotkeys() {
-    UnregisterHotKey(hMain, HOTKEY_ID_RECENTER);
-    UnregisterHotKey(hMain, HOTKEY_ID_PAUSE);
-    RegisterHotKey(hMain, HOTKEY_ID_RECENTER, 0, cfg_vk_recenter);
-    RegisterHotKey(hMain, HOTKEY_ID_PAUSE, 0, cfg_vk_pause);
+/* Low-level keyboard hook callback */
+LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode == HC_ACTION && wParam == WM_KEYDOWN) {
+        KBDLLHOOKSTRUCT *kbd = (KBDLLHOOKSTRUCT *)lParam;
+        UINT vk = kbd->vkCode;
+        
+        /* Handle rebinding mode */
+        if (bind_state != STATE_IDLE) {
+            if (bind_state == STATE_BIND_RECENTER) cfg_vk_recenter = vk;
+            if (bind_state == STATE_BIND_PAUSE)    cfg_vk_pause = vk;
+            bind_state = STATE_IDLE;
+            save_config();
+            PostMessage(hMain, WM_USER + 1, 0, 0); /* Signal to update labels */
+            return 1; /* Consume the key */
+        }
+        
+        /* Check for configured hotkeys */
+        if (vk == cfg_vk_recenter) {
+            send_command("RECN");
+        } else if (vk == cfg_vk_pause) {
+            send_command("PAUS");
+        }
+    }
+    return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -84,40 +116,27 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             hPauseText    = CreateWindowA("STATIC", "Pause Key: Pause", WS_VISIBLE | WS_CHILD, 10, 40, 200, 20, hwnd, (HMENU)IDC_ST_PAUSE, NULL, NULL);
             hPauseBtn     = CreateWindowA("BUTTON", "Rebind", WS_VISIBLE | WS_CHILD, 220, 35, 60, 25, hwnd, (HMENU)IDC_BTN_PAUSE, NULL, NULL);
             update_labels();
-            re_register_hotkeys();
             break;
             
         case WM_COMMAND:
             if (LOWORD(wp) == IDC_BTN_RECENTER) {
                 bind_state = STATE_BIND_RECENTER;
                 update_labels();
-                SetFocus(hwnd); /* Return focus to window for key capture */
             } else if (LOWORD(wp) == IDC_BTN_PAUSE) {
                 bind_state = STATE_BIND_PAUSE;
                 update_labels();
-                SetFocus(hwnd); /* Return focus to window for key capture */
             }
             break;
 
-        case WM_KEYDOWN:
-        case WM_SYSKEYDOWN:
-            if (bind_state != STATE_IDLE) {
-                UINT vk = (UINT)wp;
-                if (bind_state == STATE_BIND_RECENTER) cfg_vk_recenter = vk;
-                if (bind_state == STATE_BIND_PAUSE)    cfg_vk_pause = vk;
-                bind_state = STATE_IDLE;
-                save_config();
-                update_labels();
-                re_register_hotkeys();
-            }
-            break;
-
-        case WM_HOTKEY:
-            if (wp == HOTKEY_ID_RECENTER) send_command("RECN");
-            if (wp == HOTKEY_ID_PAUSE)    send_command("PAUS");
+        case WM_USER + 1: /* Update labels signal from hook */
+            update_labels();
             break;
 
         case WM_DESTROY:
+            if (hKeyboardHook) {
+                UnhookWindowsHookEx(hKeyboardHook);
+                hKeyboardHook = NULL;
+            }
             PostQuitMessage(0);
             break;
             
@@ -131,7 +150,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
     /* Single-instance check using a named mutex */
     HANDLE hMutex = CreateMutexA(NULL, TRUE, "LtrWineHotkeysMutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        /* Another instance is already running - exit silently */
         if (hMutex) CloseHandle(hMutex);
         return 0;
     }
@@ -145,7 +163,15 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
     bridge_addr.sin_port = htons(4242);
     inet_pton(AF_INET, "127.0.0.1", &bridge_addr.sin_addr);
 
+    init_ini_path(hInst);
     load_config();
+
+    /* Install low-level keyboard hook */
+    hKeyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInst, 0);
+    if (!hKeyboardHook) {
+        MessageBoxA(NULL, "Failed to install keyboard hook", "Error", MB_OK | MB_ICONERROR);
+        return 1;
+    }
 
     WNDCLASSA wc = {0};
     wc.lpfnWndProc = WndProc;
@@ -167,6 +193,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
         DispatchMessage(&msg);
     }
     
+    if (hKeyboardHook) UnhookWindowsHookEx(hKeyboardHook);
     closesocket(client_sock);
     WSACleanup();
     return 0;

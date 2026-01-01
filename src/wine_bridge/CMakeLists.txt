@@ -149,14 +149,27 @@ if(HAS_WINE64)
 endif()
 
 # 1c. Hotkey Utility (Native Win32 EXE for Proton/Wine)
-# Built as 32-bit for maximum compatibility across prefixes
-if(ENABLE_WINE32)
-add_wine_binary(ltr_wine_hotkeys
-    OUTPUT ltr_wine_hotkeys.exe
-    BITNESS 32
-    SOURCES client/ltr_wine_hotkeys.c
-    LIBS -lws2_32 -luser32 -lgdi32
-)
+# Built with MinGW to produce a proper PE executable (not winegcc .so format)
+# This is required for reliable operation in Proton environments
+find_program(MINGW32_GCC i686-w64-mingw32-gcc)
+if(MINGW32_GCC)
+    set(HOTKEY_EXE "${CMAKE_CURRENT_BINARY_DIR}/ltr_wine_hotkeys.exe")
+    add_custom_command(
+        OUTPUT ${HOTKEY_EXE}
+        COMMAND ${MINGW32_GCC} 
+            -o ${HOTKEY_EXE}
+            -DHAVE_CONFIG_H
+            -I${CMAKE_SOURCE_DIR}
+            -I${CMAKE_BINARY_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/client/ltr_wine_hotkeys.c
+            -lws2_32 -luser32 -lgdi32 -mwindows
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/client/ltr_wine_hotkeys.c
+        COMMENT "Building ltr_wine_hotkeys.exe with MinGW (PE32)"
+    )
+    add_custom_target(ltr_wine_hotkeys ALL DEPENDS ${HOTKEY_EXE})
+    install(FILES ${HOTKEY_EXE} DESTINATION lib/linuxtrack)
+else()
+    message(WARNING "MinGW (i686-w64-mingw32-gcc) not found - skipping ltr_wine_hotkeys.exe")
 endif()
 
 # 2. FreeTrackClient

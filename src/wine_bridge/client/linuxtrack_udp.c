@@ -137,9 +137,14 @@ static DWORD WINAPI receiver_thread_func(LPVOID param) {
                  udp_log("UDP Bridge: Received RECENTER command\n");
                  linuxtrack_recenter();
              } else if (memcmp(buffer, "PAUS", 4) == 0) {
-                 udp_log("UDP Bridge: Received PAUSE command\n");
-                 if (paused) linuxtrack_wakeup();
-                 else linuxtrack_suspend();
+                 udp_log("UDP Bridge: Received PAUSE command (currently paused=%d)\n", paused);
+                 if (paused) {
+                     linuxtrack_wakeup();
+                     udp_log("UDP Bridge: Tracking resumed\n");
+                 } else {
+                     linuxtrack_suspend();
+                     udp_log("UDP Bridge: Tracking paused\n");
+                 }
              }
         } else if (bytes == SOCKET_ERROR) {
             int err = WSAGetLastError();
