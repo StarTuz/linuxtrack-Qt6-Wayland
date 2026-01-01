@@ -14,18 +14,21 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - **Qt6 & Wayland Support**: Fully ported from Qt4/5 to Qt6. Removed `QtX11Extras` to allow the GUI to run natively on Wayland.
 - **Modern OpenGL (3.0+)**: Rewrote the 3D Tracking View using a programmable shader-based pipeline (GLES 3.0), replacing the broken 20-year-old fixed-function legacy code.
 - **Bison/Flex Removal**: Replaced complex legacy configuration parsers with the lightweight, robust `mINI` library.
-- **TrackIR 5 V3 Support**: Full hardware activation for the latest TrackIR 5 revisions
+- **TrackIR 5 V3 Support**: Full hardware activation for the latest TrackIR 5 revisions.
+- **Unified UDP Bridge**: New high-precision UDP stack that solves symmetry and range issues in full-screen games. Uses a unique coordinated architecture where hotkeys (Wine) trigger server-side (Linux) recentering on port 4243.
 
 ## 🎮 Verified Games & Apps
 
 - ✅ **DCS World** (Proton, with Controller.exe hotkeys)
-- ✅ **Elite Dangerous** (Proton 10/Steam Launcher)
+- ✅ **Elite Dangerous** (Proton 10/Steam Launcher, symmetric range via UDP)
+- ✅ **Train Sim World 6** (Proton, full 6DOF via UDP Bridge)
 - ✅ **X-Plane 12** (Native Linux Plugin)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
 ## 🛠️ Installation
 
 ### 1. Build from Source (CMake)
+
 **Prerequisites:** Qt6 (likely 6.10+ recommended), OpenGLES/OpenGL drivers, libusb-1.0, libmxml, liblo.
 
 ```bash
@@ -38,11 +41,12 @@ sudo make install
 ```
 
 ### 2. AppImage Distribution
+
 **Generic AppImage:** The generic CI build is currently experimental due to Qt6 ABI complexity.
 **Arch Linux AppImage:** A verified, working AppImage (built against Arch system Qt) is available. This version uses the host system's Qt libraries for maximum compatibility on rolling release distros.
 
-
 ### 3. Configure Wine/Proton Support
+
 1. Open `ltr_gui`.
 2. Go to the **Misc.** tab.
 3. Click **"Install Linuxtrack-Wine support..."**.
@@ -54,6 +58,7 @@ sudo make install
 Current progress is tracked in [MODERNIZATION_ROADMAP.md](MODERNIZATION_ROADMAP.md).
 
 **Completed:**
+
 - [x] Qt6 Migration & Wayland safety.
 - [x] Modern OpenGL Shader-based 3D View.
 - [x] Bison/Flex to mINI migration.
@@ -62,11 +67,12 @@ Current progress is tracked in [MODERNIZATION_ROADMAP.md](MODERNIZATION_ROADMAP.
 - [x] Automatic Steam/Proton/Lutris/Bottles Prefix Discovery.
 - [x] Controller.exe for customizable Pause/Recenter hotkeys.
 - [x] Linux-native global hotkey daemon.
+- [x] Coordinated UDP Bridge for symmetric 6DOF tracking.
 
 **Upcoming:**
+
 - [ ] Native UI for model scaling/offsets.
 - [-] AppImage/Flatpak distribution (Arch AppImage verified).
-
 
 ---
 
