@@ -166,7 +166,7 @@ add_subdirectory(ltr_hotkey_gui)
 # --- Installation ---
 
 # 1. Libraries (Core)
-install(TARGETS ltr linuxtrack DESTINATION lib)
+install(TARGETS ltr linuxtrack DESTINATION lib/linuxtrack)
 
 # 2. Drivers (Plugins)
 foreach(DRV wc tir joy ft ltusb1 xlinuxtrack9 xlinuxtrack9_32)

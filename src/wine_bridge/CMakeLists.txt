@@ -123,6 +123,31 @@ if(HAS_WINE64)
     )
 endif()
 
+# 1b. NPClient UDP (Robust version - no Linux library dependencies)
+# Uses Winsock to receive pose data from ltr_udp
+# Uses simplified NPClient_udp_main.c that has no file/registry dependencies
+if(ENABLE_WINE32)
+add_wine_binary(NPClientUDP32
+    OUTPUT NPClientUDP.dll.so
+    BITNESS 32
+    SHARED
+    SPEC client/NPClient.spec
+    SOURCES client/NPClient_udp_main.c client/linuxtrack_udp.c client/rest.c
+    LIBS -lws2_32
+)
+endif()
+
+if(HAS_WINE64)
+    add_wine_binary(NPClientUDP64
+        OUTPUT NPClient64UDP.dll.so
+        BITNESS 64
+        SHARED
+        SPEC client/NPClient.spec
+        SOURCES client/NPClient_udp_main.c client/linuxtrack_udp.c client/rest.c
+        LIBS -lws2_32
+    )
+endif()
+
 # 2. FreeTrackClient
 # 2. FreeTrackClient
 if(ENABLE_WINE32)

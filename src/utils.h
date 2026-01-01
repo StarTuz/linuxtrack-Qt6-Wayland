@@ -29,6 +29,7 @@ void ltr_int_strlower(char *s);
 LIBLINUXTRACK_PRIVATE char *ltr_int_my_strcat(const char *str1,
                                               const char *str2);
 LIBLINUXTRACK_PRIVATE char *ltr_int_get_default_file_name(const char *fname);
+LIBLINUXTRACK_PRIVATE char *ltr_int_get_ipc_path(const char *fname);
 LIBLINUXTRACK_PRIVATE char *ltr_int_get_app_path(const char *suffix);
 char *ltr_int_get_data_path_prefix(const char *data, const char *prefix);
 char *ltr_int_get_data_path(const char *data);

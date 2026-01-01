@@ -288,8 +288,25 @@ char *linuxtrack_get_prefix() {
   key = (char *)malloc(4096);
   while (!feof(f)) {
     if (fgets(line, 4095, f) != NULL) {
-      if ((sscanf(line, "%s = \"%[^\"\n]", key, val) == 2) &&
-          strcasecmp(key, "prefix") == 0) {
+      /*
+       * Try multiple formats for robustness:
+       * 1. Key = "value"  (original format with spaces)
+       * 2. Key="value"    (no spaces around =)
+       * 3. Key= "value"   (space after = only)
+       * 4. Key ="value"   (space before = only)
+       */
+      int matched = 0;
+      if (sscanf(line, "%s = \"%[^\"\n]", key, val) == 2) {
+        matched = 1;
+      } else if (sscanf(line, "%[^=]=\"%[^\"\n]", key, val) == 2) {
+        matched = 1;
+        /* Trim trailing whitespace from key */
+        char *end = key + strlen(key) - 1;
+        while (end > key && (*end == ' ' || *end == '\t')) {
+          *end-- = '\0';
+        }
+      }
+      if (matched && strcasecmp(key, "prefix") == 0) {
         prefix = strdup(val);
         break;
       }

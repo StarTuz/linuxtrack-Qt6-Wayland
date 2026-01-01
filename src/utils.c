@@ -241,6 +241,49 @@ char *ltr_int_get_default_file_name(const char *fname) {
   }
 }
 
+char *ltr_int_get_ipc_path(const char *fname) {
+  char *runtime_dir = getenv("XDG_RUNTIME_DIR");
+  char *ipc_path = NULL;
+  
+  // Strategy 1: XDG_RUNTIME_DIR/linuxtrack (Best for IPC, usually mapped)
+  if (runtime_dir != NULL) {
+    struct stat st;
+    char *dir_path = NULL;
+    if (asprintf(&dir_path, "%s/linuxtrack", runtime_dir) != -1) {
+      if (stat(dir_path, &st) == -1) {
+        mkdir(dir_path, 0700);
+      }
+      if (asprintf(&ipc_path, "%s/%s", dir_path, fname) != -1) {
+        free(dir_path);
+        return ipc_path;
+      }
+      free(dir_path);
+    }
+  }
+
+  // Strategy 2: ~/.config/linuxtrack/run (Fallback, definitely shared)
+  char *home = getenv("HOME");
+  if (home != NULL) {
+    char *dir_path = NULL;
+    if (asprintf(&dir_path, "%s/.config/linuxtrack/run", home) != -1) {
+       if (stat(dir_path, &st) == -1) {
+         mkdir(dir_path, 0700);
+       }
+       if (asprintf(&ipc_path, "%s/%s", dir_path, fname) != -1) {
+         free(dir_path);
+         return ipc_path;
+       }
+       free(dir_path);
+    }
+  }
+
+  // Strategy 3: /tmp (Legacy fallback, broken in containers)
+  if (asprintf(&ipc_path, "/tmp/%s", fname) != -1) {
+    return ipc_path;
+  }
+  return NULL;
+}
+
 char *ltr_int_get_app_path(const char *suffix) {
   char *fname = ltr_int_get_default_file_name(NULL);
   if (fname == NULL) {

@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\NaturalPoint]
+
+[HKEY_CURRENT_USER\Software\NaturalPoint\NATURALPOINT]
+
+[HKEY_CURRENT_USER\Software\NaturalPoint\NATURALPOINT\NPClient Location]
+"Path"="C:\\Program Files\\Linuxtrack\\"

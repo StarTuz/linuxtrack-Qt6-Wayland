@@ -10,6 +10,8 @@
 #include <config.h>
 #endif
 
+extern void udp_log(const char *fmt, ...);
+
 static ssize_t my_getline(char **lineptr, size_t *n, FILE *f) {
 #ifndef DARWIN
 #ifdef __MINGW32__
@@ -88,9 +90,17 @@ bool game_data_get_desc(int id, game_desc_t *gd) {
            home);
 #endif
   if ((f = fopen(path1, "r")) == NULL) {
-    printf("Can't open data file '%s'!\n", path1);
-    free(path1);
-    return false;
+    udp_log("UDP Bridge ERROR: Can't open data file '%s'\n", path1);
+    /* Try a hardcoded path as fallback since Wine HOME can be weird */
+    const char *fallback = "/home/startux/.config/linuxtrack/tir_firmware/gamedata.txt";
+    if ((f = fopen(fallback, "r")) == NULL) {
+        udp_log("UDP Bridge ERROR: Fallback '%s' also failed\n", fallback);
+        free(path1);
+        return false;
+    }
+    udp_log("UDP Bridge: Using fallback path for gamedata.txt\n");
+  } else {
+    udp_log("UDP Bridge: Opened gamedata.txt at %s\n", path1);
   }
   int tmp_id;
   size_t tmp_str_size = 4096;
@@ -723,29 +733,45 @@ bool getSomeSeriousPoetry(char *verse1, char *verse2) {
   memset(verse1, 0, 200);
   if (f1 != NULL) {
     if (fread(verse1, 1, 200, f1) == 0) {
-      printf("Cant read dll signature('%s')!\n", path1);
+      udp_log("UDP Bridge: Cant read dll signature('%s')!\n", path1);
       res = false;
     }
-    printf("DLL SIGNATURE: %s\n", verse1);
+    // udp_log("UDP Bridge: Signature 1 OK\n");
     fclose(f1);
   } else {
-    printf("Can't open dll signature ('%s')!\n", path1);
-    res = false;
+    /* Fallback */
+    const char *fallback = "/home/startux/.config/linuxtrack/tir_firmware/poem1.txt";
+    f1 = fopen(fallback, "rb");
+    if(f1 != NULL){
+        fread(verse1, 1, 200, f1);
+        fclose(f1);
+        udp_log("UDP Bridge: Using fallback for poem1\n");
+    } else {
+        udp_log("UDP Bridge: Can't open dll signature ('%s')!\n", path1);
+        res = false;
+    }
   }
   free(path1);
   FILE *f2 = fopen(path2, "rb");
   memset(verse2, 0, 200);
   if (f2 != NULL) {
     if (fread(verse2, 1, 200, f2) == 0) {
-      perror("fread");
-      printf("Cant read app signature('%s')!\n", path2);
+      udp_log("UDP Bridge: Cant read app signature('%s')!\n", path2);
       res = false;
     }
-    printf("APP SIGNATURE: %s\n", verse2);
     fclose(f2);
   } else {
-    printf("Cant open app signature('%s')!\n", path2);
-    res = false;
+    /* Fallback */
+    const char *fallback = "/home/startux/.config/linuxtrack/tir_firmware/poem2.txt";
+    f2 = fopen(fallback, "rb");
+    if(f2 != NULL){
+        fread(verse2, 1, 200, f2);
+        fclose(f2);
+        udp_log("UDP Bridge: Using fallback for poem2\n");
+    } else {
+        udp_log("UDP Bridge: Cant open app signature('%s')!\n", path2);
+        res = false;
+    }
   }
   free(path2);
   return res;
