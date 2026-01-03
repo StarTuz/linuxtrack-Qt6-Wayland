@@ -63,6 +63,11 @@ void UdpBridge::setProtocol(Protocol p)
     proto = p;
 }
 
+void UdpBridge::setProfile(const QString &profileName)
+{
+    profile = profileName;
+}
+
 QString UdpBridge::targetAddress() const
 {
     return address.toString();
@@ -75,6 +80,8 @@ void UdpBridge::start()
     // Spawn ltr_udp process
     if (!ltrUdpProcess) {
         ltrUdpProcess = new QProcess(this);
+        connect(ltrUdpProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, &UdpBridge::onProcessFinished);
     }
     
     // Build arguments based on settings
@@ -83,6 +90,9 @@ void UdpBridge::start()
     args << QString::fromLatin1("--port=") + QString::number(port);
     if (proto == FreeTrack) {
         args << QString::fromLatin1("--proto=freetrack");
+    }
+    if (!profile.isEmpty()) {
+        args << QString::fromLatin1("--profile=") + profile;
     }
     
     // Find ltr_udp binary
@@ -118,6 +128,16 @@ void UdpBridge::stop()
     
     running = false;
     emit statusChanged(false);
+}
+
+void UdpBridge::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    (void)exitCode;
+    (void)exitStatus;
+    if (running) {
+        running = false;
+        emit statusChanged(false);
+    }
 }
 
 void UdpBridge::sendPose(float yaw, float pitch, float roll, float x, float y, float z)

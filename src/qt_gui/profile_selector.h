@@ -18,6 +18,8 @@ private:
   ProfileSetup *ps;
   bool initializing;
   bool setCurrentProfile(QString prof);
+signals:
+  void profileChanged(const QString &profileName);
 public slots:
   bool close();
 private slots:

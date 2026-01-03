@@ -24,6 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef HAVE_WAYLAND
+#include <gio/gio.h>
+#include <glib.h>
+#endif
 
 /* Linuxtrack client API */
 #include "linuxtrack.h"
@@ -32,6 +36,7 @@
 static volatile bool running = true;
 static bool verbose = false;
 static bool tracking_paused = false;
+static const char *profile_name = NULL;  /* NULL = use "Default" profile */
 static Display *display = NULL;
 static Window root_window;
 
@@ -263,17 +268,19 @@ static void load_config(void) {
 }
 
 static void action_recenter(void) {
-  log_msg("Recentering tracking...");
+  linuxtrack_state_type state = linuxtrack_get_tracking_state();
+  log_msg("Recentering tracking (current state: %s)...", linuxtrack_explain(state));
   linuxtrack_recenter();
 }
 
 static void action_toggle_pause(void) {
+  linuxtrack_state_type state = linuxtrack_get_tracking_state();
   if (tracking_paused) {
-    log_msg("Resuming tracking...");
+    log_msg("Resuming tracking (current state: %s)...", linuxtrack_explain(state));
     linuxtrack_wakeup();
     tracking_paused = false;
   } else {
-    log_msg("Pausing tracking...");
+    log_msg("Pausing tracking (current state: %s)...", linuxtrack_explain(state));
     linuxtrack_suspend();
     tracking_paused = true;
   }
@@ -311,6 +318,7 @@ static bool grab_hotkeys(void) {
 }
 
 static void ungrab_hotkeys(void) {
+  if (!display) return;
   for (int i = 0; hotkeys[i].keysym != 0; i++) {
     KeyCode keycode = XKeysymToKeycode(display, hotkeys[i].keysym);
     if (keycode != 0) {
@@ -337,6 +345,283 @@ static void process_key_event(XKeyEvent *ke) {
   }
 }
 
+static int run_x11_daemon(void) {
+  /* Connect to X11 */
+  display = XOpenDisplay(NULL);
+  if (!display) {
+    fprintf(stderr, "Error: Cannot open X display. Are you running X11?\n");
+    return 1;
+  }
+
+  root_window = DefaultRootWindow(display);
+  log_msg("Connected to X11 display.");
+
+  /* Initialize Linuxtrack with specified profile */
+  linuxtrack_state_type state = linuxtrack_init(profile_name);
+  if (state < LINUXTRACK_OK) {
+    fprintf(stderr, "Error: Cannot initialize Linuxtrack: %s\n",
+            linuxtrack_explain(state));
+    XCloseDisplay(display);
+    return 1;
+  }
+
+  /* Wait for tracker to be running */
+  int timeout = 0;
+  while (timeout < 50) {
+    state = linuxtrack_get_tracking_state();
+    if (state == RUNNING || state == PAUSED) {
+      break;
+    }
+    usleep(100000);
+    timeout++;
+  }
+
+  if (state != RUNNING && state != PAUSED) {
+    fprintf(stderr, "Warning: Tracker not running (state: %s)\n",
+            linuxtrack_explain(state));
+    fprintf(stderr, "X11 Hotkeys will work once tracking starts.\n");
+  } else {
+    log_msg("Linuxtrack connected (state: %s)", linuxtrack_explain(state));
+  }
+
+  /* Grab global hotkeys */
+  if (!grab_hotkeys()) {
+    fprintf(stderr, "Error: Failed to grab X11 hotkeys.\n");
+    linuxtrack_shutdown();
+    XCloseDisplay(display);
+    return 1;
+  }
+
+  printf("ltr_hotkeyd: Ready (X11 backend). Hotkeys active.\n");
+  printf("  Recenter     = %s%s\n",
+         hotkeys[0].modifiers & ControlMask ? "Ctrl+" : "",
+         XKeysymToString(hotkeys[0].keysym));
+  printf("  Toggle Pause = %s%s\n",
+         hotkeys[1].modifiers & ControlMask ? "Ctrl+" : "",
+         XKeysymToString(hotkeys[1].keysym));
+
+  /* Main event loop */
+  XEvent event;
+  while (running) {
+    if (XPending(display) > 0) {
+      XNextEvent(display, &event);
+      if (event.type == KeyPress) {
+        process_key_event(&event.xkey);
+      }
+    } else {
+      usleep(50000); /* 50ms idle */
+    }
+  }
+
+  /* Cleanup */
+  printf("\nltr_hotkeyd: Shutting down X11 backend...\n");
+  ungrab_hotkeys();
+  linuxtrack_shutdown();
+  XCloseDisplay(display);
+  return 0;
+}
+
+#ifdef HAVE_WAYLAND
+static void on_shortcut_activated(GDBusConnection *connection,
+                                 const gchar *sender_name,
+                                 const gchar *object_path,
+                                 const gchar *interface_name,
+                                 const gchar *signal_name,
+                                 GVariant *parameters,
+                                 gpointer user_data) {
+    (void)connection; (void)sender_name; (void)object_path;
+    (void)interface_name; (void)signal_name; (void)user_data;
+
+    log_msg("Shortcut signal received: %s.%s", interface_name, signal_name);
+
+    const gchar *shortcut_id = NULL;
+    const gchar *session_handle = NULL;
+    guint64 timestamp = 0;
+    GVariantIter *options = NULL;
+    
+    /* Try to parse signature (osta{sv}) - found on some systems like KDE */
+    if (g_variant_is_of_type(parameters, G_VARIANT_TYPE("(osta{sv})"))) {
+        g_variant_get(parameters, "(&o&sta{sv})", &session_handle, &shortcut_id, &timestamp, &options);
+        log_msg("Wayland shortcut activated: %s (session: %s, ts: %lu)", shortcut_id, session_handle, timestamp);
+        if (strcmp(shortcut_id, "recenter") == 0) {
+            action_recenter();
+        } else if (strcmp(shortcut_id, "toggle_pause") == 0) {
+            action_toggle_pause();
+        }
+        g_variant_iter_free(options);
+    } 
+    /* Fallback to (osa{sv}) as per spec */
+    else if (g_variant_is_of_type(parameters, G_VARIANT_TYPE("(osa{sv})"))) {
+        g_variant_get(parameters, "(&o&sa{sv})", &session_handle, &shortcut_id, &options);
+        log_msg("Wayland shortcut activated: %s (session: %s)", shortcut_id, session_handle);
+        if (strcmp(shortcut_id, "recenter") == 0) {
+            action_recenter();
+        } else if (strcmp(shortcut_id, "toggle_pause") == 0) {
+            action_toggle_pause();
+        }
+        g_variant_iter_free(options);
+    }
+    else {
+        log_msg("Received shortcut signal with unknown signature: %s", 
+                g_variant_get_type_string(parameters));
+    }
+}
+
+static void on_portal_response(GDBusConnection *connection,
+                             const gchar *sender_name,
+                             const gchar *object_path,
+                             const gchar *interface_name,
+                             const gchar *signal_name,
+                             GVariant *parameters,
+                             gpointer user_data) {
+    (void)connection; (void)sender_name; (void)object_path;
+    (void)interface_name; (void)signal_name;
+    GDBusProxy *proxy = (GDBusProxy *)user_data;
+
+    guint32 response;
+    GVariant *results;
+    g_variant_get(parameters, "(u@a{sv})", &response, &results);
+
+    if (response == 0) {
+        log_msg("Portal session created successfully.");
+        const gchar *session_handle = NULL;
+        if (g_variant_lookup(results, "session_handle", "&s", &session_handle)) {
+            log_msg("Session handle: %s", session_handle);
+
+            /* Build shortcuts */
+            GVariantBuilder shortcuts_builder;
+            g_variant_builder_init(&shortcuts_builder, G_VARIANT_TYPE("a(sa{sv})"));
+
+            GVariantBuilder recenter_options;
+            g_variant_builder_init(&recenter_options, G_VARIANT_TYPE("a{sv}"));
+            g_variant_builder_add(&recenter_options, "{sv}", "description", g_variant_new_string("Recenter Tracking"));
+            g_variant_builder_add(&recenter_options, "{sv}", "preferred_trigger", g_variant_new_string("F12"));
+            g_variant_builder_add(&shortcuts_builder, "(sa{sv})", "recenter", &recenter_options);
+
+            GVariantBuilder pause_options;
+            g_variant_builder_init(&pause_options, G_VARIANT_TYPE("a{sv}"));
+            g_variant_builder_add(&pause_options, "{sv}", "description", g_variant_new_string("Toggle Tracking Pause"));
+            g_variant_builder_add(&pause_options, "{sv}", "preferred_trigger", g_variant_new_string("Pause"));
+            g_variant_builder_add(&shortcuts_builder, "(sa{sv})", "toggle_pause", &pause_options);
+
+            GVariantBuilder bind_opt_builder;
+            g_variant_builder_init(&bind_opt_builder, G_VARIANT_TYPE_VARDICT);
+
+            GError *error = NULL;
+            GVariant *res = g_dbus_proxy_call_sync(proxy, "BindShortcuts",
+                                               g_variant_new("(oa(sa{sv})sa{sv})",
+                                                           session_handle,
+                                                           &shortcuts_builder,
+                                                           "", /* parent window */
+                                                           &bind_opt_builder),
+                                               G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+            if (res) {
+                log_msg("Shortcuts bound successfully.");
+                g_variant_unref(res);
+            } else {
+                log_msg("Failed to bind shortcuts: %s", error->message);
+                g_error_free(error);
+            }
+        }
+    } else {
+        log_msg("Portal session creation denied or failed: %u", response);
+    }
+    g_variant_unref(results);
+}
+
+int run_wayland_daemon(void) {
+    GError *error = NULL;
+    GDBusConnection *conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+    if (!conn) {
+        log_msg("Failed to connect to session bus: %s", error->message);
+        g_error_free(error);
+        return 1;
+    }
+
+    /* Initialize Linuxtrack with specified profile */
+    linuxtrack_state_type state = linuxtrack_init(profile_name);
+    if (state < LINUXTRACK_OK) {
+        fprintf(stderr, "Error: Cannot initialize Linuxtrack: %s\n", linuxtrack_explain(state));
+        g_object_unref(conn);
+        return 1;
+    }
+
+    GDBusProxy *proxy = g_dbus_proxy_new_sync(conn,
+                                           G_DBUS_PROXY_FLAGS_NONE,
+                                           NULL,
+                                           "org.freedesktop.portal.Desktop",
+                                           "/org/freedesktop/portal/desktop",
+                                           "org.freedesktop.portal.GlobalShortcuts",
+                                           NULL, &error);
+    if (!proxy) {
+        log_msg("GlobalShortcuts portal not available: %s", error->message);
+        g_error_free(error);
+        linuxtrack_shutdown();
+        g_object_unref(conn);
+        return 1;
+    }
+
+    log_msg("Connected to GlobalShortcuts portal.");
+
+    /* Subscribing to Activated signal */
+    g_dbus_connection_signal_subscribe(conn,
+                                     NULL, /* Any sender */
+                                     "org.freedesktop.portal.GlobalShortcuts",
+                                     "Activated",
+                                     "/org/freedesktop/portal/desktop",
+                                     NULL,
+                                     G_DBUS_SIGNAL_FLAGS_NONE,
+                                     on_shortcut_activated,
+                                     NULL, NULL);
+
+    /* Create session */
+    GVariantBuilder opt_builder;
+    g_variant_builder_init(&opt_builder, G_VARIANT_TYPE_VARDICT);
+    g_variant_builder_add(&opt_builder, "{sv}", "session_handle_token", g_variant_new_string("linuxtrack"));
+    g_variant_builder_add(&opt_builder, "{sv}", "label", g_variant_new_string("LinuxTrack"));
+
+    GVariant *res = g_dbus_proxy_call_sync(proxy, "CreateSession",
+                                        g_variant_new("(a{sv})", &opt_builder),
+                                        G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+    if (!res) {
+        log_msg("Failed to create portal session: %s", error->message);
+        g_error_free(error);
+        g_object_unref(proxy);
+        linuxtrack_shutdown();
+        g_object_unref(conn);
+        return 1;
+    }
+
+    const gchar *request_handle;
+    g_variant_get(res, "(o)", &request_handle);
+    log_msg("Portal session request handle: %s", request_handle);
+    g_variant_unref(res);
+
+    /* Subscribe to the Response signal for this request */
+    g_dbus_connection_signal_subscribe(conn,
+                                     "org.freedesktop.portal.Desktop",
+                                     "org.freedesktop.portal.Request",
+                                     "Response",
+                                     request_handle,
+                                     NULL,
+                                     G_DBUS_SIGNAL_FLAGS_NONE,
+                                     on_portal_response,
+                                     proxy, NULL);
+
+    printf("ltr_hotkeyd: Wayland backend initialized. Waiting for portal triggers...\n");
+    printf("Note: You may need to configure shortcuts in your Desktop Settings (KDE/GNOME).\n");
+
+    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+    g_main_loop_run(loop);
+
+    g_main_loop_unref(loop);
+    g_object_unref(proxy);
+    linuxtrack_shutdown();
+    g_object_unref(conn);
+    return 0;
+}
+#endif
+
 static void print_usage(const char *progname) {
   printf("Usage: %s [OPTIONS]\n"
          "\n"
@@ -345,6 +630,7 @@ static void print_usage(const char *progname) {
          "Options:\n"
          "  --help, -h      Show this help message\n"
          "  --verbose, -v   Print verbose messages\n"
+         "  --profile=NAME  Use specified profile (default: Default)\n"
          "\n"
          "Default Hotkeys (configurable via ltr_hotkey_gui):\n"
          "  F12             Recenter tracking\n"
@@ -367,6 +653,8 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(argv[i], "--verbose") == 0 ||
                strcmp(argv[i], "-v") == 0) {
       verbose = true;
+    } else if (strncmp(argv[i], "--profile=", 10) == 0) {
+      profile_name = argv[i] + 10;
     }
   }
 
@@ -379,84 +667,18 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
 
-  /* Connect to X11 */
-  display = XOpenDisplay(NULL);
-  if (!display) {
-    fprintf(stderr, "Error: Cannot open X display. Are you running X11?\n");
-    fprintf(stderr, "Note: Wayland is not supported. Use X11 or XWayland.\n");
-    return 1;
-  }
-
-  root_window = DefaultRootWindow(display);
-  log_msg("Connected to X11 display.");
-
-  /* Initialize Linuxtrack */
-  linuxtrack_state_type state = linuxtrack_init(NULL);
-  if (state < LINUXTRACK_OK) {
-    fprintf(stderr, "Error: Cannot initialize Linuxtrack: %s\n",
-            linuxtrack_explain(state));
-    fprintf(stderr, "Make sure ltr_gui is running or ltr_server1 is active.\n");
-    XCloseDisplay(display);
-    return 1;
-  }
-
-  /* Wait for tracker to be running */
-  int timeout = 0;
-  while (timeout < 50) {
-    state = linuxtrack_get_tracking_state();
-    if (state == RUNNING || state == PAUSED) {
-      break;
-    }
-    usleep(100000);
-    timeout++;
-  }
-
-  if (state != RUNNING && state != PAUSED) {
-    fprintf(stderr, "Warning: Tracker not running (state: %s)\n",
-            linuxtrack_explain(state));
-    fprintf(stderr, "Hotkeys will work once tracking starts.\n");
-  } else {
-    log_msg("Linuxtrack connected (state: %s)", linuxtrack_explain(state));
-  }
-
-  /* Grab global hotkeys */
-  if (!grab_hotkeys()) {
-    fprintf(stderr, "Error: Failed to grab hotkeys.\n");
-    linuxtrack_shutdown();
-    XCloseDisplay(display);
-    return 1;
-  }
-
-  printf("ltr_hotkeyd: Ready. Hotkeys active.\n");
-  printf("  Recenter     = %s%s\n",
-         hotkeys[0].modifiers & ControlMask ? "Ctrl+" : "",
-         XKeysymToString(hotkeys[0].keysym));
-  printf("  Toggle Pause = %s%s\n",
-         hotkeys[1].modifiers & ControlMask ? "Ctrl+" : "",
-         XKeysymToString(hotkeys[1].keysym));
-  printf("  Quit         = %s%s\n",
-         hotkeys[2].modifiers & ControlMask ? "Ctrl+" : "",
-         XKeysymToString(hotkeys[2].keysym));
-
-  /* Main event loop */
-  XEvent event;
-  while (running) {
-    /* Use XPending + XNextEvent for non-blocking check with timeout */
-    if (XPending(display) > 0) {
-      XNextEvent(display, &event);
-      if (event.type == KeyPress) {
-        process_key_event(&event.xkey);
+#ifdef HAVE_WAYLAND
+  const char *session_type = getenv("XDG_SESSION_TYPE");
+  const char *wayland_display = getenv("WAYLAND_DISPLAY");
+  if ((session_type && strcmp(session_type, "wayland") == 0) || wayland_display) {
+      log_msg("Detected Wayland session. Attempting Wayland backend...");
+      extern int run_wayland_daemon(void);
+      if (run_wayland_daemon() == 0) {
+          return 0;
       }
-    } else {
-      usleep(50000); /* 50ms idle */
-    }
+      log_msg("Wayland backend failed or unavailable, falling back to X11.");
   }
+#endif
 
-  /* Cleanup */
-  printf("\nltr_hotkeyd: Shutting down...\n");
-  ungrab_hotkeys();
-  linuxtrack_shutdown();
-  XCloseDisplay(display);
-
-  return 0;
+  return run_x11_daemon();
 }

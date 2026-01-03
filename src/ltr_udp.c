@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
   const char *target_ip = DEFAULT_HOST;
   int target_port = DEFAULT_PORT;
   proto_t protocol = PROTO_OPENTRACK;
+  const char *profile_name = NULL;  // NULL = use "Default" profile
 
   // Parse simple arguments
   for (int i = 1; i < argc; i++) {
@@ -81,6 +82,8 @@ int main(int argc, char *argv[]) {
       target_ip = argv[i] + 5;
     } else if (strncmp(argv[i], "--port=", 7) == 0) {
       target_port = atoi(argv[i] + 7);
+    } else if (strncmp(argv[i], "--profile=", 10) == 0) {
+      profile_name = argv[i] + 10;
     } else {
       // Assume port if just a number
       int p = atoi(argv[i]);
@@ -108,16 +111,16 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  printf("ltr_udp: Starting...\n");
-  printf("ltr_udp: Protocol: %s\n", (protocol == PROTO_OPENTRACK)
-                                        ? "OpenTrack (6 doubles)"
-                                        : "FreeTrack (9 fields)");
-  printf("ltr_udp: Target:   %s:%d\n", target_ip, target_port);
+  printf("ltr_udp v1.2.0 starting...\n");
+  printf("Protocol: %s\n", (protocol == PROTO_OPENTRACK) ? "OpenTrack (UDP)" : "FreeTrack");
+  printf("Target:   %s:%d\n", target_ip, target_port);
+  printf("Profile:  %s\n", profile_name ? profile_name : "Default");
   printf("Press Ctrl+C to stop.\n");
 
-  // Initialize Linuxtrack
-  printf("ltr_udp: Initializing Linuxtrack client...\n");
-  linuxtrack_state_type state = linuxtrack_init(NULL);
+  // Initialize Linuxtrack with specified profile
+  printf("ltr_udp: Initializing Linuxtrack with profile '%s'...\n", 
+         profile_name ? profile_name : "Default");
+  linuxtrack_state_type state = linuxtrack_init(profile_name);
   if (state < LINUXTRACK_OK) {
     fprintf(stderr, "Failed to initialize linuxtrack: %s\n",
             linuxtrack_explain(state));

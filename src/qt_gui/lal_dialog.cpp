@@ -18,11 +18,10 @@ void LALDialog::setupUi() {
   QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
   // Info Label
-  QLabel *infoLabel = new QLabel(tr("<b>Licensed Asset Loader</b><br>"
-                                    "Manage proprietary drivers and firmware "
-                                    "required for certain devices.<br>"
-                                    "Assets are installed locally to your user "
-                                    "directory (no Wine required)."),
+  QLabel *infoLabel = new QLabel(tr("<b>Licensed Asset Loader (Proof of Concept)</b><br>"
+                                    "A framework for managing proprietary firmware.<br>"
+                                    "<i>Note: Full functionality requires hardware vendors (NaturalPoint, Tobii) "
+                                    "to provide compatible archive formats. Currently supports TrackIR installer extraction.</i>"),
                                  this);
   mainLayout->addWidget(infoLabel);
 

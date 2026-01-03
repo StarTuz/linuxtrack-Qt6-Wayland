@@ -77,10 +77,19 @@ AssetDefinition LALManager::getAssetDefinition(const std::string &id) const {
 }
 
 AssetStatus LALManager::getAssetStatus(const std::string &id) const {
-  // TODO: Implement actual check
-  // Check if expected destination files exist in
-  // ~/.local/share/linuxtrack/lal/<id>/
-  (void)id;
+  const char *home = std::getenv("HOME");
+  if (!home) return AssetStatus::MISSING;
+  
+  fs::path installDir = fs::path(home) / ".local/share/linuxtrack/lal" / id;
+  
+  // Check if directory exists and has files
+  if (fs::exists(installDir) && fs::is_directory(installDir)) {
+    std::error_code ec;
+    auto it = fs::directory_iterator(installDir, ec);
+    if (!ec && it != fs::end(it)) {
+      return AssetStatus::INSTALLED;  // Has at least one file
+    }
+  }
   return AssetStatus::MISSING;
 }
 

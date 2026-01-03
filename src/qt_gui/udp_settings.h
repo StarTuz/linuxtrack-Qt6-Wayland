@@ -44,7 +44,6 @@ private:
     void updateStatus();
     
     QProcess *hotkeyProcess;
-    bool stackRunning;
 };
 
 #endif // UDP_SETTINGS_H

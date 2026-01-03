@@ -25,6 +25,7 @@ public:
 
     void setTarget(const QString &ip, int port);
     void setProtocol(Protocol p);
+    void setProfile(const QString &profileName);
     
     bool isRunning() const { return running; }
     QString targetAddress() const;
@@ -44,6 +45,7 @@ signals:
 
 private slots:
     void onCommandReadyRead();
+    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
 private:
     QUdpSocket *socket;
@@ -53,6 +55,7 @@ private:
     Protocol proto;
     bool running;
     QProcess *ltrUdpProcess;
+    QString profile;
 };
 
 #endif // UDP_BRIDGE_H

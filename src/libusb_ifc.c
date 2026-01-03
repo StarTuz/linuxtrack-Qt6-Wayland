@@ -1,6 +1,7 @@
 #include <libusb-1.0/libusb.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <unistd.h>
 #define USB_IMPL_ONLY
 #include "usb_ifc.h"
 #include "utils.h"
@@ -222,7 +223,15 @@ dev_found ltr_int_find_tir(void)
     ltr_int_log_message("Opening handle to the device found.\n");
     err = libusb_open(found, &handle);
     if(err){
-      ltr_int_log_message("Error opening device!\n");
+      // Retry once after short delay (udev timing issue workaround)
+      ltr_int_log_message("First open attempt failed (%s), retrying after 200ms...\n", 
+                          libusb_strerror(err));
+      usleep(200000);
+      err = libusb_open(found, &handle);
+    }
+    if(err){
+      ltr_int_log_message("Error opening device: %s\n", libusb_strerror(err));
+      ltr_int_log_message("If udev rules are installed, try unplugging and replugging the device.\n");
       return dev | NOT_PERMITTED;
     }
     ltr_int_log_message("Handle opened successfully.\n");

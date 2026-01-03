@@ -25,6 +25,35 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Linux Plugin)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
+## 🔧 Hardware Setup (TrackIR/SmartNav)
+
+### Udev Rules (Required for USB Access)
+
+Your TrackIR/SmartNav device needs udev rules so Linux can access it without root privileges.
+
+**Step 1: Copy the rules file**
+
+```bash
+# If installed to /opt/linuxtrack:
+sudo cp /opt/linuxtrack/share/linuxtrack/99-TIR.rules /etc/udev/rules.d/
+
+# If using the AppImage, extract it first:
+./Linuxtrack-*.AppImage --appimage-extract
+sudo cp squashfs-root/usr/share/linuxtrack/99-TIR.rules /etc/udev/rules.d/
+```
+
+**Step 2: Reload udev rules**
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+**Step 3: Unplug and replug your TrackIR device**
+
+> [!TIP]
+> If you still see "permissions problem" after following these steps, try logging out and back in, or rebooting.
+
 ## 🛠️ Installation
 
 ### 1. Build from Source (CMake)
@@ -66,13 +95,42 @@ Current progress is tracked in [MODERNIZATION_ROADMAP.md](MODERNIZATION_ROADMAP.
 - [x] Project LAL (Native Firmware Manager) Phase 3 Integration.
 - [x] Automatic Steam/Proton/Lutris/Bottles Prefix Discovery.
 - [x] Controller.exe for customizable Pause/Recenter hotkeys.
-- [x] Linux-native global hotkey daemon.
+- [x] Linux-native global hotkey daemon with **Wayland support** (via `xdg-desktop-portal` GlobalShortcuts).
 - [x] Coordinated UDP Bridge for symmetric 6DOF tracking.
 
 **Upcoming:**
 
 - [ ] Native UI for model scaling/offsets.
 - [-] AppImage/Flatpak distribution (Arch AppImage verified).
+
+---
+
+## ⌨️ Native Hotkeys (Wayland/X11)
+
+The `ltr_hotkeyd` daemon provides global hotkeys for recenter and pause without needing alt-tab.
+
+### Default Hotkeys
+
+| Action | Key |
+| --- | --- |
+| Recenter Tracking | F12 |
+| Toggle Pause | Pause |
+
+### Wayland Support
+
+On Wayland (KDE Plasma, GNOME), shortcuts are registered via `xdg-desktop-portal` GlobalShortcuts interface. You can customize them in your desktop's **System Settings → Shortcuts → LinuxTrack**.
+
+### X11 Support
+
+On X11 sessions, the daemon uses traditional `XGrabKey` for global hotkey capture.
+
+### Starting the Daemon
+
+Enable **"Native Hotkeys"** in the Misc tab of `ltr_gui`, or run manually:
+
+```bash
+ltr_hotkeyd --verbose --profile="YourProfileName"
+```
 
 ---
 

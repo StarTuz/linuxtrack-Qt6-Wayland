@@ -41,6 +41,7 @@ bool Profile::setCurrent(const QString &name) {
   if (!names.contains(name, Qt::CaseInsensitive)) {
     return false;
   }
+  currentName = name;
   currentProfile->changeProfile(name);
   return true;
 }

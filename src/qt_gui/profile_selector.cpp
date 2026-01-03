@@ -64,6 +64,8 @@ void ProfileSelector::profilesIndexChanged(int index) {
   if (!setCurrentProfile(text)) {
     // refresh();
   }
+  PROFILE.setCurrent(text);
+  emit profileChanged(text);
   if ((PROFILE.isProfile(text)) < 0) {
     return;
   }

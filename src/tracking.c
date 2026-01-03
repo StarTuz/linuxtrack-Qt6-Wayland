@@ -353,17 +353,16 @@ bool ltr_int_postprocess_axes(ltr_axes_t axes, linuxtrack_pose_t *pose, linuxtra
   //Single point must be "denormalized"
 
   raw_angles[0] = unfiltered->pitch = ltr_int_val_on_axis(axes, PITCH, pose->raw_pitch);
-  raw_angles[1] = unfiltered->yaw = ltr_int_val_on_axis(axes, YAW, pose->raw_yaw);
-  raw_angles[2] = unfiltered->roll = ltr_int_val_on_axis(axes, ROLL, pose->raw_roll);
-  //printf(">>Raw: %f %f %f\n", raw_angles[0], raw_angles[1], raw_angles[2]);
+  raw_angles[1] = unfiltered->roll = ltr_int_val_on_axis(axes, ROLL, pose->raw_roll);
+  raw_angles[2] = unfiltered->yaw = ltr_int_val_on_axis(axes, YAW, pose->raw_yaw);
 
   if(!ltr_int_is_vector_finite(raw_angles)){
     return false;
   }
 
   pose->pitch = clamp_angle(ltr_int_filter_axis(axes, PITCH, raw_angles[0], &(filtered_angles[0])));
-  pose->yaw = clamp_angle(ltr_int_filter_axis(axes, YAW, raw_angles[1], &(filtered_angles[1])));
-  pose->roll = clamp_angle(ltr_int_filter_axis(axes, ROLL, raw_angles[2], &(filtered_angles[2])));
+  pose->roll = clamp_angle(ltr_int_filter_axis(axes, ROLL, raw_angles[1], &(filtered_angles[1])));
+  pose->yaw = clamp_angle(ltr_int_filter_axis(axes, YAW, raw_angles[2], &(filtered_angles[2])));
 
   double rotated[3];
   double transform[3][3];

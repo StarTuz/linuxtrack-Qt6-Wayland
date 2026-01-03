@@ -18,7 +18,6 @@ UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
     , ui(new Ui::UdpSettingsDialog)
     , bridge(b)
     , hotkeyProcess(nullptr)
-    , stackRunning(b ? b->isRunning() : false)
 {
     ui->setupUi(this);
     
@@ -31,6 +30,10 @@ UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
         connect(bridge, &UdpBridge::commandReceived, this, [this](const QString &cmd){
             if (cmd == QString::fromLatin1("RECN")) onRecenterClicked();
             else if (cmd == QString::fromLatin1("PAUS")) onPauseClicked();
+        });
+        connect(bridge, &UdpBridge::statusChanged, this, [this](bool running){
+            (void)running;
+            updateStatus();
         });
     }
     
@@ -332,16 +335,13 @@ void UdpSettings::saveHotkeyIniFile()
 
 void UdpSettings::onStartStopClicked()
 {
-    if (stackRunning) {
+    if (bridge && bridge->isRunning()) {
         // Stop the stack
-        if (bridge) {
-            bridge->stop();
-        }
+        bridge->stop();
         if (hotkeyProcess && hotkeyProcess->state() != QProcess::NotRunning) {
             hotkeyProcess->terminate();
             hotkeyProcess->waitForFinished(1000);
         }
-        stackRunning = false;
     } else {
         // Start the stack
         
@@ -366,15 +366,13 @@ void UdpSettings::onStartStopClicked()
                 hotkeyProcess->start(QString::fromLatin1("wine"), QStringList() << exePath);
             }
         }
-        
-        stackRunning = true;
     }
     updateStatus();
 }
 
 void UdpSettings::updateStatus()
 {
-    if (stackRunning) {
+    if (bridge && bridge->isRunning()) {
         ui->startStopButton->setText(QString::fromLatin1("Stop UDP Stack"));
         ui->statusLabel->setText(QString::fromLatin1("Status: Running"));
     } else {
