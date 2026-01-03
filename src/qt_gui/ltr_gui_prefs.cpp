@@ -15,6 +15,7 @@
 #include <iostream>
 
 PrefProxy *PrefProxy::prf = nullptr;
+bool PrefProxy::isAppImage = false;
 
 static int warnMessage(const QString &message){
  return QMessageBox::warning(nullptr, QString::fromUtf8("Linuxtrack"),
@@ -23,6 +24,7 @@ static int warnMessage(const QString &message){
 
 PrefProxy::PrefProxy()
 {
+  isAppImage = qEnvironmentVariableIsSet("APPIMAGE") || qEnvironmentVariableIsSet("APPDIR");
   if(ltr_int_read_prefs(nullptr, false)){
     checkPrefix(true);
     return;
@@ -49,8 +51,10 @@ PrefProxy::PrefProxy()
 bool PrefProxy::checkPrefix(bool save)
 {
   QString appPath = QApplication::applicationDirPath();
+  
   appPath.prepend(QString::fromUtf8("\""));
   appPath += QString::fromUtf8("\"");
+  
   bool res;
   char *tmp_prefix = ltr_int_get_key("Global", "Prefix");
   if(tmp_prefix != nullptr){
@@ -60,9 +64,20 @@ bool PrefProxy::checkPrefix(bool save)
     res = false;
     prefix = QString::fromUtf8("");
   }
+  
+  // If we have a stable prefix already, and we are running from an AppImage, 
+  // do NOT overwrite it with the volatile AppImage mount point.
+  if(isAppImage && res && !prefix.contains(QString::fromUtf8("/tmp/"))) {
+    ltr_int_log_message("Running from AppImage, preserving stable prefix: %s\n", prefix.toUtf8().constData());
+    return true;
+  }
+
   if(res && (prefix == appPath)){
     //Intentionaly left empty
   }else{
+    // If we are an AppImage and have no prefix, we should ideally NOT set it to 
+    // the volatile mount point either, but for now we follow old logic unless we 
+    // find a better "stable" home.
     prefix = appPath;
     bool res = ltr_int_change_key("Global", "Prefix",appPath.toUtf8().constData());
     if(save){
@@ -429,6 +444,15 @@ QString PrefProxy::getLibPath(QString file)
   return appPath + QString::fromUtf8("/../Frameworks/") + file + QString::fromUtf8(".0.dylib");
 #endif
 */
+}
+
+QString PrefProxy::getPrefix()
+{
+  QString res = prefix;
+  if (res.startsWith(QString::fromUtf8("\"")) && res.endsWith(QString::fromUtf8("\""))) {
+    res = res.mid(1, res.length() - 2);
+  }
+  return res;
 }
 
 QString PrefProxy::getRsrcDirPath()

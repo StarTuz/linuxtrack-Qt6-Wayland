@@ -14,7 +14,10 @@ class PrefProxy{
   ~PrefProxy();
   static PrefProxy *prf;
   QString prefix;
+  static bool isAppImage;
  public:
+  static bool runningFromAppImage() { return isAppImage; }
+  QString getPrefix();
   static PrefProxy& Pref();
   static void ClosePrefs();
   static void SavePrefsOnExit();

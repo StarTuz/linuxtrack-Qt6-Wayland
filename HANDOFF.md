@@ -116,9 +116,12 @@ The project now compiles successfully on modern Linux with:
 
 - **UDP Bridge GUI Integration:** Full UDP stack control from ltr_gui with Start/Stop, hotkey configuration, and Wine/Proton installer
 
-**Recent Additions (2026-01-03):**
+**Recent Additions (2026-01-03) [v1.1.0]:**
 
-- **Video On Delay Setting:** Configurable delay (0-500000µs) after Video_on to fix IR LED timing issues on some TrackIR hardware. Setting available in TrackIR Troubleshooting section. Fixes issue where IR LEDs flash briefly then turn off.
+- **TrackIR Video On Delay:** Added configurable delay (0-500000µs) after `Video_on` USB command. Essential for hardware revisions where IR LEDs would otherwise flash and turn off immediately. Accessible via TrackIR Troubleshooting GUI.
+- **AppImage Stability Fix:** Resolved issue where `Prefix` in configuration would point to volatile AppImage mount points.
+- **Stable Library Installation:** `ltr_gui` can now surgically install core libraries to `~/.local/lib/linuxtrack` when installing the X-Plane plugin from an AppImage, ensuring plugin persistence.
+- **Version Bump:** Project version advanced to `1.1.0`.
 
 ---
 

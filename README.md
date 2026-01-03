@@ -66,6 +66,15 @@ If your TrackIR's IR LEDs flash briefly then turn off, your hardware may need a 
 > [!NOTE]
 > This setting adds a delay (in microseconds) after enabling video before turning on the IR LEDs. Some TrackIR hardware revisions require this stabilization period.
 
+### X-Plane Plugin: linuxtrack.so Not Found (AppImage)
+
+If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when using the AppImage:
+
+1. Open `ltr_gui` (from the AppImage).
+2. Go to **Misc.** -> **Install X-Plane plugin...**.
+3. When prompted, allow the app to install **stable libraries** to `~/.local`.
+4. This copies the necessary `.so` files to a location X-Plane can see after the AppImage is closed.
+
 ## 🛠️ Installation
 
 ### 1. Build from Source (CMake)

@@ -5,6 +5,7 @@
 *.la
 *.a
 *.so
+*.so.*
 *.dll
 *.exe
 .mv
@@ -12,9 +13,15 @@
 .deps/
 build/
 build32/
+build_local/
 dist32/
+AppDir/
+squashfs-root/
+*.AppImage
 Makefile
 CMakeCache.txt
 CMakeFiles/
 *.log
 src/qt_gui/ltr_gui.gch/
+install_manifest.txt
+cmake_install.cmake
