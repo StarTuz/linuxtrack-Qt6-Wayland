@@ -54,6 +54,18 @@ sudo udevadm trigger
 > [!TIP]
 > If you still see "permissions problem" after following these steps, try logging out and back in, or rebooting.
 
+### IR LEDs Turn Off Immediately
+
+If your TrackIR's IR LEDs flash briefly then turn off, your hardware may need a timing delay:
+
+1. Open `ltr_gui` and go to your TrackIR device settings
+2. In the **Troubleshooting** section, find **Video On Delay**
+3. Set it to `120000` (120ms) or higher
+4. Restart tracking
+
+> [!NOTE]
+> This setting adds a delay (in microseconds) after enabling video before turning on the IR LEDs. Some TrackIR hardware revisions require this stabilization period.
+
 ## 🛠️ Installation
 
 ### 1. Build from Source (CMake)

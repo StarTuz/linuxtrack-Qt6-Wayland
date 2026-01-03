@@ -116,6 +116,10 @@ The project now compiles successfully on modern Linux with:
 
 - **UDP Bridge GUI Integration:** Full UDP stack control from ltr_gui with Start/Stop, hotkey configuration, and Wine/Proton installer
 
+**Recent Additions (2026-01-03):**
+
+- **Video On Delay Setting:** Configurable delay (0-500000µs) after Video_on to fix IR LED timing issues on some TrackIR hardware. Setting available in TrackIR Troubleshooting section. Fixes issue where IR LEDs flash briefly then turn off.
+
 ---
 
 ## 3. Changes Made
@@ -670,7 +674,7 @@ When you install the UDP Bridge to a Wine prefix, the current hotkey settings ar
 ### Repository Status
 
 **Branch:** `main` (Default)
-**Tag:** `v1.0.6` (Release)
+**Tag:** `v1.0.9` (Release)
 **Status:** Clean (All changes committed and pushed)
 
 ```

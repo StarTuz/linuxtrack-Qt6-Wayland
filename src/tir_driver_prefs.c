@@ -11,6 +11,7 @@ static int ir_bright = 0;
 static int threshold = 0;
 static bool status = false;
 static bool grayscale = false;
+static int video_on_delay = 0;
 
 static char max_blob_key[] = "Max-blob";
 static char min_blob_key[] = "Min-blob";
@@ -19,6 +20,7 @@ static char ir_bright_key[] = "Ir-led-brightness";
 static char threshold_key[] = "Threshold";
 static char status_key[] = "Status-signals";
 static char grayscale_key[] = "Grayscale";
+static char video_on_delay_key[] = "Video-on-delay";
 
 bool ltr_int_tir_init_prefs() {
   const char *dev = ltr_int_get_device_section();
@@ -54,6 +56,9 @@ bool ltr_int_tir_init_prefs() {
     free(tmp);
   } else {
     grayscale = false;
+  }
+  if (!ltr_int_get_key_int(dev, video_on_delay_key, &video_on_delay)) {
+    video_on_delay = 0;
   }
   free((void *)dev);
   return true;
@@ -158,3 +163,20 @@ bool ltr_int_tir_set_use_grayscale(bool gs) {
 }
 
 bool ltr_int_tir_get_use_grayscale() { return grayscale; }
+
+int ltr_int_tir_get_video_on_delay() { return video_on_delay; }
+
+bool ltr_int_tir_set_video_on_delay(int val) {
+  if (val < 0) {
+    val = 0;
+  }
+  if (val > 500000) {
+    val = 500000;
+  }
+  video_on_delay = val;
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, video_on_delay_key, val);
+  free(dev);
+  return res;
+}
+
