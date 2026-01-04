@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QProcess>
 #include <QDateTime>
+#include <QCoreApplication>
 #include "tracker.h"
 
 UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
@@ -355,15 +356,59 @@ void UdpSettings::onStartStopClicked()
             bridge->start();
         }
         
-        // Start hotkey utility if enabled
+        // Start native hotkey daemon if enabled
         if (ui->enableHotkeysCheck->isChecked()) {
             if (!hotkeyProcess) {
                 hotkeyProcess = new QProcess(this);
+                connect(hotkeyProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+                    qWarning() << "ltr_hotkeyd error:" << error;
+                });
             }
-            // Path to hotkey exe - in prefix or installed location
-            QString exePath = QString::fromLatin1("/opt/linuxtrack/lib/linuxtrack/ltr_wine_hotkeys.exe");
-            if (QFile::exists(exePath)) {
-                hotkeyProcess->start(QString::fromLatin1("wine"), QStringList() << exePath);
+            
+            // Find ltr_hotkeyd in various locations
+            QString exePath;
+            
+            // 1. Check APPDIR (AppImage environment)
+            QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
+            if (!appDir.isEmpty()) {
+                QString appImagePath = appDir + QString::fromLatin1("/usr/bin/ltr_hotkeyd");
+                if (QFile::exists(appImagePath)) {
+                    exePath = appImagePath;
+                }
+            }
+            
+            // 2. Check installed location
+            if (exePath.isEmpty()) {
+                QString installPath = QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkeyd");
+                if (QFile::exists(installPath)) {
+                    exePath = installPath;
+                }
+            }
+            
+            // 3. Check alongside ltr_gui (build directory or /usr/bin)
+            if (exePath.isEmpty()) {
+                QString siblingPath = QCoreApplication::applicationDirPath() + QString::fromLatin1("/ltr_hotkeyd");
+                if (QFile::exists(siblingPath)) {
+                    exePath = siblingPath;
+                }
+            }
+            
+            // 4. Check PATH
+            if (exePath.isEmpty()) {
+                QString pathLookup = QString::fromLatin1("ltr_hotkeyd");
+                // Check if it exists in PATH by trying to find it
+                QProcess which;
+                which.start(QString::fromLatin1("which"), QStringList() << pathLookup);
+                if (which.waitForFinished(1000) && which.exitCode() == 0) {
+                    exePath = QString::fromLocal8Bit(which.readAllStandardOutput().trimmed());
+                }
+            }
+            
+            if (!exePath.isEmpty()) {
+                qDebug() << "Starting ltr_hotkeyd from:" << exePath;
+                hotkeyProcess->start(exePath, QStringList());
+            } else {
+                qWarning() << "ltr_hotkeyd not found in any expected location";
             }
         }
         

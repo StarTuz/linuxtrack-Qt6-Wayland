@@ -140,6 +140,11 @@ The project now compiles successfully on modern Linux with:
 - **TrackIR Firmware Links:** Updated to point to official [trackir.com/downloads](https://www.trackir.com/downloads/) (v5.53).
 - **Version Bump:** Project version advanced to `1.1.2`.
 
+**Recent Additions (2026-01-04) [v1.1.3]:**
+
+- **UDP Bridge Hotkey Daemon Fix:** Fixed bug where clicking "Start UDP Stack" did not spawn the hotkey daemon. The dialog incorrectly tried to start `ltr_wine_hotkeys.exe` via Wine instead of the native `ltr_hotkeyd` daemon. Now correctly starts the native Linux daemon from AppImage, `/opt/linuxtrack/bin`, sibling directory, or PATH.
+- **Version Bump:** Project version advanced to `1.1.3`.
+
 ---
 
 ## 3. Changes Made
