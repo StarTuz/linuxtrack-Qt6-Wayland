@@ -85,6 +85,9 @@ If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when u
 5. **Enable One Euro Filter** in Tracking Setup and **Save** your profile
 6. **External camera views** now work seamlessly — switch to outside view without pausing tracking!
 
+> [!NOTE]
+> The seamless camera toggle works with **vanilla X-Plane cameras only**. Third-party camera plugins (A-Better-Camera, X-Camera) may not be compatible as they handle `view_type` differently.
+
 > [!TIP]
 > **Auto-start tracking:** Run `ltr_gui --autostart` (or `-a`) to automatically begin tracking when the GUI launches. Add this to your X-Plane startup script:
 >
