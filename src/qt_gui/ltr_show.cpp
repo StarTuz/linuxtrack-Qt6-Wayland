@@ -123,6 +123,11 @@ void LtrGuiForm::on_startButton_pressed()
   TRACKER.start(sec);
 }
 
+void LtrGuiForm::startTracking()
+{
+  on_startButton_pressed();
+}
+
 void LtrGuiForm::on_recenterButton_pressed()
 {
   TRACKER.recenter();

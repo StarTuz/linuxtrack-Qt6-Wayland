@@ -132,6 +132,14 @@ The project now compiles successfully on modern Linux with:
 - **X-Plane Recommendation:** Documented that X-Plane users should run `ltr_gui` alongside X-Plane to access One Euro filter controls.
 - **Version Bump:** Project version advanced to `1.1.1`.
 
+**Recent Additions (2026-01-04) [v1.1.2]:**
+
+- **ltr_gui --autostart Flag:** Added command-line flag (`--autostart` or `-a`) that automatically starts tracking when the GUI launches. Useful for X-Plane startup scripts.
+- **AppImage Qt Plugin Fix:** Fixed "Could not find the Qt platform plugin xcb" error in AppImage. Updated `AppRun` to set `QT_QPA_PLATFORM_PLUGIN_PATH` pointing to bundled platform plugins.
+- **Troubleshooting Docs:** Added sections for TrackIR firmware (use Extract method), MFC42 workaround, and NVIDIA 3D view issues.
+- **TrackIR Firmware Links:** Updated to point to official [trackir.com/downloads](https://www.trackir.com/downloads/) (v5.53).
+- **Version Bump:** Project version advanced to `1.1.2`.
+
 ---
 
 ## 3. Changes Made

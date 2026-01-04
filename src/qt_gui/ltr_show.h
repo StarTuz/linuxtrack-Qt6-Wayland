@@ -41,6 +41,7 @@ class LtrGuiForm : public QWidget
    ~LtrGuiForm();
    void allowCloseWindow();
    void StorePrefs(QSettings &settings);
+   void startTracking();  // Public method for autostart
   public slots:
    void update();
    void updateFps();

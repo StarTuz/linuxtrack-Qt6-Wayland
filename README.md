@@ -85,6 +85,14 @@ If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when u
 5. **Enable One Euro Filter** in Tracking Setup and **Save** your profile
 6. **External camera views** now work seamlessly — switch to outside view without pausing tracking!
 
+> [!TIP]
+> **Auto-start tracking:** Run `ltr_gui --autostart` (or `-a`) to automatically begin tracking when the GUI launches. Add this to your X-Plane startup script:
+>
+> ```bash
+> ltr_gui --autostart &
+> xplane12
+> ```
+
 ### Jittery/Noisy Tracking (One Euro Filter)
 
 If your tracking feels jittery compared to Windows, you can enable the **One Euro Filter** - an open-source, adaptive smoothing algorithm designed specifically for motion tracking.

@@ -15,6 +15,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSettings>
+#include <QTimer>
 #include <iostream>
 
 #include "device_setup.h"
@@ -32,6 +33,7 @@
 #include "xplugin.h"
 #include "udp_bridge.h"
 #include "udp_settings.h"
+#include "utils.h"
 
 static QMessageBox::StandardButton warnQuestion(const QString &message) {
   return QMessageBox::warning(nullptr, QString::fromUtf8("Linuxtrack"), message,
@@ -49,9 +51,9 @@ static QMessageBox::StandardButton infoMessage(const QString &message) {
                                   message, QMessageBox::Ok);
 }
 
-LinuxtrackGui::LinuxtrackGui(QWidget *parent)
+LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
     : QWidget(parent), ds(nullptr), xpInstall(nullptr), initialized(false),
-      news_serial(-1), guiInit(true), showWineWarning(true) {
+      news_serial(-1), guiInit(true), showWineWarning(true), m_autostart(autostart) {
   ui.setupUi(this);
   PREF;
   setWindowTitle(QString::fromUtf8("Linuxtrack GUI v") +
@@ -143,6 +145,13 @@ void LinuxtrackGui::show() {
     HelpViewer::ShowWindow();
   } else {
     HelpViewer::ChangePage(QString::fromUtf8("dev_setup.htm"));
+  }
+  
+  // Auto-start tracking if --autostart flag was passed
+  if (m_autostart) {
+    ltr_int_log_message("Autostart: triggering tracking start\n");
+    // Use a single-shot timer to start tracking after event loop begins
+    QTimer::singleShot(500, showWindow, &LtrGuiForm::startTracking);
   }
 }
 

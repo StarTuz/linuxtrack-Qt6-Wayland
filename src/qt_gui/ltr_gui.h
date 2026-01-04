@@ -29,7 +29,7 @@ class UdpBridge;
 class LinuxtrackGui : public QWidget {
   Q_OBJECT
 public:
-  LinuxtrackGui(QWidget *parent = 0);
+  LinuxtrackGui(QWidget *parent = 0, bool autostart = false);
   ~LinuxtrackGui();
 
 protected:
@@ -79,6 +79,7 @@ private:
   bool guiInit;
   bool showWineWarning;
   UdpBridge *udpBridge;
+  bool m_autostart;
 };
 
 #endif
