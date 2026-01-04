@@ -124,10 +124,13 @@ The project now compiles successfully on modern Linux with:
 - **One Euro Filter:** Implemented an open-source, patent-free adaptive smoothing filter to reduce tracking jitter without adding noticeable lag. Based on the published CHI 2012 algorithm. Toggleable per-axis with two tunable parameters (`min_cutoff` for smoothness, `beta` for responsiveness).
 - **Version Bump:** Project version advanced to `1.1.0`.
 
-**Recent Additions (2026-01-04):**
+**Recent Additions (2026-01-04) [v1.1.1]:**
 
 - **One Euro Filter GUI Fix:** Fixed bug where Smoothness/Responsiveness sliders had no effect. The `ltr_srv_slave.c` was incorrectly routing `AXIS_ONE_EURO_ENABLED` and `AXIS_INVERTED` through the float parameter handler instead of the boolean handler. Slider changes now correctly propagate to the tracking server in real-time.
-- **X-Plane Recommendation:** Documented that X-Plane users should run `ltr_gui` alongside X-Plane to access One Euro filter controls (the native plugin alone lacks GUI access).
+- **One Euro Filter Persistence:** Fixed missing save/load logic for One Euro filter settings. Extended `axis_fields` enum, added save calls in `ltr_int_set_axis_param()`, and added load logic in `ltr_int_get_axis()`. Settings are now saved per-profile (e.g., `Pitch-one-euro-enabled`).
+- **X-Plane Seamless Camera Toggle:** Switch between cockpit and external camera views without disabling TrackIR. The plugin now returns early when `view_type != 1026` (3D cockpit), keeping tracking active but not interfering with external views. Added `linuxtrack/ltr_start` and `linuxtrack/ltr_stop` commands for explicit control.
+- **X-Plane Recommendation:** Documented that X-Plane users should run `ltr_gui` alongside X-Plane to access One Euro filter controls.
+- **Version Bump:** Project version advanced to `1.1.1`.
 
 ---
 

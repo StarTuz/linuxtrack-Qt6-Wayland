@@ -104,12 +104,13 @@ char *def_section[][2] = {
 
 typedef enum{
   SENTRY1, DEADZONE, INVERTED, LCURV, RCURV, MULT, LMULT, RMULT, LIMITS, LLIMIT, RLIMIT, FILTER, 
-  ENABLED, SENTRY_2
+  ENABLED, ONE_EURO_ENABLED, ONE_EURO_MIN_CUTOFF, ONE_EURO_BETA, SENTRY_2
 }axis_fields;
 static const char *fields[] = {NULL, "-deadzone", "-inverted",
 				"-left-curvature", "-right-curvature", 
 				"-sensitivity", "-left-multiplier", "-right-multiplier",
-				"-limits", "-left-limit", "-right-limit", "-filter", "-enabled", NULL};
+				"-limits", "-left-limit", "-right-limit", "-filter", "-enabled",
+				"-one-euro-enabled", "-one-euro-min-cutoff", "-one-euro-beta", NULL};
 static const char *axes_desc[] = {"PITCH", "ROLL", "YAW", "TX", "TY", "TZ"};
 static const char *axis_param_desc[] = {"Deadzone", "Inverted", "Left Curvature", "Right Curvature",
                    "Sensitivity", "Left Sensitivity", "Right Sensitivity", "Limit", "Left Limit", "Right Limit", 
@@ -347,11 +348,13 @@ bool ltr_int_set_axis_param(ltr_axes_t axes, enum axis_t id, enum axis_param_t p
     case AXIS_ONE_EURO_MIN_CUTOFF:
       axis->one_euro_min_cutoff = val;
       one_euro_set_params(&axis->one_euro_state, val, axis->one_euro_beta);
+      save_val_flt(axes, id, ONE_EURO_MIN_CUTOFF, val);
       signal_change(axes);
       break;
     case AXIS_ONE_EURO_BETA:
       axis->one_euro_beta = val;
       one_euro_set_params(&axis->one_euro_state, axis->one_euro_min_cutoff, val);
+      save_val_flt(axes, id, ONE_EURO_BETA, val);
       signal_change(axes);
       break;
     default:
@@ -432,6 +435,11 @@ bool ltr_int_set_axis_bool_param(ltr_axes_t axes, enum axis_t id, enum axis_para
       axis->one_euro_enabled = val;
       if(!val) {
         one_euro_reset(&axis->one_euro_state);
+      }
+      if(val){
+        save_val_str(axes, id, ONE_EURO_ENABLED, "Yes");
+      }else{
+        save_val_str(axes, id, ONE_EURO_ENABLED, "No");
       }
       signal_change(axes);
       break;
@@ -625,7 +633,30 @@ static bool ltr_int_get_axis(const char *sec_name, enum axis_t id, struct axis_d
     field_name = NULL;
   }
   
+  // Load One Euro filter settings
+  field_name = ltr_int_my_strcat(prefix, fields[ONE_EURO_ENABLED]);
+  string = ltr_int_axis_get_key(sec_name, field_name);
+  if((string != NULL) && (strcasecmp(string, "Yes") == 0)){
+    axis->one_euro_enabled = true;
+  }
+  if(string != NULL){
+    free(string);
+  }
+  free(field_name);
   
+  field_name = ltr_int_my_strcat(prefix, fields[ONE_EURO_MIN_CUTOFF]);
+  if(ltr_int_axis_get_key_flt(sec_name, field_name, &val)){
+    axis->one_euro_min_cutoff = val;
+    one_euro_set_params(&axis->one_euro_state, val, axis->one_euro_beta);
+  }
+  free(field_name);
+  
+  field_name = ltr_int_my_strcat(prefix, fields[ONE_EURO_BETA]);
+  if(ltr_int_axis_get_key_flt(sec_name, field_name, &val)){
+    axis->one_euro_beta = val;
+    one_euro_set_params(&axis->one_euro_state, axis->one_euro_min_cutoff, val);
+  }
+  free(field_name);
   
   //Shouldn't be needed... (and causes deadlock now)
   //ltr_int_val_on_axis(id, 0.0f);

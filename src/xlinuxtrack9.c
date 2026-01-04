@@ -75,6 +75,8 @@ static bool active_flag = false;
 static bool pv_present = false;
 
 static XPLMCommandRef run_cmd;
+static XPLMCommandRef start_cmd;
+static XPLMCommandRef stop_cmd;
 static XPLMCommandRef pause_cmd;
 static XPLMCommandRef recenter_cmd;
 static bool initialized = false;
@@ -85,7 +87,7 @@ static int cmd_cbk(XPLMCommandRef       inCommand,
                    XPLMCommandPhase     inPhase,
                    void *               inRefcon);
 
-enum {START, PAUSE, RECENTER};
+enum {START, STOP, PAUSE, RECENTER};
 
 static float xlinuxtrackCallback(float inElapsedSinceLastCall,    
                                  float inElapsedTimeSinceLastFlightLoop,    
@@ -148,6 +150,8 @@ PLUGIN_API int XPluginStart(char *outName,
   //fprintf(stderr, "XPlane version: %d\n", xplane_ver);
 
     run_cmd = XPLMCreateCommand("linuxtrack/ltr_run","Start/stop tracking");
+    start_cmd = XPLMCreateCommand("linuxtrack/ltr_start","Start tracking");
+    stop_cmd = XPLMCreateCommand("linuxtrack/ltr_stop","Stop tracking");
     pause_cmd = XPLMCreateCommand("linuxtrack/ltr_pause","Pause tracking");
     recenter_cmd = XPLMCreateCommand("linuxtrack/ltr_recenter","Recenter tracking");
         XPLMRegisterCommandHandler(
@@ -155,6 +159,16 @@ PLUGIN_API int XPluginStart(char *outName,
                     cmd_cbk,
                     true,
                     (void *)START);
+        XPLMRegisterCommandHandler(
+                    start_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)START);
+        XPLMRegisterCommandHandler(
+                    stop_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)STOP);
         XPLMRegisterCommandHandler(
                     pause_cmd,
                     cmd_cbk,
@@ -305,6 +319,16 @@ PLUGIN_API void XPluginStop(void)
                     true,
                     (void *)START);
         XPLMUnregisterCommandHandler(
+                    start_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)START);
+        XPLMUnregisterCommandHandler(
+                    stop_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)STOP);
+        XPLMUnregisterCommandHandler(
                     pause_cmd,
                     cmd_cbk,
                     true,
@@ -433,6 +457,14 @@ static int cmd_cbk(XPLMCommandRef       inCommand,
         }else{
           deactivate();
         }
+      }else if(inCommand == start_cmd){
+        if(active_flag==false){
+          activate();
+        }
+      }else if(inCommand == stop_cmd){
+        if(active_flag==true){
+          deactivate();
+        }
       }else if(inCommand == pause_cmd){
         freeze = (freeze == false)? true : false;
       }else if(inCommand == recenter_cmd){
@@ -474,6 +506,16 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   }
   
   if(!active_flag){
+    return -1.0;
+  }
+  
+  // Return early when NOT in 3D cockpit - allows seamless external camera switching
+  // TrackIR stays active but doesn't interfere with external views
+  if(view_changed){
+    // Reset roll to prevent view artifacts when switching views
+    if(head_roll != NULL){
+      XPLMSetDataf(head_roll, 0);
+    }
     return -1.0;
   }
 

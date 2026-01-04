@@ -16,13 +16,14 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - **Bison/Flex Removal**: Replaced complex legacy configuration parsers with the lightweight, robust `mINI` library.
 - **TrackIR 5 V3 Support**: Full hardware activation for the latest TrackIR 5 revisions.
 - **Unified UDP Bridge**: New high-precision UDP stack that solves symmetry and range issues in full-screen games. Uses a unique coordinated architecture where hotkeys (Wine) trigger server-side (Linux) recentering on port 4243.
+- **Seamless X-Plane Camera Toggle**: Switch between cockpit and external camera views without disabling TrackIR. One button press for helicopter inspections!
 
 ## 🎮 Verified Games & Apps
 
 - ✅ **DCS World** (Proton, with Controller.exe hotkeys)
 - ✅ **Elite Dangerous** (Proton 10/Steam Launcher, symmetric range via UDP)
 - ✅ **Train Sim World 6** (Proton, full 6DOF via UDP Bridge)
-- ✅ **X-Plane 12** (Native Linux Plugin, run `ltr_gui` for One Euro filter)
+- ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
@@ -74,6 +75,15 @@ If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when u
 2. Go to **Misc.** -> **Install X-Plane plugin...**.
 3. When prompted, allow the app to install **stable libraries** to `~/.local`.
 4. This copies the necessary `.so` files to a location X-Plane can see after the AppImage is closed.
+
+### X-Plane Quick Start
+
+1. **Create a new profile** in `ltr_gui` (e.g., "X-plane")
+2. **Install the X-Plane plugin** via Misc. → Install X-Plane plugin
+3. **Start X-Plane** - the plugin loads automatically
+4. If TrackIR device is off, just hit **Start** in `ltr_gui`'s Device Setup — tracking will work
+5. **Enable One Euro Filter** in Tracking Setup and **Save** your profile
+6. **External camera views** now work seamlessly — switch to outside view without pausing tracking!
 
 ### Jittery/Noisy Tracking (One Euro Filter)
 
