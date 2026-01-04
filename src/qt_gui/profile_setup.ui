@@ -425,6 +425,122 @@
      </item>
     </layout>
    </item>
+   <item>
+    <widget class="QFrame" name="oneEuroFrame">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="oneEuroLayout">
+      <item>
+       <widget class="QCheckBox" name="OneEuroEnabled">
+        <property name="toolTip">
+         <string>Enable adaptive One Euro filter for reduced jitter (recommended for TrackIR)</string>
+        </property>
+        <property name="text">
+         <string>One Euro Filter (Adaptive Smoothing)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="oneEuroMinCutoffLayout">
+        <item>
+         <widget class="QLabel" name="oneEuroMinCutoffLabel">
+          <property name="text">
+           <string>Smoothness:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="oneEuroMinCutoffLow">
+          <property name="text">
+           <string>Jittery</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSlider" name="OneEuroMinCutoff">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>50</number>
+          </property>
+          <property name="value">
+           <number>10</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="tickPosition">
+           <enum>QSlider::TicksBelow</enum>
+          </property>
+          <property name="tickInterval">
+           <number>10</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="oneEuroMinCutoffHigh">
+          <property name="text">
+           <string>Smooth</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="oneEuroBetaLayout">
+        <item>
+         <widget class="QLabel" name="oneEuroBetaLabel">
+          <property name="text">
+           <string>Responsiveness:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="oneEuroBetaLow">
+          <property name="text">
+           <string>Laggy</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSlider" name="OneEuroBeta">
+          <property name="minimum">
+           <number>0</number>
+          </property>
+          <property name="maximum">
+           <number>100</number>
+          </property>
+          <property name="value">
+           <number>7</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="tickPosition">
+           <enum>QSlider::TicksBelow</enum>
+          </property>
+          <property name="tickInterval">
+           <number>20</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="oneEuroBetaHigh">
+          <property name="text">
+           <string>Responsive</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>

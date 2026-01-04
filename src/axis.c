@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "pref.h"
 #include "math_utils.h"
+#include "one_euro_filter.h"
 
 //The "singleton" solution was chosen to allow easy monitoring of axis changes - 
 //  - there is no need to track other apps that might have open the same axes...
@@ -22,6 +23,11 @@ struct axis_def{
   float l_limit, r_limit;
   float filter_factor;
   char *prefix;
+  // One Euro filter state
+  bool one_euro_enabled;
+  float one_euro_min_cutoff;
+  float one_euro_beta;
+  one_euro_filter_t one_euro_state;
 };
 
 struct ltr_axes {
@@ -214,8 +220,16 @@ float ltr_int_filter_axis(ltr_axes_t axes, enum axis_t id, float x, float *y_min
       trans_koef = 1.0;
       break;
   }
-  float ff = trans_koef * (axis->filter_factor) * (axis->l_limit > axis->r_limit ? axis->l_limit : axis->r_limit);
-  return *y_minus_1 = ltr_int_nonlinfilt(x, *y_minus_1, ff);
+  
+  // Use One Euro filter if enabled, otherwise fall back to legacy filter
+  if(axis->one_euro_enabled) {
+    // Assume ~120Hz update rate (8.33ms per frame)
+    float dt = 1.0f / 120.0f;
+    return one_euro_filter(&axis->one_euro_state, x, dt);
+  } else {
+    float ff = trans_koef * (axis->filter_factor) * (axis->l_limit > axis->r_limit ? axis->l_limit : axis->r_limit);
+    return *y_minus_1 = ltr_int_nonlinfilt(x, *y_minus_1, ff);
+  }
 }
 
 float ltr_int_val_on_axis(ltr_axes_t axes, enum axis_t id, float x)
@@ -330,6 +344,16 @@ bool ltr_int_set_axis_param(ltr_axes_t axes, enum axis_t id, enum axis_param_t p
       save_val_flt(axes, id, FILTER, val);
       signal_change(axes);
       break;
+    case AXIS_ONE_EURO_MIN_CUTOFF:
+      axis->one_euro_min_cutoff = val;
+      one_euro_set_params(&axis->one_euro_state, val, axis->one_euro_beta);
+      signal_change(axes);
+      break;
+    case AXIS_ONE_EURO_BETA:
+      axis->one_euro_beta = val;
+      one_euro_set_params(&axis->one_euro_state, axis->one_euro_min_cutoff, val);
+      signal_change(axes);
+      break;
     default:
       pthread_mutex_unlock(&axes_mutex);
       return false;
@@ -366,6 +390,12 @@ float ltr_int_get_axis_param(ltr_axes_t axes, enum axis_t id, enum axis_param_t 
     case AXIS_FILTER:
       res = axis->filter_factor;
       break;
+    case AXIS_ONE_EURO_MIN_CUTOFF:
+      res = axis->one_euro_min_cutoff;
+      break;
+    case AXIS_ONE_EURO_BETA:
+      res = axis->one_euro_beta;
+      break;
     default:
       res = 0.0;
       break;
@@ -398,6 +428,13 @@ bool ltr_int_set_axis_bool_param(ltr_axes_t axes, enum axis_t id, enum axis_para
       }
       signal_change(axes);
       break;
+    case AXIS_ONE_EURO_ENABLED:
+      axis->one_euro_enabled = val;
+      if(!val) {
+        one_euro_reset(&axis->one_euro_state);
+      }
+      signal_change(axes);
+      break;
     default:
       pthread_mutex_unlock(&axes_mutex);
       return false;
@@ -418,6 +455,9 @@ bool ltr_int_get_axis_bool_param(ltr_axes_t axes, enum axis_t id, enum axis_para
       break;
     case AXIS_INVERTED:
       res = axis->inverted;
+      break;
+    case AXIS_ONE_EURO_ENABLED:
+      res = axis->one_euro_enabled;
       break;
     default:
       res = false;
@@ -477,6 +517,12 @@ static void ltr_int_init_axis(const char *sec_name, struct axis_def *axis, const
   axis->curve_defs.dead_zone = 0.0f;
   axis->curve_defs.l_curvature = 0.5f;
   axis->curve_defs.r_curvature = 0.5f;
+  
+  // Initialize One Euro filter with defaults
+  axis->one_euro_enabled = false;
+  axis->one_euro_min_cutoff = 1.0f;
+  axis->one_euro_beta = 0.007f;
+  one_euro_init(&axis->one_euro_state, axis->one_euro_min_cutoff, axis->one_euro_beta, 1.0f);
 }
 
 static void ltr_int_close_axis(ltr_axes_t axes, enum axis_t id)

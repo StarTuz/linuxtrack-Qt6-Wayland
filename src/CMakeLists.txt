@@ -10,6 +10,7 @@ add_library(ltr SHARED
     wc_driver_prefs.c wc_driver_prefs.h ipc_utils.c ipc_utils.h 
     com_proc.c com_proc.h wii_com.c wii_com.h
     joy_driver_prefs.c joy_driver_prefs.h ps3_prefs.c ps3_prefs.h
+    one_euro_filter.c one_euro_filter.h
 )
 target_include_directories(ltr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ..)
 target_link_libraries(ltr PRIVATE ${LTR_LIBM} ${LTR_LIBPTHREAD} ${LTR_LIBDL})

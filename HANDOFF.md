@@ -116,6 +116,14 @@ The project now compiles successfully on modern Linux with:
 
 - **UDP Bridge GUI Integration:** Full UDP stack control from ltr_gui with Start/Stop, hotkey configuration, and Wine/Proton installer
 
+**Recent Additions (2026-01-03) [v1.1.0]:**
+
+- **TrackIR Video On Delay:** Added configurable delay (0-500000µs) after `Video_on` USB command. Essential for hardware revisions where IR LEDs would otherwise flash and turn off immediately. Accessible via TrackIR Troubleshooting GUI.
+- **AppImage Stability Fix:** Resolved issue where `Prefix` in configuration would point to volatile AppImage mount points.
+- **Stable Library Installation:** `ltr_gui` can now surgically install core libraries to `~/.local/lib/linuxtrack` when installing the X-Plane plugin from an AppImage, ensuring plugin persistence.
+- **One Euro Filter:** Implemented an open-source, patent-free adaptive smoothing filter to reduce tracking jitter without adding noticeable lag. Based on the published CHI 2012 algorithm. Toggleable per-axis with two tunable parameters (`min_cutoff` for smoothness, `beta` for responsiveness).
+- **Version Bump:** Project version advanced to `1.1.0`.
+
 ---
 
 ## 3. Changes Made
@@ -670,7 +678,7 @@ When you install the UDP Bridge to a Wine prefix, the current hotkey settings ar
 ### Repository Status
 
 **Branch:** `main` (Default)
-**Tag:** `v1.0.6` (Release)
+**Tag:** `v1.0.9` (Release)
 **Status:** Clean (All changes committed and pushed)
 
 ```
