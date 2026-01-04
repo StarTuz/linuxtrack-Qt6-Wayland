@@ -193,7 +193,9 @@ static bool ltr_int_process_message(int l_master_uplink) {
         return false;
         break;
       }
-    } else if (msg.param.param_id == AXIS_ENABLED) {
+    } else if (msg.param.param_id == AXIS_ENABLED ||
+               msg.param.param_id == AXIS_INVERTED ||
+               msg.param.param_id == AXIS_ONE_EURO_ENABLED) {
       ltr_int_set_axis_bool_param(axes, msg.param.axis_id, msg.param.param_id,
                                   msg.param.flt_val > 0.5f);
     } else {

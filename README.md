@@ -22,7 +22,7 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **DCS World** (Proton, with Controller.exe hotkeys)
 - ✅ **Elite Dangerous** (Proton 10/Steam Launcher, symmetric range via UDP)
 - ✅ **Train Sim World 6** (Proton, full 6DOF via UDP Bridge)
-- ✅ **X-Plane 12** (Native Linux Plugin)
+- ✅ **X-Plane 12** (Native Linux Plugin, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
@@ -77,14 +77,17 @@ If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when u
 
 ### Jittery/Noisy Tracking (One Euro Filter)
 
-If your tracking feels jittery compared to Windows, you can enable the **One Euro Filter** - an open-source, adaptive smoothing algorithm designed specifically for motion tracking:
+If your tracking feels jittery compared to Windows, you can enable the **One Euro Filter** - an open-source, adaptive smoothing algorithm designed specifically for motion tracking.
 
-The filter is available per-axis in your profile settings and can be enabled programmatically. Two parameters control its behavior:
+> [!IMPORTANT]
+> **X-Plane users**: You must run `ltr_gui` alongside X-Plane to access the One Euro filter. The native X-Plane plugin alone does not provide access to these settings.
+
+The filter is available in the **Tracking Setup** tab of your profile with two sliders:
 
 | Parameter | Effect | Range | Default |
 |-----------|--------|-------|---------|
-| **min_cutoff** | Jitter reduction (higher = less smoothing) | 0.5-5.0 | 1.0 |
-| **beta** | Responsiveness (higher = more responsive to fast moves) | 0.0-0.1 | 0.007 |
+| **Smoothness** (`min_cutoff`) | Jitter reduction — slide right for smoother | 0.1-5.0 | 1.0 |
+| **Responsiveness** (`beta`) | Fast-move responsiveness — slide right for snappier | 0.0-0.1 | 0.007 |
 
 > [!TIP]
 > Start with `min_cutoff = 1.0` and `beta = 0.007`. Increase `min_cutoff` if tracking feels laggy. Increase `beta` if fast movements feel sluggish.
