@@ -102,6 +102,46 @@ The filter is available in the **Tracking Setup** tab of your profile with two s
 > [!TIP]
 > Start with `min_cutoff = 1.0` and `beta = 0.007`. Increase `min_cutoff` if tracking feels laggy. Increase `beta` if fast movements feel sluggish.
 
+## 🔍 Troubleshooting
+
+### TrackIR Firmware Installation
+
+Download the latest TrackIR software from [trackir.com/downloads](https://www.trackir.com/downloads/) (currently v5.53).
+
+In `ltr_gui` → Misc → **Manage Assets (LAL)**:
+
+> [!IMPORTANT]
+> Use the **Extract** button, not the Installer. The Installer method may fail on modern systems. Extract works reliably using native `7z`.
+
+1. Download the TrackIR `.exe` installer from the link above
+2. In Manage Assets, click **Extract** and select the downloaded `.exe`
+3. The firmware files will be extracted to `~/.config/linuxtrack/tir_firmware/`
+
+### MFC42 Missing (Wine/Proton Games)
+
+If a game complains about missing MFC42:
+
+```bash
+# Replace <appid> with your game's Steam App ID
+protontricks <appid> mfc42
+```
+
+This installs the Microsoft Foundation Classes runtime. Note: Tracking usually works fine even without this fix.
+
+### 3D Tracking View Not Working (NVIDIA)
+
+If the 3D tracking view in `ltr_gui` shows a blank/black screen:
+
+> [!NOTE]
+> This may be an NVIDIA driver issue (reported on RTX 4080 Super). The 3D view uses OpenGL ES 3.0 shaders.
+
+**Workarounds to try:**
+
+1. Ensure you have the latest NVIDIA drivers installed
+2. Try running with `__GLX_VENDOR_LIBRARY_NAME=nvidia ltr_gui`
+3. Check if other OpenGL apps work (e.g., `glxgears`)
+4. Tracking still works — the 3D view is purely for visualization
+
 ## 🛠️ Installation
 
 ### 1. Build from Source (CMake)

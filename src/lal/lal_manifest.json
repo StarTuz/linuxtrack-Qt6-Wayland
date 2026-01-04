@@ -5,16 +5,17 @@
     {
       "id": "tir_firmware_v5",
       "name": "TrackIR 5 Firmware",
-      "version": "5.4.2",
+      "version": "5.53",
       "vendor": "NaturalPoint",
-      "description": "Required for device initialization and game support.",
+      "description": "Required for device initialization and game support. Download from https://www.trackir.com/downloads/",
       "license_type": "Proprietary",
       "critical": true,
       "sources": [
         {
-          "type": "url",
-          "url": "https://naturalpoint.com/files/TrackIR_5.4.2.exe",
-          "sha256": "PENDING_VERIFICATION_OF_REAL_FILE_HASH"
+          "type": "manual_download",
+          "url": "https://www.trackir.com/downloads/",
+          "filename": "TrackIR_5.53.exe",
+          "sha256": "USER_MUST_VERIFY"
         }
       ],
       "extraction": {
