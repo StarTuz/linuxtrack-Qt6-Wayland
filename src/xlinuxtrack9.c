@@ -81,6 +81,16 @@ static XPLMCommandRef pause_cmd;
 static XPLMCommandRef recenter_cmd;
 static bool initialized = false;
 
+// Robustness: retry/reconnect state
+static int init_retry_count = 0;
+static float init_retry_timer = 0.0f;
+static int reconnect_attempts = 0;
+#define INIT_RETRY_DELAY_SEC 3.0f
+#define MAX_INIT_RETRIES 10
+#define RECONNECT_DELAY_SEC 5.0f
+#define MAX_RECONNECT_ATTEMPTS 3
+#define MAX_MSGBOX_LINES 20
+
 static int xplane_ver;
 
 static int cmd_cbk(XPLMCommandRef       inCommand,
@@ -498,10 +508,50 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   //  fprintf(stderr, "PV_ENABLED=%d\n", XPLMGetDatai(PV_Enabled_DR));
     //XPLMSetDatai(PV_Enabled_DR, active_flag);
   
+  // Robustness: Check if linuxtrack became available after X-Plane started
+  // Only retry init if we don't have a valid connection yet
   if(!initialized){
-    if(linuxtrack_get_tracking_state() != STOPPED){
+    linuxtrack_state_type state = linuxtrack_get_tracking_state();
+    if(state != STOPPED && state >= LINUXTRACK_OK){
+      // Server became available - mark as initialized
       initialized = true;
-      linuxtrack_suspend();
+      init_retry_count = 0;
+      init_retry_timer = 0.0f;
+      linuxtrack_suspend();  // Suspend until user activates
+    } else if(init_retry_count < MAX_INIT_RETRIES){
+      // Server not yet available - retry init periodically
+      init_retry_timer += inElapsedSinceLastCall;
+      if(init_retry_timer >= INIT_RETRY_DELAY_SEC){
+        init_retry_timer = 0.0f;
+        // Shutdown any partial state before retrying
+        linuxtrack_shutdown();
+        state = linuxtrack_init(NULL);
+        if(state >= LINUXTRACK_OK){
+          initialized = true;
+          init_retry_count = 0;
+          reconnect_attempts = 0;
+          linuxtrack_suspend();  // Suspend until user activates
+        } else {
+          init_retry_count++;
+        }
+      }
+    }
+  } else {
+    // Robustness: Reconnection logic - if tracking server dies, try to reconnect
+    linuxtrack_state_type state = linuxtrack_get_tracking_state();
+    // Only consider it dead if completely stopped or error state
+    if(state == STOPPED || state < 0){
+      if(reconnect_attempts < MAX_RECONNECT_ATTEMPTS){
+        // Tracking died - attempt to reinitialize
+        linuxtrack_shutdown();
+        initialized = false;
+        init_retry_count = 0;
+        init_retry_timer = 0.0f;
+        reconnect_attempts++;
+      }
+    } else if(state >= LINUXTRACK_OK){
+      // Tracking is healthy, reset reconnect counter
+      reconnect_attempts = 0;
     }
   }
   
@@ -701,7 +751,7 @@ static void messageBox(const char *msgBoxTitle, const char *message)
     return;
   }
   strcpy(msg_copy, message);
-  line_t lines[10];
+  line_t lines[MAX_MSGBOX_LINES];
   size_t num_lines = 0;
   size_t i;
   const char *head = msg_copy;
@@ -711,11 +761,12 @@ static void messageBox(const char *msgBoxTitle, const char *message)
     max_width = title_width;
   }
   for(i = 0; i < len; ++i){
+    if(num_lines >= MAX_MSGBOX_LINES) break;  // Bounds check
     if(msg_copy[i] == '\0'){
       lines[num_lines].text = head;
       lines[num_lines].width = XPLMMeasureString(xplmFont_Proportional, head, strlen(head));
       if(lines[num_lines].width > max_width){
-	max_width = lines[num_lines].width;
+        max_width = lines[num_lines].width;
       }
       ++num_lines;
       break;
@@ -726,7 +777,7 @@ static void messageBox(const char *msgBoxTitle, const char *message)
       lines[num_lines].width = XPLMMeasureString(xplmFont_Proportional, head, strlen(head));
       head = msg_copy + i + 1;
       if(lines[num_lines].width > max_width){
-	max_width = lines[num_lines].width;
+        max_width = lines[num_lines].width;
       }
       ++num_lines;
     }
