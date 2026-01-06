@@ -80,6 +80,7 @@ static XPLMCommandRef stop_cmd;
 static XPLMCommandRef pause_cmd;
 static XPLMCommandRef recenter_cmd;
 static bool initialized = false;
+static bool was_in_cockpit = true;
 
 // Robustness: retry/reconnect state
 static int init_retry_count = 0;
@@ -555,6 +556,20 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
     }
   }
   
+  // Transition logic: Handle view-based tracking control (fwfa behavior)
+  if (!view_changed && !was_in_cockpit) {
+    // Transition: External -> Cockpit
+    if (active_flag) {
+      linuxtrack_wakeup();
+    }
+    was_in_cockpit = true;
+  } else if (view_changed && was_in_cockpit) {
+    // Transition: Cockpit -> External
+    linuxtrack_suspend();
+    revertView();
+    was_in_cockpit = false;
+  }
+
   if(!active_flag){
     return -1.0;
   }

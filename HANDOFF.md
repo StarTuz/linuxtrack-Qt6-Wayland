@@ -161,6 +161,14 @@ The project now compiles successfully on modern Linux with:
   - Master broadcasts to all affected slaves and re-keys connections
 - **Version Bump:** Project version advanced to `1.1.5`.
 
+**Recent Additions (2026-01-05) [v1.1.6]:**
+
+- **Automatic View-Based Tracking Control:** Restored the "automatic pause" behavior from the `fwfa` fork.
+  - Tracking now automatically suspends (`linuxtrack_suspend`) when leaving the 3D Cockpit view.
+  - Camera coordinates are automatically reset to neutral (`revertView`) in external views to prevent view offsets.
+  - Tracking automatically resumes (`linuxtrack_wakeup`) when returning to the cockpit.
+- **Version Bump:** Project version advanced to `1.1.6`.
+
 ---
 
 ## 3. Changes Made
