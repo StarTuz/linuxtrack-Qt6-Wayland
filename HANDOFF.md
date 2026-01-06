@@ -175,6 +175,13 @@ The project now compiles successfully on modern Linux with:
 - **Fixed Shutodwn Freeze:** Resolved a potential deadlock/hang when stopping tracking from the GUI by refining the plugin's reconnection behavior.
 - **Version Bump:** Project version advanced to `1.1.7`.
 
+**Recent Additions (2026-01-05) [v1.1.8]:**
+
+- **Fixed TrackIR Freeze:** Added a state guard to ensure `linuxtrack_get_pose` is only called when tracking is in the `RUNNING` state. This prevents X-Plane from freezing if the tracking server is stopped or crashing.
+- **Improved Robustness:** Refined reconnection logic to handle the `STOPPED` state gracefully, preventing the plugin from "fighting" the GUI when the user intentionally stops the camera.
+- **Reverted View Reset:** Removed the forced coordinate reset on view change, as it was deemed unnecessary. Standard view controls and roll-reset are maintained.
+- **Version Bump:** Project version advanced to `1.1.8`.
+
 ---
 
 ## 3. Changes Made

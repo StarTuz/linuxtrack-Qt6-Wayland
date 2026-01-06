@@ -49,7 +49,7 @@ static XPLMDataRef enable_view_control = NULL;
 static float  GetHeadDataRefCB(void* inRefcon);
 static int    GetHeadCtrlRefCB(void* inRefcon);
 static void   SetHeadCtrlRefCB(void* inRefcon, int outValue);
-static void revertView(bool force);
+static void revertView(void);
 
 static float current_head_x;
 static float current_head_y;
@@ -138,7 +138,7 @@ static void   SetHeadCtrlRefCB(void* inRefcon, int outValue)
   if(inRefcon == (void*)&head_control_enable){
     if((head_control_enable != 0) && (outValue == 0) && (XPLMGetDatai(view) == 1026)){
       //Revert only when turning off while in 3D cockpit
-      revertView(false);
+      revertView();
     }
   }
   *(int*)inRefcon = outValue;
@@ -429,10 +429,10 @@ static void activate(void)
   }
 }
 
-static void revertView(bool force)
+static void revertView(void)
 {
   int current_view = XPLMGetDatai(view);
-  if((!pv_present) && (force || (current_view == 1026))){
+  if((!pv_present) && (current_view == 1026)){
     XPLMSetDataf(head_x, base_x);
     XPLMSetDataf(head_y, base_y);
     XPLMSetDataf(head_z, base_z);
@@ -447,7 +447,7 @@ static void revertView(bool force)
 static void deactivate()
 {
   active_flag=false;
-  revertView(false);
+  revertView();
   if(PV_Enabled_DR){
           XPLMSetDatai(PV_Enabled_DR, false);
   }
@@ -519,8 +519,8 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
       init_retry_count = 0;
       init_retry_timer = 0.0f;
       linuxtrack_suspend();  // Suspend until user activates
-    } else if(init_retry_count < MAX_INIT_RETRIES){
-      // Server not yet available - retry init periodically
+    } else if(state < 0 && init_retry_count < MAX_INIT_RETRIES){
+      // Server not yet available or crashed - retry init periodically
       init_retry_timer += inElapsedSinceLastCall;
       if(init_retry_timer >= INIT_RETRY_DELAY_SEC){
         init_retry_timer = 0.0f;
@@ -538,19 +538,15 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
       }
     }
   } else {
-    // Robustness: Reconnection logic - if tracking server dies, try to reconnect
+    // Robustness: Reconnection logic - if tracking server dies or stops, clean up
     linuxtrack_state_type state = linuxtrack_get_tracking_state();
-    // Only consider it dead if in an error state (state < 0)
-    // If it's just STOPPED, we don't immediately reconnect to avoid fighting the GUI shutdown
-    if(state < 0){
-      if(reconnect_attempts < MAX_RECONNECT_ATTEMPTS){
-        // Tracking died - attempt to reinitialize
-        linuxtrack_shutdown();
-        initialized = false;
-        init_retry_count = 0;
-        init_retry_timer = 0.0f;
-        reconnect_attempts++;
-      }
+    if(state == STOPPED || state < 0){
+      // Tracking died or was stopped intentionally - attempt to clean up
+      linuxtrack_shutdown();
+      initialized = false;
+      init_retry_count = 0;
+      init_retry_timer = 0.0f;
+      if(state < 0) reconnect_attempts++;
     } else if(state >= LINUXTRACK_OK){
       // Tracking is healthy, reset reconnect counter
       reconnect_attempts = 0;
@@ -567,7 +563,6 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   } else if (view_changed && was_in_cockpit) {
     // Transition: Cockpit -> External
     linuxtrack_suspend();
-    revertView(true);
     was_in_cockpit = false;
   }
 
@@ -585,21 +580,26 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
     return -1.0;
   }
 
-  int retval;
+  int retval = 0;
   unsigned int counter;
+  linuxtrack_state_type state = linuxtrack_get_tracking_state();
   
-  if(initialized && (freeze == false)){
+  if(initialized && (freeze == false) && (state == RUNNING)){
     retval = linuxtrack_get_pose(&current_head_heading,&current_head_pitch,&current_head_roll,
                                    &current_head_x, &current_head_y, &current_head_z, &counter);
     if (retval < 0) {
       return -1.0;
     }
+  } else {
+    // Return early if not running - avoids freezing X-Plane loop if library blocks
+    return -1.0;
+  }
     current_head_x       *= 1e-3f;
     current_head_y       *= 1e-3f;
     current_head_z       *= 1e-3f;
     current_head_heading *= -1.0f;
     current_head_roll    *= -1.0f;
-  }
+
   if(pv_present){
     XPLMSetDataf(PV_TIR_X_DR, current_head_x);
     XPLMSetDataf(PV_TIR_Y_DR, current_head_y);
