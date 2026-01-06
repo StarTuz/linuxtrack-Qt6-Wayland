@@ -145,6 +145,14 @@ The project now compiles successfully on modern Linux with:
 - **UDP Bridge Hotkey Daemon Fix:** Fixed bug where clicking "Start UDP Stack" did not spawn the hotkey daemon. The dialog incorrectly tried to start `ltr_wine_hotkeys.exe` via Wine instead of the native `ltr_hotkeyd` daemon. Now correctly starts the native Linux daemon from AppImage, `/opt/linuxtrack/bin`, sibling directory, or PATH.
 - **Version Bump:** Project version advanced to `1.1.3`.
 
+**Recent Additions (2026-01-05) [v1.1.4]:**
+
+- **X-Plane Plugin Robustness:** Improved `xlinuxtrack9.c` plugin reliability:
+  - **Startup Retry Logic:** Plugin now retries `linuxtrack_init()` every 3 seconds (up to 10 times) if ltr_gui isn't running when X-Plane starts.
+  - **Reconnection Logic:** Plugin detects if tracking server dies and attempts to reconnect (up to 3 attempts).
+  - **Bounds Checking:** Fixed potential buffer overflow in `messageBox()` with `MAX_MSGBOX_LINES=20` limit.
+- **Version Bump:** Project version advanced to `1.1.4`.
+
 ---
 
 ## 3. Changes Made
