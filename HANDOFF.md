@@ -153,6 +153,14 @@ The project now compiles successfully on modern Linux with:
   - **Bounds Checking:** Fixed potential buffer overflow in `messageBox()` with `MAX_MSGBOX_LINES=20` limit.
 - **Version Bump:** Project version advanced to `1.1.4`.
 
+**Recent Additions (2026-01-05) [v1.1.5]:**
+
+- **Live Profile Switching:** Profiles can now be changed in ltr_gui while tracking is active. Connected slaves (X-Plane plugin, UDP bridge, etc.) receive the new profile and reinitialize their axes curves immediately.
+  - Added `CMD_PROFILE_CHANGE` IPC message
+  - Handler in `ltr_srv_slave.c` reinitializes axes
+  - Master broadcasts to all affected slaves and re-keys connections
+- **Version Bump:** Project version advanced to `1.1.5`.
+
 ---
 
 ## 3. Changes Made

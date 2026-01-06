@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 void ltr_int_change(const char *profile, int axis, int elem, float val);
+void ltr_int_change_profile(const char *old_profile, const char *new_profile);
 bool ltr_int_master(bool standalone);
 
 //For ltr_gui
