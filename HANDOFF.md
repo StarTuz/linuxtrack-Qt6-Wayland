@@ -182,6 +182,14 @@ The project now compiles successfully on modern Linux with:
 - **Reverted View Reset:** Removed the forced coordinate reset on view change, as it was deemed unnecessary. Standard view controls and roll-reset are maintained.
 - **Version Bump:** Project version advanced to `1.1.8`.
 
+**Recent Additions (2026-01-05) [v1.1.9]:**
+
+- **Fixed "Frozen View"**: Added an automatic `revertView()` call when the tracking server is stopped or enters an error state. This ensures the cockpit view returns to neutral instead of staying tilted at the last tracked position.
+- **Improved Recenter**: The `linuxtrack/ltr_recenter` command now re-bases the X-Plane cockpit view reference point (`pos_init_flag = 1`). This allows users to move their default seat position and recenter tracking relative to the new position.
+- **Fixed Coordinate Scaling**: Resolved a regression where head coordinates were being repeatedly scaled even when no new data was available.
+- **Fixed Startup Logic**: Ensure the `initialized` flag is correctly set upon successful plugin startup.
+- **Version Bump:** Project version advanced to `1.1.9`.
+
 ---
 
 ## 3. Changes Made

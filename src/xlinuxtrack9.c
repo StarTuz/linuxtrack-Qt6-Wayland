@@ -315,7 +315,9 @@ PLUGIN_API int XPluginStart(char *outName,
 
   if(!initialized){
     linuxtrack_state_type state = linuxtrack_init(NULL);
-    if(state < LINUXTRACK_OK){
+    if(state >= LINUXTRACK_OK){
+      initialized = true;
+    } else {
       messageBox("Linuxtrack Problem", linuxtrack_explain(state));
     }
   }
@@ -480,6 +482,7 @@ static int cmd_cbk(XPLMCommandRef       inCommand,
         freeze = (freeze == false)? true : false;
       }else if(inCommand == recenter_cmd){
         linuxtrack_recenter();
+        pos_init_flag = 1;
       }
     }
     return 1;
@@ -590,15 +593,19 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
     if (retval < 0) {
       return -1.0;
     }
+    if (retval > 0) {
+      current_head_x       *= 1e-3f;
+      current_head_y       *= 1e-3f;
+      current_head_z       *= 1e-3f;
+      current_head_heading *= -1.0f;
+      current_head_roll    *= -1.0f;
+    }
   } else {
+    // Revert view to neutral if we aren't running (prevents frozen offsets)
+    revertView();
     // Return early if not running - avoids freezing X-Plane loop if library blocks
     return -1.0;
   }
-    current_head_x       *= 1e-3f;
-    current_head_y       *= 1e-3f;
-    current_head_z       *= 1e-3f;
-    current_head_heading *= -1.0f;
-    current_head_roll    *= -1.0f;
 
   if(pv_present){
     XPLMSetDataf(PV_TIR_X_DR, current_head_x);
