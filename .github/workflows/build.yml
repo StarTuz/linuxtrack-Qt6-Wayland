@@ -2,9 +2,9 @@ name: Build & Package
 
 on:
   push:
-    branches: [ master, main, modernization-* ]
+    branches: [ master, main, modernization-*, beta ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, beta ]
 
 jobs:
   build-linux:
@@ -14,7 +14,9 @@ jobs:
       matrix:
         qt_version: [6]
 
-    name: Build (Qt${{ matrix.qt_version }}) & AppImage
+    name: Build (Qt${{ matrix.qt_version }})
+# AppImage portion disabled as requested
+#    name: Build (Qt${{ matrix.qt_version }}) & AppImage
 
     steps:
       - name: Checkout code
@@ -66,20 +68,20 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_WINE32=OFF
           make -j$(nproc)
 
-      - name: Generate AppImage
-        env:
-          BUILD_DIR: "build"
-          APP_DIR: "AppDir"
-        run: |
-          chmod +x packaging/appimage/make_appimage.sh
-          # The script creates AppDir, so we run it, then if we needed to inject we would.
-          # But it's better if make_appimage.sh handles dist32.
-          ./packaging/appimage/make_appimage.sh
+#      - name: Generate AppImage
+#        env:
+#          BUILD_DIR: "build"
+#          APP_DIR: "AppDir"
+#        run: |
+#          chmod +x packaging/appimage/make_appimage.sh
+#          # The script creates AppDir, so we run it, then if we needed to inject we would.
+#          # But it's better if make_appimage.sh handles dist32.
+#          ./packaging/appimage/make_appimage.sh
 
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: Linuxtrack-x86_64.AppImage
-          path: "*.AppImage"
-          if-no-files-found: error
+#      - name: Upload AppImage
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: Linuxtrack-x86_64.AppImage
+#          path: "*.AppImage"
+#          if-no-files-found: error
 
