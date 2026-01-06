@@ -49,7 +49,7 @@ static XPLMDataRef enable_view_control = NULL;
 static float  GetHeadDataRefCB(void* inRefcon);
 static int    GetHeadCtrlRefCB(void* inRefcon);
 static void   SetHeadCtrlRefCB(void* inRefcon, int outValue);
-static void revertView(void);
+static void revertView(bool force);
 
 static float current_head_x;
 static float current_head_y;
@@ -138,7 +138,7 @@ static void   SetHeadCtrlRefCB(void* inRefcon, int outValue)
   if(inRefcon == (void*)&head_control_enable){
     if((head_control_enable != 0) && (outValue == 0) && (XPLMGetDatai(view) == 1026)){
       //Revert only when turning off while in 3D cockpit
-      revertView();
+      revertView(false);
     }
   }
   *(int*)inRefcon = outValue;
@@ -429,10 +429,10 @@ static void activate(void)
   }
 }
 
-static void revertView(void)
+static void revertView(bool force)
 {
   int current_view = XPLMGetDatai(view);
-  if((!pv_present) && (current_view == 1026)){
+  if((!pv_present) && (force || (current_view == 1026))){
     XPLMSetDataf(head_x, base_x);
     XPLMSetDataf(head_y, base_y);
     XPLMSetDataf(head_z, base_z);
@@ -447,7 +447,7 @@ static void revertView(void)
 static void deactivate()
 {
   active_flag=false;
-  revertView();
+  revertView(false);
   if(PV_Enabled_DR){
           XPLMSetDatai(PV_Enabled_DR, false);
   }
@@ -540,8 +540,9 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   } else {
     // Robustness: Reconnection logic - if tracking server dies, try to reconnect
     linuxtrack_state_type state = linuxtrack_get_tracking_state();
-    // Only consider it dead if completely stopped or error state
-    if(state == STOPPED || state < 0){
+    // Only consider it dead if in an error state (state < 0)
+    // If it's just STOPPED, we don't immediately reconnect to avoid fighting the GUI shutdown
+    if(state < 0){
       if(reconnect_attempts < MAX_RECONNECT_ATTEMPTS){
         // Tracking died - attempt to reinitialize
         linuxtrack_shutdown();
@@ -566,7 +567,7 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   } else if (view_changed && was_in_cockpit) {
     // Transition: Cockpit -> External
     linuxtrack_suspend();
-    revertView();
+    revertView(true);
     was_in_cockpit = false;
   }
 

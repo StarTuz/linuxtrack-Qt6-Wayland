@@ -169,6 +169,12 @@ The project now compiles successfully on modern Linux with:
   - Tracking automatically resumes (`linuxtrack_wakeup`) when returning to the cockpit.
 - **Version Bump:** Project version advanced to `1.1.6`.
 
+**Recent Additions (2026-01-05) [v1.1.7]:**
+
+- **Fixed View Reset Logic:** Corrected a logic error where `revertView` would fail to reset coordinates when leaving the cockpit. It now supports a forced reset during view transitions.
+- **Fixed Shutodwn Freeze:** Resolved a potential deadlock/hang when stopping tracking from the GUI by refining the plugin's reconnection behavior.
+- **Version Bump:** Project version advanced to `1.1.7`.
+
 ---
 
 ## 3. Changes Made
