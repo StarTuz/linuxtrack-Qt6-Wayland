@@ -111,6 +111,7 @@ bool TirPrefs::Activate(const QString &ID, bool init) {
   Qt::CheckState grayscale =
       (ltr_int_tir_get_use_grayscale()) ? Qt::Checked : Qt::Unchecked;
   ui.TirUseGrayscale->setCheckState(grayscale);
+  ui.TirVideoOnDelay->setValue(ltr_int_tir_get_video_on_delay());
   if (firmwareOK) {
     if ((tirType < TIR4) || (tirType == TIR5V3)) {
       ui.TirFwLabel->setText(QString::fromUtf8("Firmware not needed!"));
@@ -237,6 +238,11 @@ void TirPrefs::on_TirSignalizeStatus_stateChanged(int state) {
 void TirPrefs::on_TirUseGrayscale_stateChanged(int state) {
   if (!initializing)
     ltr_int_tir_set_use_grayscale(state == Qt::Checked);
+}
+
+void TirPrefs::on_TirVideoOnDelay_valueChanged(int i) {
+  if (!initializing)
+    ltr_int_tir_set_video_on_delay(i);
 }
 
 void TirPrefs::TirFirmwareDLFinished(bool state) {

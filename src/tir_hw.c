@@ -674,7 +674,14 @@ static bool start_camera_tir2()
 {
   ltr_int_log_message("Starting TIR2 camera!\n");
   ltr_int_send_data(out_ep, Video_on,sizeof(Video_on));
-  ltr_int_usleep(120000);
+  {
+    int delay = ltr_int_tir_get_video_on_delay();
+    int total_delay = 120000 + delay; // TIR2 needs base 120ms + configurable
+    if(delay > 0){
+      ltr_int_log_message("Video-on-delay: %d microseconds (base + %d configured)\n", total_delay, delay);
+    }
+    ltr_int_usleep(total_delay);
+  }
   if(ir_on){
     turn_led_on_tir(TIR_LED_IR);
     ltr_int_usleep(64000);
@@ -704,6 +711,13 @@ static bool start_camera_tir3()
     ltr_int_usleep(2000);
   }
   ltr_int_send_data(out_ep, Video_on,sizeof(Video_on));
+  {
+    int delay = ltr_int_tir_get_video_on_delay();
+    if(delay > 0){
+      ltr_int_log_message("Video-on-delay: %d microseconds\n", delay);
+      ltr_int_usleep(delay);
+    }
+  }
   ltr_int_usleep(2000);
   if(ltr_int_tir_get_status_indication()){
     set_status_led_tir4(true);
@@ -716,6 +730,13 @@ static bool start_camera_tir4()
 {
   stop_camera_tir();
   ltr_int_send_data(out_ep, Video_on,sizeof(Video_on));
+  {
+    int delay = ltr_int_tir_get_video_on_delay();
+    if(delay > 0){
+      ltr_int_log_message("Video-on-delay: %d microseconds\n", delay);
+      ltr_int_usleep(delay);
+    }
+  }
   if(ir_on){
     turn_led_on_tir(TIR_LED_IR);
   }
@@ -729,6 +750,13 @@ static bool start_camera_tir5()
 {
   stop_camera_tir();
   ltr_int_send_data(out_ep, Video_on,sizeof(Video_on));
+  {
+    int delay = ltr_int_tir_get_video_on_delay();
+    if(delay > 0){
+      ltr_int_log_message("Video-on-delay: %d microseconds\n", delay);
+      ltr_int_usleep(delay);
+    }
+  }
   if(ir_on){
     control_ir_led_tir(true);
   }else{
@@ -748,6 +776,13 @@ static bool start_camera_sn4()
     ltr_int_send_data(out_ep, SN4_normal_mode,sizeof(SN4_normal_mode));
   }
   ltr_int_send_data(out_ep, Video_on,sizeof(Video_on));
+  {
+    int delay = ltr_int_tir_get_video_on_delay();
+    if(delay > 0){
+      ltr_int_log_message("Video-on-delay: %d microseconds\n", delay);
+      ltr_int_usleep(delay);
+    }
+  }
   if(ir_on){
     turn_led_on_tir(TIR_LED_IR);
   }
@@ -755,12 +790,18 @@ static bool start_camera_sn4()
     set_status_led_tir4(true);
   }
   return true;
-  return true;
 }
 
 static bool start_camera_sn3()
 {
   ltr_int_send_data(out_ep, Video_on,sizeof(Video_on));
+  {
+    int delay = ltr_int_tir_get_video_on_delay();
+    if(delay > 0){
+      ltr_int_log_message("Video-on-delay: %d microseconds\n", delay);
+      ltr_int_usleep(delay);
+    }
+  }
   ltr_int_send_data(out_ep, Fifo_flush,sizeof(Fifo_flush));
   turn_led_on_tir(TIR_LED_GREEN);
   if(ir_on){
@@ -958,6 +999,13 @@ static bool init_camera_tir5(bool force_fw_load, bool p_ir_on)
   ltr_int_send_data(out_ep, Camera_stop,sizeof(Camera_stop));
   control_ir_led_tir(true);
   ltr_int_send_data(out_ep, Video_on,sizeof(Video_on));
+  {
+    int delay = ltr_int_tir_get_video_on_delay();
+    if(delay > 0){
+      ltr_int_log_message("init_camera_tir5: Video-on-delay = %d microseconds\n", delay);
+      ltr_int_usleep(delay);
+    }
+  }
   return true;
 }
 

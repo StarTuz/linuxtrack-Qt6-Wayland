@@ -231,6 +231,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QLabel" name="VideoOnDelayLabel">
+            <property name="text">
+             <string>Video On Delay (µs):</string>
+            </property>
+            <property name="toolTip">
+             <string>Delay after enabling video before turning on IR LEDs. Try 120000 if IR LEDs turn off immediately.</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
@@ -372,6 +382,58 @@
                <string>253</string>
               </property>
              </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="5" column="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <item>
+             <widget class="QSpinBox" name="TirVideoOnDelay">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>Delay in microseconds. Try 120000 (120ms) if IR LEDs turn off immediately after starting.</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+              <property name="minimum">
+               <number>0</number>
+              </property>
+              <property name="maximum">
+               <number>500000</number>
+              </property>
+              <property name="singleStep">
+               <number>10000</number>
+              </property>
+              <property name="value">
+               <number>0</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_video_delay_unit">
+              <property name="text">
+               <string>µs</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </item>
