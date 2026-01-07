@@ -78,6 +78,16 @@ void ProfileSetup::initAxes() {
   ui.TzSens->setValue(TRACKER.axisGet(TZ, AXIS_MULT) * 12.0);
   ui.Smoothing->setValue(TRACKER.getCommonFilterFactor() *
                          ui.Smoothing->maximum());
+  // One Euro filter state - read from PITCH axis as representative
+  ui.OneEuroEnabled->setCheckState(
+      TRACKER.axisGetBool(PITCH, AXIS_ONE_EURO_ENABLED) ? Qt::Checked : Qt::Unchecked);
+  // min_cutoff slider: 1-50 maps to 0.1-5.0
+  ui.OneEuroMinCutoff->setValue((int)(TRACKER.axisGet(PITCH, AXIS_ONE_EURO_MIN_CUTOFF) * 10.0f));
+  // beta slider: 0-100 maps to 0.0-0.1
+  ui.OneEuroBeta->setValue((int)(TRACKER.axisGet(PITCH, AXIS_ONE_EURO_BETA) * 1000.0f));
+  // Enable/disable sliders based on checkbox
+  ui.OneEuroMinCutoff->setEnabled(ui.OneEuroEnabled->isChecked());
+  ui.OneEuroBeta->setEnabled(ui.OneEuroEnabled->isChecked());
 }
 
 void ProfileSetup::axisChanged(int axis, int elem) {
@@ -203,6 +213,39 @@ void ProfileSetup::on_TzSens_valueChanged(int val) {
 void ProfileSetup::on_Smoothing_valueChanged(int val) {
   if (!initializing)
     TRACKER.setCommonFilterFactor((float)val / ui.Smoothing->maximum());
+}
+
+void ProfileSetup::on_OneEuroEnabled_stateChanged(int state) {
+  if (!initializing) {
+    bool enabled = (state == Qt::Checked);
+    // Apply to all axes
+    for (int i = PITCH; i <= TZ; ++i) {
+      TRACKER.axisChange((axis_t)i, AXIS_ONE_EURO_ENABLED, enabled);
+    }
+    // Enable/disable sliders
+    ui.OneEuroMinCutoff->setEnabled(enabled);
+    ui.OneEuroBeta->setEnabled(enabled);
+  }
+}
+
+void ProfileSetup::on_OneEuroMinCutoff_valueChanged(int val) {
+  if (!initializing) {
+    // Slider 1-50 maps to 0.1-5.0 (inverted: lower slider = smoother)
+    float min_cutoff = (float)val / 10.0f;
+    for (int i = PITCH; i <= TZ; ++i) {
+      TRACKER.axisChange((axis_t)i, AXIS_ONE_EURO_MIN_CUTOFF, min_cutoff);
+    }
+  }
+}
+
+void ProfileSetup::on_OneEuroBeta_valueChanged(int val) {
+  if (!initializing) {
+    // Slider 0-100 maps to 0.0-0.1
+    float beta = (float)val / 1000.0f;
+    for (int i = PITCH; i <= TZ; ++i) {
+      TRACKER.axisChange((axis_t)i, AXIS_ONE_EURO_BETA, beta);
+    }
+  }
 }
 
 void ProfileSetup::importProfile(QTextStream &tf) {

@@ -12,11 +12,10 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFile>
-#include <QCoreApplication>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSettings>
+#include <QTimer>
 #include <iostream>
 
 #include "device_setup.h"
@@ -34,6 +33,7 @@
 #include "xplugin.h"
 #include "udp_bridge.h"
 #include "udp_settings.h"
+#include "utils.h"
 
 static QMessageBox::StandardButton warnQuestion(const QString &message) {
   return QMessageBox::warning(nullptr, QString::fromUtf8("Linuxtrack"), message,
@@ -51,9 +51,9 @@ static QMessageBox::StandardButton infoMessage(const QString &message) {
                                   message, QMessageBox::Ok);
 }
 
-LinuxtrackGui::LinuxtrackGui(QWidget *parent)
+LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
     : QWidget(parent), ds(nullptr), xpInstall(nullptr), initialized(false),
-      news_serial(-1), guiInit(true), showWineWarning(true) {
+      news_serial(-1), guiInit(true), showWineWarning(true), m_autostart(autostart) {
   ui.setupUi(this);
   PREF;
   setWindowTitle(QString::fromUtf8("Linuxtrack GUI v") +
@@ -69,7 +69,6 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent)
                    SLOT(logsPackaged(int, QProcess::ExitStatus)));
   ui.ModelEditSite->addWidget(me);
   ui.ProfileSetupSite->addWidget(ps);
-  connect(ps, SIGNAL(profileChanged(const QString &)), this, SLOT(onProfileChanged(const QString &)));
 
   gui_settings = new QSettings(QString::fromUtf8("linuxtrack"),
                                QString::fromUtf8("ltr_gui"));
@@ -115,6 +114,7 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent)
 
   // Initialize UDP Bridge
   udpBridge = new UdpBridge(this);
+  hotkeyProcess = nullptr;  // Owned by main window
   QSettings udpSettings(QString::fromLatin1("linuxtrack"), QString::fromLatin1("ltr_gui"));
   udpSettings.beginGroup(QString::fromLatin1("UDP"));
   udpBridge->setTarget(
@@ -125,17 +125,7 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent)
   ui.UdpBridgeCheck->setChecked(udpSettings.value(QString::fromLatin1("Enabled"), false).toBool());
   udpSettings.endGroup();
 
-  // Initialize Native Hotkeys daemon
-  hotkeyDaemon = new QProcess(this);
-  QSettings hotkeySettings(QString::fromLatin1("linuxtrack"), QString::fromLatin1("ltr_gui"));
-  hotkeySettings.beginGroup(QString::fromLatin1("NativeHotkeys"));
-  ui.NativeHotkeysCheck->setChecked(hotkeySettings.value(QString::fromLatin1("Enabled"), false).toBool());
-  hotkeySettings.endGroup();
-
   guiInit = false;
-  if (ui.UdpBridgeCheck->isChecked()) {
-    on_UdpBridgeCheck_stateChanged(Qt::Checked);
-  }
 }
 
 void LinuxtrackGui::show() {
@@ -156,6 +146,13 @@ void LinuxtrackGui::show() {
     HelpViewer::ShowWindow();
   } else {
     HelpViewer::ChangePage(QString::fromUtf8("dev_setup.htm"));
+  }
+  
+  // Auto-start tracking if --autostart flag was passed
+  if (m_autostart) {
+    ltr_int_log_message("Autostart: triggering tracking start\n");
+    // Use a single-shot timer to start tracking after event loop begins
+    QTimer::singleShot(500, showWindow, &LtrGuiForm::startTracking);
   }
 }
 
@@ -181,6 +178,13 @@ LinuxtrackGui::~LinuxtrackGui() {
   ds = nullptr;
   if (xpInstall != nullptr) {
   }
+  // Stop hotkey daemon before cleanup
+  if (hotkeyProcess && hotkeyProcess->state() != QProcess::NotRunning) {
+    hotkeyProcess->terminate();
+    hotkeyProcess->waitForFinished(1000);
+  }
+  delete hotkeyProcess;
+  hotkeyProcess = nullptr;
   delete udpBridge;
   udpBridge = nullptr;
 }
@@ -286,6 +290,7 @@ void LinuxtrackGui::on_LtrTab_currentChanged(int index) {
 void LinuxtrackGui::trackerStateHandler(linuxtrack_state_type current_state) {
   switch (current_state) {
   case INITIALIZING:
+    break;
   case RUNNING:
   case PAUSED:
     // ui.DeviceSelector->setDisabled(true);
@@ -296,6 +301,23 @@ void LinuxtrackGui::trackerStateHandler(linuxtrack_state_type current_state) {
     ui.DiscardChangesButton->setDisabled(true);
     // ui.LegacyPose->setDisabled(true);
     // ui.LegacyRotation->setDisabled(true);
+    
+    // Auto-start UDP bridge when tracking begins
+    if (current_state == RUNNING) {
+      QSettings settings(QString::fromLatin1("linuxtrack"), QString::fromLatin1("ltr_gui"));
+      settings.beginGroup(QString::fromLatin1("UDP"));
+      bool autoStart = settings.value(QString::fromLatin1("AutoStart"), true).toBool();
+      bool enabled = settings.value(QString::fromLatin1("Enabled"), false).toBool();
+      settings.endGroup();
+      
+      if (autoStart && !enabled) {
+        // Auto-start if AutoStart is checked but bridge isn't running yet
+        ui.UdpBridgeCheck->setChecked(true);  // This triggers on_UdpBridgeCheck_stateChanged
+      } else if (enabled) {
+        // Bridge already enabled, ensure hotkey daemon is running
+        startHotkeyDaemon();
+      }
+    }
     break;
   default:
     // ui.DeviceSelector->setEnabled(true);
@@ -306,7 +328,6 @@ void LinuxtrackGui::trackerStateHandler(linuxtrack_state_type current_state) {
     ui.DiscardChangesButton->setEnabled(true);
     // ui.LegacyPose->setEnabled(true);
     // ui.LegacyRotation->setEnabled(true);
-    break;
     break;
   }
 }
@@ -391,9 +412,6 @@ void LinuxtrackGui::onLALClicked() {
 
 #include "moc_ltr_gui.cpp"
 
-#include "ltr_profiles.h"
-#include "ltr_gui_prefs.h"
-
 void LinuxtrackGui::on_UdpBridgeCheck_stateChanged(int state) {
   if (guiInit) return;
   
@@ -403,23 +421,11 @@ void LinuxtrackGui::on_UdpBridgeCheck_stateChanged(int state) {
   settings.endGroup();
   
   if (state == Qt::Checked) {
-    QString title = PROFILE.getCurrentProfileName();
-    udpBridge->setProfile(title);
     udpBridge->start();
+    startHotkeyDaemon();  // Also start hotkey daemon
   } else {
     udpBridge->stop();
-  }
-}
-
-void LinuxtrackGui::onProfileChanged(const QString &profileName) {
-  (void)profileName;
-  if (ui.UdpBridgeCheck->isChecked() && udpBridge->isRunning()) {
-    udpBridge->stop();
-    on_UdpBridgeCheck_stateChanged(Qt::Checked);
-  } else if (ui.UdpBridgeCheck->isChecked()) {
-    // Just update the profile for the bridge so it's ready for future starts
-    QString title = PROFILE.getCurrentProfileName();
-    udpBridge->setProfile(title);
+    stopHotkeyDaemon();  // Also stop hotkey daemon
   }
 }
 
@@ -428,61 +434,68 @@ void LinuxtrackGui::on_UdpSettingsButton_pressed() {
   dialog.exec();
 }
 
-void LinuxtrackGui::on_NativeHotkeysCheck_stateChanged(int state) {
-  if (guiInit) return;
-
+void LinuxtrackGui::startHotkeyDaemon() {
+  // Check if hotkeys are enabled in settings
   QSettings settings(QString::fromLatin1("linuxtrack"), QString::fromLatin1("ltr_gui"));
-  settings.beginGroup(QString::fromLatin1("NativeHotkeys"));
-  settings.setValue(QString::fromLatin1("Enabled"), state == Qt::Checked);
+  settings.beginGroup(QString::fromLatin1("UDP"));
+  bool enableHotkeys = settings.value(QString::fromLatin1("EnableHotkeys"), false).toBool();
   settings.endGroup();
-
-  if (state == Qt::Checked) {
-    // Start ltr_hotkeyd
-    if (hotkeyDaemon->state() == QProcess::NotRunning) {
-      QString exePath = QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkeyd");
-      if (!QFile::exists(exePath)) {
-        // Try build directory
-        exePath = QCoreApplication::applicationDirPath() + QString::fromLatin1("/../src/ltr_hotkeyd");
-      }
-      if (QFile::exists(exePath)) {
-        // Pass current profile to the hotkey daemon
-        QString profileArg = QString::fromLatin1("--profile=") + PROFILE.getCurrentProfileName();
-        hotkeyDaemon->start(exePath, QStringList() << profileArg);
-        ui.NativeHotkeysStatus->setText(QString::fromLatin1("Status: Running"));
-      } else {
-        warningMessage(QString::fromUtf8("Could not find ltr_hotkeyd executable."));
-        ui.NativeHotkeysCheck->setChecked(false);
-      }
+  
+  if (!enableHotkeys) {
+    return;  // Hotkeys not enabled in settings
+  }
+  
+  // Already running?
+  if (hotkeyProcess && hotkeyProcess->state() != QProcess::NotRunning) {
+    return;
+  }
+  
+  if (!hotkeyProcess) {
+    hotkeyProcess = new QProcess(this);
+    connect(hotkeyProcess, &QProcess::errorOccurred, this, [](QProcess::ProcessError error) {
+      qWarning() << "ltr_hotkeyd error:" << error;
+    });
+  }
+  
+  // Find ltr_hotkeyd in various locations
+  QString exePath;
+  
+  // 1. Check APPDIR (AppImage environment)
+  QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
+  if (!appDir.isEmpty()) {
+    QString appImagePath = appDir + QString::fromLatin1("/usr/bin/ltr_hotkeyd");
+    if (QFile::exists(appImagePath)) {
+      exePath = appImagePath;
     }
+  }
+  
+  // 2. Check installed location
+  if (exePath.isEmpty()) {
+    QString installPath = QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkeyd");
+    if (QFile::exists(installPath)) {
+      exePath = installPath;
+    }
+  }
+  
+  // 3. Check alongside ltr_gui
+  if (exePath.isEmpty()) {
+    QString siblingPath = QCoreApplication::applicationDirPath() + QString::fromLatin1("/ltr_hotkeyd");
+    if (QFile::exists(siblingPath)) {
+      exePath = siblingPath;
+    }
+  }
+  
+  if (!exePath.isEmpty()) {
+    qDebug() << "Starting ltr_hotkeyd from:" << exePath;
+    hotkeyProcess->start(exePath, QStringList());
   } else {
-    // Stop ltr_hotkeyd
-    if (hotkeyDaemon->state() != QProcess::NotRunning) {
-      hotkeyDaemon->terminate();
-      hotkeyDaemon->waitForFinished(1000);
-    }
-    ui.NativeHotkeysStatus->setText(QString::fromLatin1("Status: Stopped"));
+    qWarning() << "ltr_hotkeyd not found in any expected location";
   }
 }
 
-void LinuxtrackGui::on_NativeHotkeysConfigButton_pressed() {
-  infoMessage(QString::fromUtf8(
-      "Native hotkeys are configured via the ltr_hotkey_gui utility.\n\n"
-      "Default hotkeys:\n"
-      "  F12 - Recenter\n"
-      "  Pause - Pause/Resume\n\n"
-      "Wayland support is provided via xdg-desktop-portal (GlobalShortcuts)."));
-}
-
-void LinuxtrackGui::onHotkeyDaemonStateChanged() {
-  if (hotkeyDaemon->state() == QProcess::Running) {
-    ui.NativeHotkeysStatus->setText(QString::fromLatin1("Status: Running"));
-  } else if (hotkeyDaemon->state() == QProcess::Starting) {
-    ui.NativeHotkeysStatus->setText(QString::fromLatin1("Status: Starting..."));
-  } else {
-    ui.NativeHotkeysStatus->setText(QString::fromLatin1("Status: Stopped"));
-    // Sync checkbox if it died unexpectedly
-    if (ui.NativeHotkeysCheck->isChecked() && hotkeyDaemon->exitStatus() == QProcess::CrashExit) {
-        ui.NativeHotkeysCheck->setChecked(false);
-    }
+void LinuxtrackGui::stopHotkeyDaemon() {
+  if (hotkeyProcess && hotkeyProcess->state() != QProcess::NotRunning) {
+    hotkeyProcess->terminate();
+    hotkeyProcess->waitForFinished(1000);
   }
 }

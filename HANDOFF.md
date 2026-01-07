@@ -121,7 +121,74 @@ The project now compiles successfully on modern Linux with:
 - **TrackIR Video On Delay:** Added configurable delay (0-500000µs) after `Video_on` USB command. Essential for hardware revisions where IR LEDs would otherwise flash and turn off immediately. Accessible via TrackIR Troubleshooting GUI.
 - **AppImage Stability Fix:** Resolved issue where `Prefix` in configuration would point to volatile AppImage mount points.
 - **Stable Library Installation:** `ltr_gui` can now surgically install core libraries to `~/.local/lib/linuxtrack` when installing the X-Plane plugin from an AppImage, ensuring plugin persistence.
+- **One Euro Filter:** Implemented an open-source, patent-free adaptive smoothing filter to reduce tracking jitter without adding noticeable lag. Based on the published CHI 2012 algorithm. Toggleable per-axis with two tunable parameters (`min_cutoff` for smoothness, `beta` for responsiveness).
 - **Version Bump:** Project version advanced to `1.1.0`.
+
+**Recent Additions (2026-01-04) [v1.1.1]:**
+
+- **One Euro Filter GUI Fix:** Fixed bug where Smoothness/Responsiveness sliders had no effect. The `ltr_srv_slave.c` was incorrectly routing `AXIS_ONE_EURO_ENABLED` and `AXIS_INVERTED` through the float parameter handler instead of the boolean handler. Slider changes now correctly propagate to the tracking server in real-time.
+- **One Euro Filter Persistence:** Fixed missing save/load logic for One Euro filter settings. Extended `axis_fields` enum, added save calls in `ltr_int_set_axis_param()`, and added load logic in `ltr_int_get_axis()`. Settings are now saved per-profile (e.g., `Pitch-one-euro-enabled`).
+- **X-Plane Seamless Camera Toggle:** Switch between cockpit and external camera views without disabling TrackIR. The plugin now returns early when `view_type != 1026` (3D cockpit), keeping tracking active but not interfering with external views. Added `linuxtrack/ltr_start` and `linuxtrack/ltr_stop` commands for explicit control.
+- **X-Plane Recommendation:** Documented that X-Plane users should run `ltr_gui` alongside X-Plane to access One Euro filter controls.
+- **Version Bump:** Project version advanced to `1.1.1`.
+
+**Recent Additions (2026-01-04) [v1.1.2]:**
+
+- **ltr_gui --autostart Flag:** Added command-line flag (`--autostart` or `-a`) that automatically starts tracking when the GUI launches. Useful for X-Plane startup scripts.
+- **AppImage Qt Plugin Fix:** Fixed "Could not find the Qt platform plugin xcb" error in AppImage. Updated `AppRun` to set `QT_QPA_PLATFORM_PLUGIN_PATH` pointing to bundled platform plugins.
+- **Troubleshooting Docs:** Added sections for TrackIR firmware (use Extract method), MFC42 workaround, and NVIDIA 3D view issues.
+- **TrackIR Firmware Links:** Updated to point to official [trackir.com/downloads](https://www.trackir.com/downloads/) (v5.53).
+- **Version Bump:** Project version advanced to `1.1.2`.
+
+**Recent Additions (2026-01-04) [v1.1.3]:**
+
+- **UDP Bridge Hotkey Daemon Fix:** Fixed bug where clicking "Start UDP Stack" did not spawn the hotkey daemon. The dialog incorrectly tried to start `ltr_wine_hotkeys.exe` via Wine instead of the native `ltr_hotkeyd` daemon. Now correctly starts the native Linux daemon from AppImage, `/opt/linuxtrack/bin`, sibling directory, or PATH.
+- **Version Bump:** Project version advanced to `1.1.3`.
+
+**Recent Additions (2026-01-05) [v1.1.4]:**
+
+- **X-Plane Plugin Robustness:** Improved `xlinuxtrack9.c` plugin reliability:
+  - **Startup Retry Logic:** Plugin now retries `linuxtrack_init()` every 3 seconds (up to 10 times) if ltr_gui isn't running when X-Plane starts.
+  - **Reconnection Logic:** Plugin detects if tracking server dies and attempts to reconnect (up to 3 attempts).
+  - **Bounds Checking:** Fixed potential buffer overflow in `messageBox()` with `MAX_MSGBOX_LINES=20` limit.
+- **Version Bump:** Project version advanced to `1.1.4`.
+
+**Recent Additions (2026-01-05) [v1.1.5]:**
+
+- **Live Profile Switching:** Profiles can now be changed in ltr_gui while tracking is active. Connected slaves (X-Plane plugin, UDP bridge, etc.) receive the new profile and reinitialize their axes curves immediately.
+  - Added `CMD_PROFILE_CHANGE` IPC message
+  - Handler in `ltr_srv_slave.c` reinitializes axes
+  - Master broadcasts to all affected slaves and re-keys connections
+- **Version Bump:** Project version advanced to `1.1.5`.
+
+**Recent Additions (2026-01-05) [v1.1.6]:**
+
+- **Automatic View-Based Tracking Control:** Restored the "automatic pause" behavior from the `fwfa` fork.
+  - Tracking now automatically suspends (`linuxtrack_suspend`) when leaving the 3D Cockpit view.
+  - Camera coordinates are automatically reset to neutral (`revertView`) in external views to prevent view offsets.
+  - Tracking automatically resumes (`linuxtrack_wakeup`) when returning to the cockpit.
+- **Version Bump:** Project version advanced to `1.1.6`.
+
+**Recent Additions (2026-01-05) [v1.1.7]:**
+
+- **Fixed View Reset Logic:** Corrected a logic error where `revertView` would fail to reset coordinates when leaving the cockpit. It now supports a forced reset during view transitions.
+- **Fixed Shutodwn Freeze:** Resolved a potential deadlock/hang when stopping tracking from the GUI by refining the plugin's reconnection behavior.
+- **Version Bump:** Project version advanced to `1.1.7`.
+
+**Recent Additions (2026-01-05) [v1.1.8]:**
+
+- **Fixed TrackIR Freeze:** Added a state guard to ensure `linuxtrack_get_pose` is only called when tracking is in the `RUNNING` state. This prevents X-Plane from freezing if the tracking server is stopped or crashing.
+- **Improved Robustness:** Refined reconnection logic to handle the `STOPPED` state gracefully, preventing the plugin from "fighting" the GUI when the user intentionally stops the camera.
+- **Reverted View Reset:** Removed the forced coordinate reset on view change, as it was deemed unnecessary. Standard view controls and roll-reset are maintained.
+- **Version Bump:** Project version advanced to `1.1.8`.
+
+**Recent Additions (2026-01-05) [v1.1.9]:**
+
+- **Fixed "Frozen View"**: Added an automatic `revertView()` call when the tracking server is stopped or enters an error state. This ensures the cockpit view returns to neutral instead of staying tilted at the last tracked position.
+- **Improved Recenter**: The `linuxtrack/ltr_recenter` command now re-bases the X-Plane cockpit view reference point (`pos_init_flag = 1`). This allows users to move their default seat position and recenter tracking relative to the new position.
+- **Fixed Coordinate Scaling**: Resolved a regression where head coordinates were being repeatedly scaled even when no new data was available.
+- **Fixed Startup Logic**: Ensure the `initialized` flag is correctly set upon successful plugin startup.
+- **Version Bump:** Project version advanced to `1.1.9`.
 
 ---
 
@@ -538,6 +605,20 @@ libcwiid                 # Wiimote support
    - Wine bridge files show false-positive errors in IDEs
    - Cause: IDE doesn't understand `winegcc` include paths
    - These files compile correctly with the Wine toolchain
+
+5. **X-Plane External View Conflict** ⚠️ UNDER INVESTIGATION
+   - **Symptom:** Cannot switch to external view (Shift-4) while TrackIR is active
+   - **Visual:** Horizon lights/textures flash rapidly, as if view is being pulled back to cockpit
+   - **Workaround:** Pause tracking before switching views, or use `linuxtrack/ltr_pause` command
+   - **Root Cause:** Plugin applies cockpit coordinates every frame, overriding X-Plane's view change
+   - **Investigation Notes:** See `.agent/TEAM_FEEDBACK.md` post-mortem section
+   - **Reference:** fwfa123/linuxtrackx-ir fork reportedly handles this correctly
+   - **Status:** Requires proper side-by-side diff with fwfa fork to isolate fix
+   - **Next Steps (Team Recommendations):**
+     1. Check if `pv_present` is incorrectly true (bypasses view_changed guard)
+     2. Add debug logging with `XPLMDebugString()` to trace view_type during Shift-4
+     3. Line-by-line comparison of fwfa callback's early-return logic
+     4. Test if view_type oscillates between values during X-Plane view transition
 
 ### Historical Note
 

@@ -22,6 +22,7 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <vector>
 
 static std::multimap<std::string, int> slaves;
 static semaphore_p pfSem = nullptr;
@@ -88,6 +89,40 @@ void ltr_int_change(const char *profile, int axis, int elem, float val) {
     for (i = slaves.begin(); i != slaves.end(); ++i) {
       ltr_int_send_param_update(i->second, axis, elem, val);
     }
+  }
+}
+
+void ltr_int_change_profile(const char *old_profile, const char *new_profile) {
+  std::lock_guard<std::mutex> guard(send_mx);
+  std::pair<std::multimap<std::string, int>::iterator,
+            std::multimap<std::string, int>::iterator>
+      range;
+  std::multimap<std::string, int>::iterator i;
+  
+  if (old_profile == nullptr || new_profile == nullptr) {
+    ltr_int_log_message("ltr_int_change_profile called with NULL profile!\n");
+    return;
+  }
+  
+  // Find all slaves using the old profile and notify them
+  range = slaves.equal_range(old_profile);
+  for (i = range.first; i != range.second; ++i) {
+    ltr_int_send_message_w_str(i->second, CMD_PROFILE_CHANGE, 0, (char*)new_profile);
+    ltr_int_log_message("Sent profile change to slave @socket %d: '%s' -> '%s'\n",
+                        i->second, old_profile, new_profile);
+  }
+  
+  // Update the slave's key in the multimap
+  // We need to re-key the entries from old_profile to new_profile
+  range = slaves.equal_range(old_profile);
+  std::vector<int> sockets_to_rekey;
+  for (i = range.first; i != range.second; ++i) {
+    sockets_to_rekey.push_back(i->second);
+  }
+  // Remove old entries and add with new key
+  slaves.erase(old_profile);
+  for (int socket : sockets_to_rekey) {
+    slaves.insert(std::pair<std::string, int>(new_profile, socket));
   }
 }
 

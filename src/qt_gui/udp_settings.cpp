@@ -11,13 +11,15 @@
 #include <QFile>
 #include <QProcess>
 #include <QDateTime>
+#include <QCoreApplication>
 #include "tracker.h"
 
 UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::UdpSettingsDialog)
     , bridge(b)
-    , hotkeyProcess(nullptr)
+    , hotkeyProcess(nullptr)  // Not owned by dialog - will be reparented to main window if started
+    , stackRunning(b ? b->isRunning() : false)
 {
     ui->setupUi(this);
     
@@ -31,10 +33,6 @@ UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
             if (cmd == QString::fromLatin1("RECN")) onRecenterClicked();
             else if (cmd == QString::fromLatin1("PAUS")) onPauseClicked();
         });
-        connect(bridge, &UdpBridge::statusChanged, this, [this](bool running){
-            (void)running;
-            updateStatus();
-        });
     }
     
     loadSettings();
@@ -43,12 +41,12 @@ UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
 
 UdpSettings::~UdpSettings()
 {
-    // Stop hotkey process if running
+    // NOTE: hotkeyProcess is now owned by LinuxtrackGui, not this dialog.
+    // We don't terminate it here - it should persist after dialog closes.
+    // If dialog started a local process, reparent it to main window.
     if (hotkeyProcess && hotkeyProcess->state() != QProcess::NotRunning) {
-        hotkeyProcess->terminate();
-        hotkeyProcess->waitForFinished(1000);
+        hotkeyProcess->setParent(parentWidget());  // Reparent to main window
     }
-    delete hotkeyProcess;
     delete ui;
 }
 
@@ -335,13 +333,16 @@ void UdpSettings::saveHotkeyIniFile()
 
 void UdpSettings::onStartStopClicked()
 {
-    if (bridge && bridge->isRunning()) {
+    if (stackRunning) {
         // Stop the stack
-        bridge->stop();
+        if (bridge) {
+            bridge->stop();
+        }
         if (hotkeyProcess && hotkeyProcess->state() != QProcess::NotRunning) {
             hotkeyProcess->terminate();
             hotkeyProcess->waitForFinished(1000);
         }
+        stackRunning = false;
     } else {
         // Start the stack
         
@@ -355,24 +356,70 @@ void UdpSettings::onStartStopClicked()
             bridge->start();
         }
         
-        // Start hotkey utility if enabled
+        // Start native hotkey daemon if enabled
         if (ui->enableHotkeysCheck->isChecked()) {
             if (!hotkeyProcess) {
                 hotkeyProcess = new QProcess(this);
+                connect(hotkeyProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+                    qWarning() << "ltr_hotkeyd error:" << error;
+                });
             }
-            // Path to hotkey exe - in prefix or installed location
-            QString exePath = QString::fromLatin1("/opt/linuxtrack/lib/linuxtrack/ltr_wine_hotkeys.exe");
-            if (QFile::exists(exePath)) {
-                hotkeyProcess->start(QString::fromLatin1("wine"), QStringList() << exePath);
+            
+            // Find ltr_hotkeyd in various locations
+            QString exePath;
+            
+            // 1. Check APPDIR (AppImage environment)
+            QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
+            if (!appDir.isEmpty()) {
+                QString appImagePath = appDir + QString::fromLatin1("/usr/bin/ltr_hotkeyd");
+                if (QFile::exists(appImagePath)) {
+                    exePath = appImagePath;
+                }
+            }
+            
+            // 2. Check installed location
+            if (exePath.isEmpty()) {
+                QString installPath = QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkeyd");
+                if (QFile::exists(installPath)) {
+                    exePath = installPath;
+                }
+            }
+            
+            // 3. Check alongside ltr_gui (build directory or /usr/bin)
+            if (exePath.isEmpty()) {
+                QString siblingPath = QCoreApplication::applicationDirPath() + QString::fromLatin1("/ltr_hotkeyd");
+                if (QFile::exists(siblingPath)) {
+                    exePath = siblingPath;
+                }
+            }
+            
+            // 4. Check PATH
+            if (exePath.isEmpty()) {
+                QString pathLookup = QString::fromLatin1("ltr_hotkeyd");
+                // Check if it exists in PATH by trying to find it
+                QProcess which;
+                which.start(QString::fromLatin1("which"), QStringList() << pathLookup);
+                if (which.waitForFinished(1000) && which.exitCode() == 0) {
+                    exePath = QString::fromLocal8Bit(which.readAllStandardOutput().trimmed());
+                }
+            }
+            
+            if (!exePath.isEmpty()) {
+                qDebug() << "Starting ltr_hotkeyd from:" << exePath;
+                hotkeyProcess->start(exePath, QStringList());
+            } else {
+                qWarning() << "ltr_hotkeyd not found in any expected location";
             }
         }
+        
+        stackRunning = true;
     }
     updateStatus();
 }
 
 void UdpSettings::updateStatus()
 {
-    if (bridge && bridge->isRunning()) {
+    if (stackRunning) {
         ui->startStopButton->setText(QString::fromLatin1("Stop UDP Stack"));
         ui->statusLabel->setText(QString::fromLatin1("Status: Running"));
     } else {

@@ -1,0 +1,9 @@
+build/
+build_local/
+AppDir/
+dist32/
+packaging/tools/
+*.AppImage
+.git/
+.agent/
+.gemini/

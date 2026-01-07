@@ -1,4 +1,6 @@
 #include <QApplication>
+#include <QCommandLineParser>
+#include <QCommandLineOption>
 
 #include "ltr_gui.h"
 #include "utils.h"
@@ -13,7 +15,24 @@
      setlocale(LC_ALL, "C");
      QLocale::setDefault(QLocale::c());
      QApplication app(argc, argv);
-     LinuxtrackGui gui;
+     
+     // Command-line argument parsing
+     QCommandLineParser parser;
+     parser.setApplicationDescription(QString::fromLatin1("Linuxtrack GUI - Head tracking for Linux"));
+     parser.addHelpOption();
+     parser.addVersionOption();
+     
+     QCommandLineOption autostartOption(
+         QStringList() << QString::fromLatin1("a") << QString::fromLatin1("autostart"),
+         QString::fromLatin1("Automatically start tracking after initialization")
+     );
+     parser.addOption(autostartOption);
+     
+     parser.process(app);
+     
+     bool autostart = parser.isSet(autostartOption);
+     
+     LinuxtrackGui gui(nullptr, autostart);
      gui.show();
      return app.exec();
  }

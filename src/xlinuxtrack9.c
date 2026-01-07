@@ -75,9 +75,22 @@ static bool active_flag = false;
 static bool pv_present = false;
 
 static XPLMCommandRef run_cmd;
+static XPLMCommandRef start_cmd;
+static XPLMCommandRef stop_cmd;
 static XPLMCommandRef pause_cmd;
 static XPLMCommandRef recenter_cmd;
 static bool initialized = false;
+static bool was_in_cockpit = true;
+
+// Robustness: retry/reconnect state
+static int init_retry_count = 0;
+static float init_retry_timer = 0.0f;
+static int reconnect_attempts = 0;
+#define INIT_RETRY_DELAY_SEC 3.0f
+#define MAX_INIT_RETRIES 10
+#define RECONNECT_DELAY_SEC 5.0f
+#define MAX_RECONNECT_ATTEMPTS 3
+#define MAX_MSGBOX_LINES 20
 
 static int xplane_ver;
 
@@ -85,7 +98,7 @@ static int cmd_cbk(XPLMCommandRef       inCommand,
                    XPLMCommandPhase     inPhase,
                    void *               inRefcon);
 
-enum {START, PAUSE, RECENTER};
+enum {START, STOP, PAUSE, RECENTER};
 
 static float xlinuxtrackCallback(float inElapsedSinceLastCall,    
                                  float inElapsedTimeSinceLastFlightLoop,    
@@ -148,6 +161,8 @@ PLUGIN_API int XPluginStart(char *outName,
   //fprintf(stderr, "XPlane version: %d\n", xplane_ver);
 
     run_cmd = XPLMCreateCommand("linuxtrack/ltr_run","Start/stop tracking");
+    start_cmd = XPLMCreateCommand("linuxtrack/ltr_start","Start tracking");
+    stop_cmd = XPLMCreateCommand("linuxtrack/ltr_stop","Stop tracking");
     pause_cmd = XPLMCreateCommand("linuxtrack/ltr_pause","Pause tracking");
     recenter_cmd = XPLMCreateCommand("linuxtrack/ltr_recenter","Recenter tracking");
         XPLMRegisterCommandHandler(
@@ -155,6 +170,16 @@ PLUGIN_API int XPluginStart(char *outName,
                     cmd_cbk,
                     true,
                     (void *)START);
+        XPLMRegisterCommandHandler(
+                    start_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)START);
+        XPLMRegisterCommandHandler(
+                    stop_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)STOP);
         XPLMRegisterCommandHandler(
                     pause_cmd,
                     cmd_cbk,
@@ -290,7 +315,9 @@ PLUGIN_API int XPluginStart(char *outName,
 
   if(!initialized){
     linuxtrack_state_type state = linuxtrack_init(NULL);
-    if(state < LINUXTRACK_OK){
+    if(state >= LINUXTRACK_OK){
+      initialized = true;
+    } else {
       messageBox("Linuxtrack Problem", linuxtrack_explain(state));
     }
   }
@@ -304,6 +331,16 @@ PLUGIN_API void XPluginStop(void)
                     cmd_cbk,
                     true,
                     (void *)START);
+        XPLMUnregisterCommandHandler(
+                    start_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)START);
+        XPLMUnregisterCommandHandler(
+                    stop_cmd,
+                    cmd_cbk,
+                    true,
+                    (void *)STOP);
         XPLMUnregisterCommandHandler(
                     pause_cmd,
                     cmd_cbk,
@@ -433,10 +470,19 @@ static int cmd_cbk(XPLMCommandRef       inCommand,
         }else{
           deactivate();
         }
+      }else if(inCommand == start_cmd){
+        if(active_flag==false){
+          activate();
+        }
+      }else if(inCommand == stop_cmd){
+        if(active_flag==true){
+          deactivate();
+        }
       }else if(inCommand == pause_cmd){
         freeze = (freeze == false)? true : false;
       }else if(inCommand == recenter_cmd){
         linuxtrack_recenter();
+        pos_init_flag = 1;
       }
     }
     return 1;
@@ -466,32 +512,101 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   //  fprintf(stderr, "PV_ENABLED=%d\n", XPLMGetDatai(PV_Enabled_DR));
     //XPLMSetDatai(PV_Enabled_DR, active_flag);
   
+  // Robustness: Check if linuxtrack became available after X-Plane started
+  // Only retry init if we don't have a valid connection yet
   if(!initialized){
-    if(linuxtrack_get_tracking_state() != STOPPED){
+    linuxtrack_state_type state = linuxtrack_get_tracking_state();
+    if(state != STOPPED && state >= LINUXTRACK_OK){
+      // Server became available - mark as initialized
       initialized = true;
-      linuxtrack_suspend();
+      init_retry_count = 0;
+      init_retry_timer = 0.0f;
+      linuxtrack_suspend();  // Suspend until user activates
+    } else if(state < 0 && init_retry_count < MAX_INIT_RETRIES){
+      // Server not yet available or crashed - retry init periodically
+      init_retry_timer += inElapsedSinceLastCall;
+      if(init_retry_timer >= INIT_RETRY_DELAY_SEC){
+        init_retry_timer = 0.0f;
+        // Shutdown any partial state before retrying
+        linuxtrack_shutdown();
+        state = linuxtrack_init(NULL);
+        if(state >= LINUXTRACK_OK){
+          initialized = true;
+          init_retry_count = 0;
+          reconnect_attempts = 0;
+          linuxtrack_suspend();  // Suspend until user activates
+        } else {
+          init_retry_count++;
+        }
+      }
+    }
+  } else {
+    // Robustness: Reconnection logic - if tracking server dies or stops, clean up
+    linuxtrack_state_type state = linuxtrack_get_tracking_state();
+    if(state == STOPPED || state < 0){
+      // Tracking died or was stopped intentionally - attempt to clean up
+      linuxtrack_shutdown();
+      initialized = false;
+      init_retry_count = 0;
+      init_retry_timer = 0.0f;
+      if(state < 0) reconnect_attempts++;
+    } else if(state >= LINUXTRACK_OK){
+      // Tracking is healthy, reset reconnect counter
+      reconnect_attempts = 0;
     }
   }
   
+  // Transition logic: Handle view-based tracking control (fwfa behavior)
+  if (!view_changed && !was_in_cockpit) {
+    // Transition: External -> Cockpit
+    if (active_flag) {
+      linuxtrack_wakeup();
+    }
+    was_in_cockpit = true;
+  } else if (view_changed && was_in_cockpit) {
+    // Transition: Cockpit -> External
+    linuxtrack_suspend();
+    was_in_cockpit = false;
+  }
+
   if(!active_flag){
     return -1.0;
   }
-
-  int retval;
-  unsigned int counter;
   
-  if(initialized && (freeze == false)){
+  // Return early when NOT in 3D cockpit - allows seamless external camera switching
+  // TrackIR stays active but doesn't interfere with external views
+  if(view_changed){
+    // Reset roll to prevent view artifacts when switching views
+    if(head_roll != NULL){
+      XPLMSetDataf(head_roll, 0);
+    }
+    return -1.0;
+  }
+
+  int retval = 0;
+  unsigned int counter;
+  linuxtrack_state_type state = linuxtrack_get_tracking_state();
+  
+  if(initialized && (freeze == false) && (state == RUNNING)){
     retval = linuxtrack_get_pose(&current_head_heading,&current_head_pitch,&current_head_roll,
                                    &current_head_x, &current_head_y, &current_head_z, &counter);
     if (retval < 0) {
       return -1.0;
     }
-    current_head_x       *= 1e-3f;
-    current_head_y       *= 1e-3f;
-    current_head_z       *= 1e-3f;
-    current_head_heading *= -1.0f;
-    current_head_roll    *= -1.0f;
+    if (retval > 0) {
+      current_head_x       *= 1e-3f;
+      current_head_y       *= 1e-3f;
+      current_head_z       *= 1e-3f;
+      current_head_heading *= -1.0f;
+      current_head_roll    *= -1.0f;
+    }
+  } else {
+    // Revert view to neutral if we aren't running (prevents frozen offsets)
+    revertView();
+    // Return early if not running - avoids freezing X-Plane loop if library blocks
+    return -1.0;
   }
+
   if(pv_present){
     XPLMSetDataf(PV_TIR_X_DR, current_head_x);
     XPLMSetDataf(PV_TIR_Y_DR, current_head_y);
@@ -659,7 +774,7 @@ static void messageBox(const char *msgBoxTitle, const char *message)
     return;
   }
   strcpy(msg_copy, message);
-  line_t lines[10];
+  line_t lines[MAX_MSGBOX_LINES];
   size_t num_lines = 0;
   size_t i;
   const char *head = msg_copy;
@@ -669,11 +784,12 @@ static void messageBox(const char *msgBoxTitle, const char *message)
     max_width = title_width;
   }
   for(i = 0; i < len; ++i){
+    if(num_lines >= MAX_MSGBOX_LINES) break;  // Bounds check
     if(msg_copy[i] == '\0'){
       lines[num_lines].text = head;
       lines[num_lines].width = XPLMMeasureString(xplmFont_Proportional, head, strlen(head));
       if(lines[num_lines].width > max_width){
-	max_width = lines[num_lines].width;
+        max_width = lines[num_lines].width;
       }
       ++num_lines;
       break;
@@ -684,7 +800,7 @@ static void messageBox(const char *msgBoxTitle, const char *message)
       lines[num_lines].width = XPLMMeasureString(xplmFont_Proportional, head, strlen(head));
       head = msg_copy + i + 1;
       if(lines[num_lines].width > max_width){
-	max_width = lines[num_lines].width;
+        max_width = lines[num_lines].width;
       }
       ++num_lines;
     }

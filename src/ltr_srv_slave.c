@@ -193,13 +193,23 @@ static bool ltr_int_process_message(int l_master_uplink) {
         return false;
         break;
       }
-    } else if (msg.param.param_id == AXIS_ENABLED) {
+    } else if (msg.param.param_id == AXIS_ENABLED ||
+               msg.param.param_id == AXIS_INVERTED ||
+               msg.param.param_id == AXIS_ONE_EURO_ENABLED) {
       ltr_int_set_axis_bool_param(axes, msg.param.axis_id, msg.param.param_id,
                                   msg.param.flt_val > 0.5f);
     } else {
       ltr_int_set_axis_param(axes, msg.param.axis_id, msg.param.param_id,
                              msg.param.flt_val);
     }
+    break;
+  case CMD_PROFILE_CHANGE:
+    // Live profile switching: reinitialize axes with new profile
+    ltr_int_log_message("Slave switching to profile '%s'!\n", msg.str);
+    ltr_int_close_axes(&axes);
+    free(profile_name);
+    profile_name = ltr_int_my_strdup(msg.str);
+    ltr_int_init_axes(&axes, profile_name);
     break;
   default:
     ltr_int_log_message("Slave received unexpected message %d!\n", msg.cmd);

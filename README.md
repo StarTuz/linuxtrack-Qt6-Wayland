@@ -16,13 +16,14 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - **Bison/Flex Removal**: Replaced complex legacy configuration parsers with the lightweight, robust `mINI` library.
 - **TrackIR 5 V3 Support**: Full hardware activation for the latest TrackIR 5 revisions.
 - **Unified UDP Bridge**: New high-precision UDP stack that solves symmetry and range issues in full-screen games. Uses a unique coordinated architecture where hotkeys (Wine) trigger server-side (Linux) recentering on port 4243.
+- **Seamless X-Plane Camera Toggle**: Switch between cockpit and external camera views without disabling TrackIR. One button press for helicopter inspections!
 
 ## 🎮 Verified Games & Apps
 
 - ✅ **DCS World** (Proton, with Controller.exe hotkeys)
 - ✅ **Elite Dangerous** (Proton 10/Steam Launcher, symmetric range via UDP)
 - ✅ **Train Sim World 6** (Proton, full 6DOF via UDP Bridge)
-- ✅ **X-Plane 12** (Native Linux Plugin)
+- ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
@@ -74,6 +75,83 @@ If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when u
 2. Go to **Misc.** -> **Install X-Plane plugin...**.
 3. When prompted, allow the app to install **stable libraries** to `~/.local`.
 4. This copies the necessary `.so` files to a location X-Plane can see after the AppImage is closed.
+
+### X-Plane Quick Start
+
+1. **Create a new profile** in `ltr_gui` (e.g., "X-plane")
+2. **Install the X-Plane plugin** via Misc. → Install X-Plane plugin
+3. **Start X-Plane** - the plugin loads automatically
+4. If TrackIR device is off, just hit **Start** in `ltr_gui`'s Device Setup — tracking will work
+5. **Enable One Euro Filter** in Tracking Setup and **Save** your profile
+6. **External camera views** now work seamlessly — switch to outside view without pausing tracking!
+
+> [!NOTE]
+> The seamless camera toggle works with **vanilla X-Plane cameras only**. Third-party camera plugins (A-Better-Camera, X-Camera) may not be compatible as they handle `view_type` differently.
+
+> [!TIP]
+> **Auto-start tracking:** Run `ltr_gui --autostart` (or `-a`) to automatically begin tracking when the GUI launches. Add this to your X-Plane startup script:
+>
+> ```bash
+> ltr_gui --autostart &
+> xplane12
+> ```
+
+### Jittery/Noisy Tracking (One Euro Filter)
+
+If your tracking feels jittery compared to Windows, you can enable the **One Euro Filter** - an open-source, adaptive smoothing algorithm designed specifically for motion tracking.
+
+> [!IMPORTANT]
+> **X-Plane users**: You must run `ltr_gui` alongside X-Plane to access the One Euro filter. The native X-Plane plugin alone does not provide access to these settings.
+
+The filter is available in the **Tracking Setup** tab of your profile with two sliders:
+
+| Parameter | Effect | Range | Default |
+|-----------|--------|-------|---------|
+| **Smoothness** (`min_cutoff`) | Jitter reduction — slide right for smoother | 0.1-5.0 | 1.0 |
+| **Responsiveness** (`beta`) | Fast-move responsiveness — slide right for snappier | 0.0-0.1 | 0.007 |
+
+> [!TIP]
+> Start with `min_cutoff = 1.0` and `beta = 0.007`. Increase `min_cutoff` if tracking feels laggy. Increase `beta` if fast movements feel sluggish.
+
+## 🔍 Troubleshooting
+
+### TrackIR Firmware Installation
+
+Download the latest TrackIR software from [trackir.com/downloads](https://www.trackir.com/downloads/) (currently v5.53).
+
+In `ltr_gui` → Misc → **Manage Assets (LAL)**:
+
+> [!IMPORTANT]
+> Use the **Extract** button, not the Installer. The Installer method may fail on modern systems. Extract works reliably using native `7z`.
+
+1. Download the TrackIR `.exe` installer from the link above
+2. In Manage Assets, click **Extract** and select the downloaded `.exe`
+3. The firmware files will be extracted to `~/.config/linuxtrack/tir_firmware/`
+
+### MFC42 Missing (Wine/Proton Games)
+
+If a game complains about missing MFC42:
+
+```bash
+# Replace <appid> with your game's Steam App ID
+protontricks <appid> mfc42
+```
+
+This installs the Microsoft Foundation Classes runtime. Note: Tracking usually works fine even without this fix.
+
+### 3D Tracking View Not Working (NVIDIA)
+
+If the 3D tracking view in `ltr_gui` shows a blank/black screen:
+
+> [!NOTE]
+> This may be an NVIDIA driver issue (reported on RTX 4080 Super). The 3D view uses OpenGL ES 3.0 shaders.
+
+**Workarounds to try:**
+
+1. Ensure you have the latest NVIDIA drivers installed
+2. Try running with `__GLX_VENDOR_LIBRARY_NAME=nvidia ltr_gui`
+3. Check if other OpenGL apps work (e.g., `glxgears`)
+4. Tracking still works — the 3D view is purely for visualization
 
 ## 🛠️ Installation
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(LinuxTrack VERSION 1.1.0 LANGUAGES C CXX)
+project(LinuxTrack VERSION 1.1.9 LANGUAGES C CXX)
 
 # Default installation prefix
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -31,8 +31,6 @@ pkg_check_modules(MXML REQUIRED mxml)
 pkg_check_modules(LIBUSB10 libusb-1.0)
 pkg_check_modules(LIBLO liblo)
 pkg_check_modules(OPENCV opencv4)
-pkg_check_modules(GLIB glib-2.0)
-pkg_check_modules(GIO gio-2.0)
 
 find_library(LTR_LIBM m)
 find_library(LTR_LIBDL dl)

@@ -147,6 +147,13 @@ void Tracker::signalNewSlave(const char *name)
 void Tracker::setProfile(QString p)
 {
   axes_valid = false;
+  
+  // Notify connected slaves about profile change (for live switching)
+  if (!currentProfile.isEmpty() && currentProfile != p) {
+    ltr_int_change_profile(currentProfile.toUtf8().constData(), 
+                           p.toUtf8().constData());
+  }
+  
   ltr_int_close_axes(&axes);
   //PREF.setCustomSection(p);
   currentProfile = p;

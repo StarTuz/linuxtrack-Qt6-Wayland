@@ -27,8 +27,9 @@ export LIBGL_ALWAYS_SOFTWARE=1
 # Set library paths
 export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/linuxtrack:${LD_LIBRARY_PATH}"
 
-# Set Qt plugin path
-export QT_PLUGIN_PATH="${HERE}/usr/plugins"
+# Set Qt plugin paths - include both locations
+export QT_PLUGIN_PATH="${HERE}/usr/plugins:${HERE}/usr/lib/qt6/plugins"
+export QT_QPA_PLATFORM_PLUGIN_PATH="${HERE}/usr/plugins/platforms:${HERE}/usr/lib/qt6/plugins/platforms"
 
 # Run the actual binary
 exec "${HERE}/usr/bin/ltr_gui" "$@"
