@@ -18,7 +18,7 @@ UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::UdpSettingsDialog)
     , bridge(b)
-    , hotkeyProcess(nullptr)
+    , hotkeyProcess(nullptr)  // Not owned by dialog - will be reparented to main window if started
     , stackRunning(b ? b->isRunning() : false)
 {
     ui->setupUi(this);
@@ -41,12 +41,12 @@ UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
 
 UdpSettings::~UdpSettings()
 {
-    // Stop hotkey process if running
+    // NOTE: hotkeyProcess is now owned by LinuxtrackGui, not this dialog.
+    // We don't terminate it here - it should persist after dialog closes.
+    // If dialog started a local process, reparent it to main window.
     if (hotkeyProcess && hotkeyProcess->state() != QProcess::NotRunning) {
-        hotkeyProcess->terminate();
-        hotkeyProcess->waitForFinished(1000);
+        hotkeyProcess->setParent(parentWidget());  // Reparent to main window
     }
-    delete hotkeyProcess;
     delete ui;
 }
 

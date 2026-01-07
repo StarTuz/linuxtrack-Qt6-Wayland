@@ -79,7 +79,11 @@ private:
   bool guiInit;
   bool showWineWarning;
   UdpBridge *udpBridge;
+  QProcess *hotkeyProcess;  // Owned by main window, not dialog
   bool m_autostart;
+  
+  void startHotkeyDaemon();
+  void stopHotkeyDaemon();
 };
 
 #endif
