@@ -222,7 +222,7 @@ void ModelEdit::modelSelectorActivated(const QString &text) {
     modelTweaker = nullptr;
   }
   if (modelTweaker != nullptr) {
-    ui.ModelEditorSite->insertWidget(2, modelTweaker);
+    ui.ModelEditorSite->addWidget(modelTweaker);
   }
   if (!initializing)
     PREF.activateModel(currentSection);

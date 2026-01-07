@@ -32,10 +32,10 @@
 #define PACKAGE "LinuxTrack"
 #define PACKAGE_BUGREPORT "https://github.com/uglyDwarf/linuxtrack/issues"
 #define PACKAGE_NAME "LinuxTrack"
-#define PACKAGE_STRING "LinuxTrack 1.2.0"
+#define PACKAGE_STRING "LinuxTrack 1.1.9"
 #define PACKAGE_TARNAME "linuxtrack"
 #define PACKAGE_URL ""
-#define PACKAGE_VERSION "1.2.0"
-#define VERSION "1.2.0"
+#define PACKAGE_VERSION "1.1.9"
+#define VERSION "1.1.9"
 
 #endif

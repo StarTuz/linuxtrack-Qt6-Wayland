@@ -12,6 +12,9 @@ if [ ! -f "src/CMakeLists.txt" ]; then
     exit 1
 fi
 
+# Needed for running linuxdeploy (an AppImage) inside Docker/non-FUSE environments
+export APPIMAGE_EXTRACT_AND_RUN=1
+
 # Clean up previous artifacts
 rm -rf "$APP_DIR"
 rm -f *.AppImage
@@ -97,6 +100,9 @@ export ARCH=x86_64
 
 # Set Qt environment for proper plugin discovery
 export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines"
+
+# NOTE: No library exclusions for now - accept larger bundle for stability
+# Once GUI is stable, exclusions can be re-added incrementally
 
 "$LINUXDEPLOY" --appdir "$APP_DIR" \
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
