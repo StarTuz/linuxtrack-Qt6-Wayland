@@ -43,6 +43,7 @@ private:
     void saveHotkeyIniFile();
     void updateStatus();
     
+    bool stackRunning;
     QProcess *hotkeyProcess;
 };
 
