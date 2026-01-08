@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <time.h>
 #include "tracking.h"
 #include "math_utils.h"
 #include "pose.h"
@@ -349,6 +350,21 @@ bool ltr_int_postprocess_axes(ltr_axes_t axes, linuxtrack_pose_t *pose, linuxtra
   static float filtered_translations[3] = {0.0f, 0.0f, 0.0f};
   //ltr_int_get_axes_ff(axes, filter_factors);
   double raw_angles[3];
+  
+  // Calculate dt once per frame for One Euro filter
+  static struct timespec last_ts = {0, 0};
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  float dt;
+  if(last_ts.tv_sec == 0 && last_ts.tv_nsec == 0) {
+    dt = 1.0f / 60.0f; // First frame: assume 60Hz
+  } else {
+    dt = (float)(now.tv_sec - last_ts.tv_sec) + 
+         (float)(now.tv_nsec - last_ts.tv_nsec) / 1e9f;
+  }
+  // Clamp to reasonable range (2Hz-500Hz)
+  if(dt <= 0.002f || dt > 0.5f) dt = 1.0f / 60.0f;
+  last_ts = now;
 
   //Single point must be "denormalized"
 
@@ -360,9 +376,9 @@ bool ltr_int_postprocess_axes(ltr_axes_t axes, linuxtrack_pose_t *pose, linuxtra
     return false;
   }
 
-  pose->pitch = clamp_angle(ltr_int_filter_axis(axes, PITCH, raw_angles[0], &(filtered_angles[0])));
-  pose->roll = clamp_angle(ltr_int_filter_axis(axes, ROLL, raw_angles[1], &(filtered_angles[1])));
-  pose->yaw = clamp_angle(ltr_int_filter_axis(axes, YAW, raw_angles[2], &(filtered_angles[2])));
+  pose->pitch = clamp_angle(ltr_int_filter_axis(axes, PITCH, raw_angles[0], &(filtered_angles[0]), dt));
+  pose->roll = clamp_angle(ltr_int_filter_axis(axes, ROLL, raw_angles[1], &(filtered_angles[1]), dt));
+  pose->yaw = clamp_angle(ltr_int_filter_axis(axes, YAW, raw_angles[2], &(filtered_angles[2]), dt));
 
   double rotated[3];
   double transform[3][3];
@@ -393,11 +409,11 @@ bool ltr_int_postprocess_axes(ltr_axes_t axes, linuxtrack_pose_t *pose, linuxtra
   }
 
   pose->tx =
-    ltr_int_filter_axis(axes, TX, unfiltered->tx, &(filtered_translations[0]));
+    ltr_int_filter_axis(axes, TX, unfiltered->tx, &(filtered_translations[0]), dt);
   pose->ty =
-    ltr_int_filter_axis(axes, TY, unfiltered->ty, &(filtered_translations[1]));
+    ltr_int_filter_axis(axes, TY, unfiltered->ty, &(filtered_translations[1]), dt);
   pose->tz =
-    ltr_int_filter_axis(axes, TZ, unfiltered->tz, &(filtered_translations[2]));
+    ltr_int_filter_axis(axes, TZ, unfiltered->tz, &(filtered_translations[2]), dt);
   //printf(">>Post: %f %f %f  %f %f %f\n", pose->pitch, pose->yaw, pose->roll, pose->tx, pose->ty, pose->tz);
   return true;
 }

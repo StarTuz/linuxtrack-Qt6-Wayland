@@ -200,7 +200,7 @@ bool ltr_int_get_axes_ff(ltr_axes_t axes, double ffs[])
 }
 */
 
-float ltr_int_filter_axis(ltr_axes_t axes, enum axis_t id, float x, float *y_minus_1)
+float ltr_int_filter_axis(ltr_axes_t axes, enum axis_t id, float x, float *y_minus_1, float dt)
 {
   pthread_mutex_lock(&axes_mutex);
   struct axis_def *axis = get_axis(axes, id);
@@ -224,8 +224,6 @@ float ltr_int_filter_axis(ltr_axes_t axes, enum axis_t id, float x, float *y_min
   
   // Use One Euro filter if enabled, otherwise fall back to legacy filter
   if(axis->one_euro_enabled) {
-    // Assume ~120Hz update rate (8.33ms per frame)
-    float dt = 1.0f / 120.0f;
     return one_euro_filter(&axis->one_euro_state, x, dt);
   } else {
     float ff = trans_koef * (axis->filter_factor) * (axis->l_limit > axis->r_limit ? axis->l_limit : axis->r_limit);

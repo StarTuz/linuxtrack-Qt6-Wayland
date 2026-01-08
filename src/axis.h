@@ -25,7 +25,7 @@ enum axis_param_t {AXIS_ENABLED, AXIS_DEADZONE,
 void ltr_int_init_axes(ltr_axes_t *axes, const char *profile);
 void ltr_int_close_axes(ltr_axes_t *axes);
 float ltr_int_val_on_axis(ltr_axes_t axes, enum axis_t id, float x);
-float ltr_int_filter_axis(ltr_axes_t axes, enum axis_t id, float x, float *y_minus_1);
+float ltr_int_filter_axis(ltr_axes_t axes, enum axis_t id, float x, float *y_minus_1, float dt);
 
 bool ltr_int_is_symetrical(ltr_axes_t axes, enum axis_t id);
 
