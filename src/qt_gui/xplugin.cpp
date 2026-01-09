@@ -164,8 +164,6 @@ void XPluginInstall::on_BrowseXPlane_pressed() {
   // Use QFileInfo instead of QRegExp for path extraction
   QFileInfo fileInfo(fileName);
   QString destPath = fileInfo.path() + QString::fromUtf8("/Resources/plugins");
-  QString sourceFile32 =
-      PrefProxy::getLibPath(QString::fromUtf8("xlinuxtrack9_32"));
   QString sourceFile = PrefProxy::getLibPath(QString::fromUtf8("xlinuxtrack9"));
   if (!QFile::exists(destPath)) {
     warningMessage(
@@ -184,10 +182,9 @@ void XPluginInstall::on_BrowseXPlane_pressed() {
       return;
     }
   }
-  destPath += QString::fromUtf8("/xlinuxtrack/");
+  destPath += QString::fromUtf8("/xlinuxtrack/64/");
 #ifndef DARWIN
-  if (installPlugin(sourceFile32, destPath + QString::fromUtf8("/lin.xpl")) &&
-      installPlugin(sourceFile, destPath + QString::fromUtf8("/64/lin.xpl"))) {
+  if (installPlugin(sourceFile, destPath + QString::fromUtf8("/lin.xpl"))) {
 #else
   if (installPlugin(sourceFile, destPath + QString::fromUtf8("/mac.xpl"))) {
 #endif
