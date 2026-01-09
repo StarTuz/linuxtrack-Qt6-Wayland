@@ -548,37 +548,26 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
   static size_t size = 0;
   static size_t ptr = 0;
   bool have_frame = false;
-  while(1){
-    if(ptr >= size){
-      ptr = 0;
-      if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet, sizeof(ltr_int_packet), &size, 1000)){
-	ltr_int_log_message("Problem reading data from USB!\n");
-        return -1;
-      }
+  if(ptr >= size){
+    ptr = 0;
+    if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet, sizeof(ltr_int_packet), &size, 1000)){
+       ltr_int_log_message("Problem reading data from USB!\n");
+       return -1;
     }
+    if(size == 0){
+      ltr_int_usleep(10000); // Prevent busy-spin on timeout
+      return 0; // Yield to runloop
+    }
+  }
+  
+  while(ptr < size){
     if((have_frame = process_packet(ltr_int_packet, &ptr, size)) == true){
-      break;
-    }
-    if(ltr_int_got_new_request()){
       break;
     }
   }
 
   if(have_frame){
     int res = ltr_int_stripes_to_blobs(MAX_BLOBS, blt, min, max, img);
-/*
-    if(pic != NULL){
-      static int fc = 0;
-      char name[] = "fXXXXXXX.raw";
-      sprintf(name, "f%02X%04d.raw", pkt_no, fc++);
-      printf("%s\n", name);
-      FILE *f = fopen(name, "wb");
-      if(f != NULL){
-	fwrite(pic, 1, x * y, f);
-	fclose(f);
-      }
-    }
-*/
     return res;
   }else{
     return 0;
