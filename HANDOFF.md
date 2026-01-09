@@ -1,6 +1,6 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2025-12-27
+**Last Updated:** 2026-01-08
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
@@ -189,6 +189,23 @@ The project now compiles successfully on modern Linux with:
 - **Fixed Coordinate Scaling**: Resolved a regression where head coordinates were being repeatedly scaled even when no new data was available.
 - **Fixed Startup Logic**: Ensure the `initialized` flag is correctly set upon successful plugin startup.
 - **Version Bump:** Project version advanced to `1.1.9`.
+
+**Recent Additions (2026-01-07) [v1.1.10]:**
+
+- **Video On Delay Merge:** Cherry-picked the Video On Delay feature from main into beta and merged back to main for a stable release.
+- **Version Bump:** Project version advanced to `1.1.10`.
+
+**Recent Additions (2026-01-08) [v1.1.11]:**
+
+- **One Euro Filter dt Fix:** Fixed bug where the One Euro filter was not receiving the correct delta time (`dt`) from the tracking loop. The filter now uses the actual frame-to-frame timing instead of a hardcoded value.
+- **TrackIR Thread Freeze Fix:** Solved a freeze issue in the TrackIR driver by adding a yield in the read loop.
+- **Version Bump:** Project version advanced to `1.1.11`.
+
+**Recent Additions (2026-01-08) [v1.1.12]:**
+
+- **X-Plane Plugin Installation Fix:** Removed reference to non-existent `xlinuxtrack9_32.so` (32-bit plugin that was never built). The installer now correctly installs only the 64-bit plugin (`xlinuxtrack9.so`) to the `64/` directory, matching modern X-Plane 11/12 plugin structure.
+- **AppImage Qt Plugin Fix:** When manually building AppImages (bypassing linuxdeploy), Qt6 platform plugins must be explicitly bundled. See Section 3.16 for details.
+- **Version Bump:** Project version advanced to `1.1.12`.
 
 ---
 
@@ -449,6 +466,37 @@ The `WineLauncher` helper class was forcing `WINEARCH=win32` environment variabl
 2. **Script**: Added `packaging/appimage/make_appimage.sh` which uses `linuxdeploy` and `linuxdeploy-plugin-qt`.
 3. **Result**: Users can now download a single, portable `Linuxtrack-x86_64.AppImage` executable that works on most modern Linux distributions (Ubuntu 22.04+, Fedora, Arch, etc.).
 
+**Manual AppImage Build Notes (v1.1.12+):**
+
+If `linuxdeploy` fails with strip errors on newer systems (`.relr.dyn` section errors), you can build manually with `appimagetool`. However, Qt plugins must be explicitly bundled:
+
+```bash
+# 1. Install to AppDir
+DESTDIR=$(pwd)/AppDir cmake --install build --prefix /usr
+
+# 2. Copy Qt6 platform plugins (CRITICAL)
+mkdir -p AppDir/usr/plugins/platforms
+cp /usr/lib/qt6/plugins/platforms/libqxcb.so AppDir/usr/plugins/platforms/
+cp -r /usr/lib/qt6/plugins/xcbglintegrations AppDir/usr/plugins/
+
+# 3. Setup AppImage resources
+cp AppDir/usr/share/applications/linuxtrack.desktop AppDir/
+cp AppDir/usr/share/pixmaps/linuxtrack.svg AppDir/
+ln -sf linuxtrack.svg AppDir/.DirIcon
+cp packaging/appimage/AppRun AppDir/ && chmod +x AppDir/AppRun
+
+# 4. Build AppImage
+ARCH=x86_64 appimagetool AppDir Linuxtrack-x86_64.AppImage
+```
+
+**Required Qt6 Plugins:**
+
+| Plugin Path | Purpose |
+|-------------|--------|
+| `usr/plugins/platforms/libqxcb.so` | X11/XCB display support (required) |
+| `usr/plugins/xcbglintegrations/libqxcb-egl-integration.so` | EGL OpenGL integration |
+| `usr/plugins/xcbglintegrations/libqxcb-glx-integration.so` | GLX OpenGL integration |
+
 ---
 
 ## 4. Build Configuration
@@ -518,12 +566,7 @@ libcwiid                 # Wiimote support
 | `libwc.so` | Webcam driver |
 | `libft.so` | Face tracker driver |
 | `libjoy.so` | Joystick driver |
-| `libfakeusb.so` | USB emulation |
-| `libmacwii.so` | Mac Wiimote driver |
-| `libp3e.so` | PS3 Eye driver |
-| `libp3eft.so` | PS3 Eye + facetracker |
-| `xlinuxtrack9.so` | X-Plane 9+ plugin |
-| `xlinuxtrack9_32.so` | X-Plane 32-bit plugin |
+| `xlinuxtrack9.so` | X-Plane 9+ plugin (64-bit only) |
 
 ### Executables (in `src/`)
 
@@ -758,7 +801,7 @@ When you install the UDP Bridge to a Wine prefix, the current hotkey settings ar
 ### Repository Status
 
 **Branch:** `main` (Default)
-**Tag:** `v1.0.9` (Release)
+**Tag:** `v1.1.12` (Latest Release)
 **Status:** Clean (All changes committed and pushed)
 
 ```
