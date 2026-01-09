@@ -539,6 +539,11 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
 
 
 
+// Max USB reads before returning (prevents infinite loop)
+// At ~1ms/read, 15 reads = 15ms max blocking per frame attempt
+#define MAX_USB_READS_PER_FRAME 15
+static int usb_no_frame_warning_count = 0;
+
 int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t *img, tir_info *info)
 {
   assert(blt != NULL);
@@ -548,26 +553,56 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
   static size_t size = 0;
   static size_t ptr = 0;
   bool have_frame = false;
-  if(ptr >= size){
-    ptr = 0;
-    if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet, sizeof(ltr_int_packet), &size, 1000)){
-       ltr_int_log_message("Problem reading data from USB!\n");
-       return -1;
-    }
-    if(size == 0){
-      ltr_int_usleep(10000); // Prevent busy-spin on timeout
-      return 0; // Yield to runloop
-    }
-  }
+  int read_count = 0;
   
-  while(ptr < size){
+  while(1){
+    if(ptr >= size){
+      ptr = 0;
+      if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet, sizeof(ltr_int_packet), &size, 100)){
+	ltr_int_log_message("Problem reading data from USB!\n");
+        return -1;
+      }
+      // Increment read count on EVERY read attempt (including empty/timeout reads)
+      read_count++;
+      
+      // Prevent infinite loop - return after too many reads without a complete frame
+      // This catches both: 1) data but no frame, 2) timeouts returning size=0
+      if(read_count >= MAX_USB_READS_PER_FRAME){
+        if(++usb_no_frame_warning_count % 100 == 1){
+          ltr_int_log_message("Warning: No frame after %d USB reads, size=%zu (occurrence #%d)\n", 
+                              read_count, size, usb_no_frame_warning_count);
+        }
+        return 0;  // No frame available - let runloop handle gracefully
+      }
+      
+      // If read returned 0 bytes (timeout), immediately try again but still count it
+      if(size == 0){
+        continue;
+      }
+    }
     if((have_frame = process_packet(ltr_int_packet, &ptr, size)) == true){
+      break;
+    }
+    if(ltr_int_got_new_request()){
       break;
     }
   }
 
   if(have_frame){
     int res = ltr_int_stripes_to_blobs(MAX_BLOBS, blt, min, max, img);
+/*
+    if(pic != NULL){
+      static int fc = 0;
+      char name[] = "fXXXXXXX.raw";
+      sprintf(name, "f%02X%04d.raw", pkt_no, fc++);
+      printf("%s\n", name);
+      FILE *f = fopen(name, "wb");
+      if(f != NULL){
+	fwrite(pic, 1, x * y, f);
+	fclose(f);
+      }
+    }
+*/
     return res;
   }else{
     return 0;
