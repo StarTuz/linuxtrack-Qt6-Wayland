@@ -429,6 +429,16 @@ static bool process_packet_tir2(unsigned char data[], size_t *ptr, int pktsize, 
   return have_frame;
 }
 
+// Track consecutive packet errors for desync detection
+static int consecutive_packet_errors = 0;
+#define MAX_CONSECUTIVE_ERRORS 5
+
+// Reset packet parser state (call when desync detected)
+void ltr_int_reset_packet_parser(void)
+{
+  consecutive_packet_errors = 0;
+  ltr_int_log_message("Resetting packet parser state due to desync\n");
+}
 
 bool process_packet(unsigned char data[], size_t *ptr, size_t size)
 {
@@ -469,18 +479,15 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
           break;
 
         default:
-          ltr_int_log_message("ERROR!!! ('%02X %02X')\n", data[*ptr], data[*ptr + 1]);
-/*	  printf("Error at %d\n", *ptr);
-	  int counter;
-	  for(counter = 0; counter < size+2; ++counter){
-	    if(counter % 16 == 0){
-	      printf("\n%6d ", counter);
-	    }
-	    printf("%02X ", data[counter]);
-	  }
-	  printf("\n");
-*/
+          consecutive_packet_errors++;
+          if(consecutive_packet_errors <= 3){
+            ltr_int_log_message("ERROR!!! ('%02X %02X') [%d consecutive]\n",
+                                data[*ptr], data[*ptr + 1], consecutive_packet_errors);
+          }
+          // Reset parser state on desync
           type = -1;
+          limit = -1;
+          pktsize = 0;
 	  *ptr = size; //Read new packet...
           return false;
           break;
@@ -530,6 +537,8 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
     }
 
     if(have_frame == true){
+      // Reset error counter on successful frame
+      consecutive_packet_errors = 0;
       break;
     }
   }
@@ -583,6 +592,33 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
     if((have_frame = process_packet(ltr_int_packet, &ptr, size)) == true){
       break;
     }
+
+    // Check for persistent desync - if we keep getting errors, flush and resync
+    if(consecutive_packet_errors >= MAX_CONSECUTIVE_ERRORS){
+      ltr_int_log_message("USB desync detected (%d errors), flushing buffer...\n",
+                          consecutive_packet_errors);
+      // Flush USB buffer by reading until empty/timeout
+      size_t flush_size;
+      int flush_count = 0;
+      while(flush_count < 10){
+        if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet,
+                                  sizeof(ltr_int_packet), &flush_size, 10)){
+          break;  // USB error during flush
+        }
+        if(flush_size == 0){
+          break;  // Buffer drained
+        }
+        flush_count++;
+      }
+      ltr_int_log_message("Flushed %d packets, resetting parser\n", flush_count);
+      // Reset parser and buffer state
+      consecutive_packet_errors = 0;
+      ptr = 0;
+      size = 0;
+      // Return 0 to let runloop yield before retrying
+      return 0;
+    }
+
     if(ltr_int_got_new_request()){
       break;
     }

@@ -69,6 +69,9 @@ int ltr_int_rl_run(struct camera_control_block *ccb, frame_callback_fun cbk)
                   ltr_int_cal_set_state(err_PROCESSING_FRAME);
                   stop_flag = true;
                 }
+              }else{
+                // Yield CPU when no frame available to prevent tight spin
+                ltr_int_usleep(1000); // 1ms yield
               }
             }
             break;
