@@ -593,29 +593,36 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
       break;
     }
 
-    // Check for persistent desync - if we keep getting errors, flush and resync
+    // Check for persistent desync - if we keep getting errors, reset camera
     if(consecutive_packet_errors >= MAX_CONSECUTIVE_ERRORS){
-      ltr_int_log_message("USB desync detected (%d errors), flushing buffer...\n",
-                          consecutive_packet_errors);
-      // Flush USB buffer by reading until empty/timeout
+      static int desync_count = 0;
+      desync_count++;
+      ltr_int_log_message("USB desync #%d (%d errors), resetting camera...\n",
+                          desync_count, consecutive_packet_errors);
+
+      // Reset the camera hardware to force resync
+      ltr_int_pause_tir();
+      ltr_int_usleep(100000);  // 100ms pause
+      ltr_int_resume_tir();
+      ltr_int_usleep(50000);   // 50ms to stabilize
+
+      // Flush any stale data after reset
       size_t flush_size;
       int flush_count = 0;
       while(flush_count < 10){
         if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet,
-                                  sizeof(ltr_int_packet), &flush_size, 10)){
-          break;  // USB error during flush
+                                  sizeof(ltr_int_packet), &flush_size, 20)){
+          break;
         }
-        if(flush_size == 0){
-          break;  // Buffer drained
-        }
+        if(flush_size == 0) break;
         flush_count++;
       }
-      ltr_int_log_message("Flushed %d packets, resetting parser\n", flush_count);
+
       // Reset parser and buffer state
       consecutive_packet_errors = 0;
       ptr = 0;
       size = 0;
-      // Return 0 to let runloop yield before retrying
+      ltr_int_log_message("Camera reset complete, flushed %d packets\n", flush_count);
       return 0;
     }
 
