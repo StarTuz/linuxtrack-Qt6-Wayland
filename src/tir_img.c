@@ -1,5 +1,6 @@
 #include "list.h"
 #include <stdio.h>
+#include <time.h>
 #include "usb_ifc.h"
 #include "tir_hw.h"
 #include "tir_img.h"
@@ -12,6 +13,38 @@ static unsigned int pkt_no = 0;
 static image_t *p_img = NULL;
 static unsigned int current_line = 0;
 static dev_found device = NOT_TIR;
+
+// Time-based error tracking for USB desync detection
+#define ERROR_WINDOW_SIZE 16      // Track last N errors
+#define ERROR_WINDOW_SECONDS 10   // Time window in seconds
+#define ERROR_THRESHOLD 5         // Trigger recovery if this many errors in window
+
+static time_t error_timestamps[ERROR_WINDOW_SIZE];
+static int error_index = 0;
+static int error_count = 0;
+
+static void record_packet_error(void) {
+    time_t now = time(NULL);
+    error_timestamps[error_index] = now;
+    error_index = (error_index + 1) % ERROR_WINDOW_SIZE;
+    if(error_count < ERROR_WINDOW_SIZE) error_count++;
+}
+
+static int count_recent_errors(void) {
+    time_t now = time(NULL);
+    int count = 0;
+    for(int i = 0; i < error_count; i++) {
+        if(now - error_timestamps[i] <= ERROR_WINDOW_SECONDS) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static void reset_error_tracking(void) {
+    error_count = 0;
+    error_index = 0;
+}
 
 static bool process_stripe_tir2(unsigned char p_stripe[])
 {
@@ -210,7 +243,11 @@ static bool process_stripe_tir5(unsigned char payload[])
 static bool check_paket_header_tir5(unsigned char data[])
 {
   if((data[0] ^ data[1] ^ data[2] ^ data[3]) != 0xAA){
-    ltr_int_log_message("Bad packet header!\n");
+    record_packet_error();
+    int recent = count_recent_errors();
+    if(recent <= 5){
+      ltr_int_log_message("Bad packet header! [%d in window]\n", recent);
+    }
     return false;
   }else{
     return true;
@@ -225,7 +262,11 @@ static bool check_paket_header_sn4(unsigned char data[])
     csum ^= data[i];
   }
   if(csum != 0xAA){
-    ltr_int_log_message("Bad packet header!\n");
+    record_packet_error();
+    int recent = count_recent_errors();
+    if(recent <= 5){
+      ltr_int_log_message("Bad packet header! [%d in window]\n", recent);
+    }
     return false;
   }else{
     return true;
@@ -240,8 +281,16 @@ static bool process_packet_tir5(unsigned char data[], size_t *ptr, unsigned int 
   unsigned char type = data[*ptr + 2];
 
   if((type == 0) || (type == 5)){
-    if((limit < 4) || !check_paket_header_tir5(&(data[*ptr]))){
-      ltr_int_log_message("Bad packet header!\n");
+    if(limit < 4){
+      record_packet_error();
+      int recent = count_recent_errors();
+      if(recent <= 5){
+        ltr_int_log_message("Bad packet header (limit<4)! [%d in window]\n", recent);
+      }
+      return false;
+    }
+    if(!check_paket_header_tir5(&(data[*ptr]))){
+      // Error already counted and logged in check_paket_header_tir5
       return false;
     }
     ps = data[limit - 4];
@@ -249,8 +298,11 @@ static bool process_packet_tir5(unsigned char data[], size_t *ptr, unsigned int 
     ps = (ps << 8) + data[limit - 2];
     ps = (ps << 8) + data[limit - 1];
     if(ps != (pktsize - 8)){
-      ltr_int_log_message("Bad packet size! %d x %d\n", ps, pktsize - 8);
-//      assert(0);
+      record_packet_error();
+      int recent = count_recent_errors();
+      if(recent <= 5){
+        ltr_int_log_message("Bad packet size! %d x %d [%d in window]\n", ps, pktsize - 8, recent);
+      }
       return false;
     }
   }
@@ -306,7 +358,11 @@ static bool process_packet_sn4(unsigned char data[], size_t *ptr, unsigned int p
   ps = (ps << 8) + data[limit - 1];
   if(ps != (pktsize - 4)){
     *ptr += limit;
-    ltr_int_log_message("Bad packet size! %d x %d\n", ps, pktsize - 8);
+    record_packet_error();
+    int recent = count_recent_errors();
+    if(recent <= 5){
+      ltr_int_log_message("Bad packet size! %d x %d [%d in window]\n", ps, pktsize - 8, recent);
+    }
     return false;
   }
 
@@ -429,14 +485,10 @@ static bool process_packet_tir2(unsigned char data[], size_t *ptr, int pktsize, 
   return have_frame;
 }
 
-// Track consecutive packet errors for desync detection
-static int consecutive_packet_errors = 0;
-#define MAX_CONSECUTIVE_ERRORS 5
-
 // Reset packet parser state (call when desync detected)
 void ltr_int_reset_packet_parser(void)
 {
-  consecutive_packet_errors = 0;
+  reset_error_tracking();
   ltr_int_log_message("Resetting packet parser state due to desync\n");
 }
 
@@ -479,10 +531,13 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
           break;
 
         default:
-          consecutive_packet_errors++;
-          if(consecutive_packet_errors <= 3){
-            ltr_int_log_message("ERROR!!! ('%02X %02X') [%d consecutive]\n",
-                                data[*ptr], data[*ptr + 1], consecutive_packet_errors);
+          record_packet_error();
+          {
+            int recent = count_recent_errors();
+            if(recent <= 5){
+              ltr_int_log_message("ERROR!!! ('%02X %02X') [%d in window]\n",
+                                  data[*ptr], data[*ptr + 1], recent);
+            }
           }
           // Reset parser state on desync
           type = -1;
@@ -537,8 +592,7 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
     }
 
     if(have_frame == true){
-      // Reset error counter on successful frame
-      consecutive_packet_errors = 0;
+      // With time-based tracking, old errors naturally age out of window
       break;
     }
   }
@@ -593,12 +647,13 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
       break;
     }
 
-    // Check for persistent desync - if we keep getting errors, reset camera
-    if(consecutive_packet_errors >= MAX_CONSECUTIVE_ERRORS){
+    // Check for persistent desync - if we see enough errors in time window, reset camera
+    int recent_errors = count_recent_errors();
+    if(recent_errors >= ERROR_THRESHOLD){
       static int desync_count = 0;
       desync_count++;
-      ltr_int_log_message("USB desync #%d (%d errors), resetting camera...\n",
-                          desync_count, consecutive_packet_errors);
+      ltr_int_log_message("USB desync #%d (%d errors in %ds window), resetting camera...\n",
+                          desync_count, recent_errors, ERROR_WINDOW_SECONDS);
 
       // Reset the camera hardware to force resync
       ltr_int_pause_tir();
@@ -619,7 +674,7 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
       }
 
       // Reset parser and buffer state
-      consecutive_packet_errors = 0;
+      reset_error_tracking();
       ptr = 0;
       size = 0;
       ltr_int_log_message("Camera reset complete, flushed %d packets\n", flush_count);
