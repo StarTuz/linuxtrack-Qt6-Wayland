@@ -14,36 +14,67 @@ static image_t *p_img = NULL;
 static unsigned int current_line = 0;
 static dev_found device = NOT_TIR;
 
-// Time-based error tracking for USB desync detection
-#define ERROR_WINDOW_SIZE 16      // Track last N errors
-#define ERROR_WINDOW_SECONDS 10   // Time window in seconds
-#define ERROR_THRESHOLD 5         // Trigger recovery if this many errors in window
+// Simple consecutive error tracking for USB desync detection
+// Trigger recovery on 30 consecutive errors (burst detection)
+// At 120Hz, this is 250ms of continuous bad data
+#define ERROR_THRESHOLD 30
 
-static time_t error_timestamps[ERROR_WINDOW_SIZE];
-static int error_index = 0;
-static int error_count = 0;
+// Escalation: after this many failed camera resets, do USB reset
+#define FAILED_RESET_ESCALATION_THRESHOLD 60
+
+// Time-based stall detection: if no valid frame for this many seconds, escalate to USB reset
+#define STALL_TIMEOUT_SECONDS 60
+
+static int consecutive_errors = 0;
+static int failed_camera_resets = 0;  // Camera resets without successful frame
+static bool awaiting_post_reset_frame = false;  // Track if we're waiting for first good frame after reset
+
+// Time-based stall detection
+static time_t last_good_frame_time = 0;
+static bool stall_detection_active = false;
+
+// Flag indicating an external USB reset occurred - tracking loop should reset its state
+// This is set by ltr_int_reset_usb_tir() when called from IPC, to notify the tracking loop
+static volatile bool external_usb_reset_occurred = false;
+
+// Called by ltr_int_reset_usb_tir() to notify tracking loop that a reset happened
+void ltr_int_signal_usb_reset_occurred(void)
+{
+  external_usb_reset_occurred = true;
+}
+
+// Check and clear the external reset flag - tracking loop resets its state when this is true
+static bool check_and_clear_external_reset(void)
+{
+  if (external_usb_reset_occurred) {
+    external_usb_reset_occurred = false;
+    return true;
+  }
+  return false;
+}
 
 static void record_packet_error(void) {
-    time_t now = time(NULL);
-    error_timestamps[error_index] = now;
-    error_index = (error_index + 1) % ERROR_WINDOW_SIZE;
-    if(error_count < ERROR_WINDOW_SIZE) error_count++;
+    consecutive_errors++;
 }
 
 static int count_recent_errors(void) {
-    time_t now = time(NULL);
-    int count = 0;
-    for(int i = 0; i < error_count; i++) {
-        if(now - error_timestamps[i] <= ERROR_WINDOW_SECONDS) {
-            count++;
-        }
-    }
-    return count;
+    return consecutive_errors;
 }
 
 static void reset_error_tracking(void) {
-    error_count = 0;
-    error_index = 0;
+    consecutive_errors = 0;
+}
+
+static void reset_on_good_packet(void) {
+    // Reset counter when we get a valid packet
+    // This distinguishes real recovery from garbage that happens to parse
+    consecutive_errors = 0;
+
+    // If we were awaiting a good frame after reset, we got one - reset succeeded!
+    if (awaiting_post_reset_frame) {
+        awaiting_post_reset_frame = false;
+        failed_camera_resets = 0;  // Camera reset worked, clear escalation counter
+    }
 }
 
 static bool process_stripe_tir2(unsigned char p_stripe[])
@@ -246,7 +277,7 @@ static bool check_paket_header_tir5(unsigned char data[])
     record_packet_error();
     int recent = count_recent_errors();
     if(recent <= 5){
-      ltr_int_log_message("Bad packet header! [%d in window]\n", recent);
+      ltr_int_log_message("Bad packet header! [%d consecutive]\n", recent);
     }
     return false;
   }else{
@@ -265,7 +296,7 @@ static bool check_paket_header_sn4(unsigned char data[])
     record_packet_error();
     int recent = count_recent_errors();
     if(recent <= 5){
-      ltr_int_log_message("Bad packet header! [%d in window]\n", recent);
+      ltr_int_log_message("Bad packet header! [%d consecutive]\n", recent);
     }
     return false;
   }else{
@@ -285,12 +316,14 @@ static bool process_packet_tir5(unsigned char data[], size_t *ptr, unsigned int 
       record_packet_error();
       int recent = count_recent_errors();
       if(recent <= 5){
-        ltr_int_log_message("Bad packet header (limit<4)! [%d in window]\n", recent);
+        ltr_int_log_message("Bad packet header (limit<4)! [%d consecutive]\n", recent);
       }
+      *ptr = limit;
       return false;
     }
     if(!check_paket_header_tir5(&(data[*ptr]))){
       // Error already counted and logged in check_paket_header_tir5
+      *ptr = limit;
       return false;
     }
     ps = data[limit - 4];
@@ -301,8 +334,9 @@ static bool process_packet_tir5(unsigned char data[], size_t *ptr, unsigned int 
       record_packet_error();
       int recent = count_recent_errors();
       if(recent <= 5){
-        ltr_int_log_message("Bad packet size! %d x %d [%d in window]\n", ps, pktsize - 8, recent);
+        ltr_int_log_message("Bad packet size! %d x %d [%d consecutive]\n", ps, pktsize - 8, recent);
       }
+      *ptr = limit;
       return false;
     }
   }
@@ -348,7 +382,7 @@ static bool process_packet_sn4(unsigned char data[], size_t *ptr, unsigned int p
   unsigned char type = data[*ptr + 1];
 
   if((limit < 12) || !check_paket_header_sn4(&(data[*ptr]))){
-    *ptr += limit;
+    *ptr = limit;
     return false;
   }
 
@@ -357,11 +391,11 @@ static bool process_packet_sn4(unsigned char data[], size_t *ptr, unsigned int p
   ps = (ps << 8) + data[limit - 2];
   ps = (ps << 8) + data[limit - 1];
   if(ps != (pktsize - 4)){
-    *ptr += limit;
+    *ptr = limit;
     record_packet_error();
     int recent = count_recent_errors();
     if(recent <= 5){
-      ltr_int_log_message("Bad packet size! %d x %d [%d in window]\n", ps, pktsize - 8, recent);
+      ltr_int_log_message("Bad packet size! %d x %d [%d consecutive]\n", ps, pktsize - 8, recent);
     }
     return false;
   }
@@ -503,7 +537,10 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
     if(*ptr >= size){
       return false;
     }
+
+    size_t start_ptr = *ptr;
     have_frame = false;
+    
     if(type == -1){
       type = data[(*ptr) + 1];
 //      log_message("Packet type %02X\n", type);
@@ -517,16 +554,18 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
           break;
         case 0x10:
           if((data[(*ptr) + 2] == 0) || (data[(*ptr) + 2] == 5)){
-            pktsize = size;
+            pktsize = (unsigned int)size;
             limit= (*ptr) + pktsize;
           }else{
             pktsize = data[*ptr];
+            // Safety: if pktsize is 0 or too small, force it to at least 2 to advance past header
+            if(pktsize < 2) pktsize = 2;
             limit= (*ptr) + pktsize;
           }
           break;
         case 0x00:
         case 0x04:
-          pktsize = size;
+          pktsize = (unsigned int)size;
           limit= (*ptr) + pktsize;
           break;
 
@@ -535,7 +574,7 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
           {
             int recent = count_recent_errors();
             if(recent <= 5){
-              ltr_int_log_message("ERROR!!! ('%02X %02X') [%d in window]\n",
+              ltr_int_log_message("ERROR!!! ('%02X %02X') [%d consecutive]\n",
                                   data[*ptr], data[*ptr + 1], recent);
             }
           }
@@ -548,9 +587,12 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
           break;
       }
     }
+    
     if(limit > size){
-      break; //we're supposed to read beyond read-in data...
+      *ptr = size; // Discard partial packet to prevent spin
+      break; 
     }
+    
     switch(type){
       case 0x20:
         //Status packet
@@ -591,8 +633,20 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
         break;
     }
 
+    // Global Safety Guard: If we are stuck in the loop without advancing or getting a frame,
+    // force-advance to break the spin. This prevents high-CPU system freezes.
+    if(*ptr <= start_ptr && !have_frame){
+      static int spin_warning_count = 0;
+      if(++spin_warning_count % 100 == 1){
+        ltr_int_log_message("Stuck parser detected at %zu (type %02X), force-advancing.\n", *ptr, type);
+      }
+      (*ptr)++;
+      type = -1;
+    }
+
     if(have_frame == true){
-      // With time-based tracking, old errors naturally age out of window
+      // Reset error counter on successful frame
+      reset_on_good_packet();
       break;
     }
   }
@@ -607,6 +661,11 @@ bool process_packet(unsigned char data[], size_t *ptr, size_t size)
 #define MAX_USB_READS_PER_FRAME 15
 static int usb_no_frame_warning_count = 0;
 
+// Track consecutive calls that return no valid frame
+// If too many (stalled), force camera reset
+static int consecutive_no_frame_calls = 0;
+#define MAX_NO_FRAME_BEFORE_RESET 10000  // ~10 seconds at 1ms/call
+
 int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t *img, tir_info *info)
 {
   assert(blt != NULL);
@@ -619,6 +678,41 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
   int read_count = 0;
   
   while(1){
+    // Check if an external USB reset happened (from hotkey/IPC)
+    // If so, reset our internal state to match the fresh USB state
+    if(check_and_clear_external_reset()){
+      ltr_int_log_message("External USB reset detected - resetting tracking state.\n");
+      // Reset all tracking state - the USB reset was already done by the IPC handler
+      reset_error_tracking();
+      failed_camera_resets = 0;
+      awaiting_post_reset_frame = true;
+      consecutive_no_frame_calls = 0;
+      last_good_frame_time = time(NULL);  // Reset stall timer
+      ptr = 0;
+      size = 0;
+      return 0;  // Return to let caller continue with fresh state
+    }
+
+    // Time-based stall detection: if no valid frame for too long, escalate to USB reset
+    if(stall_detection_active && last_good_frame_time > 0){
+      time_t now = time(NULL);
+      time_t stall_duration = now - last_good_frame_time;
+      if(stall_duration >= STALL_TIMEOUT_SECONDS){
+        ltr_int_log_message("STALL DETECTED: No valid frames for %ld seconds - forcing USB reset!\n",
+                            (long)stall_duration);
+        ltr_int_reset_usb_tir();
+        // Reset all state
+        reset_error_tracking();
+        failed_camera_resets = 0;
+        awaiting_post_reset_frame = true;
+        consecutive_no_frame_calls = 0;
+        last_good_frame_time = time(NULL);  // Reset stall timer
+        ptr = 0;
+        size = 0;
+        return 0;
+      }
+    }
+
     if(ptr >= size){
       ptr = 0;
       if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet, sizeof(ltr_int_packet), &size, 100)){
@@ -632,10 +726,26 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
       // This catches both: 1) data but no frame, 2) timeouts returning size=0
       if(read_count >= MAX_USB_READS_PER_FRAME){
         if(++usb_no_frame_warning_count % 100 == 1){
-          ltr_int_log_message("Warning: No frame after %d USB reads, size=%zu (occurrence #%d)\n", 
+          ltr_int_log_message("Warning: No frame after %d USB reads, size=%zu (occurrence #%d)\n",
                               read_count, size, usb_no_frame_warning_count);
         }
-        return 0;  // No frame available - let runloop handle gracefully
+        // Track stall - this return path also counts as no valid frame
+        consecutive_no_frame_calls++;
+        if(consecutive_no_frame_calls >= MAX_NO_FRAME_BEFORE_RESET){
+          static int stall_reset_count = 0;
+          stall_reset_count++;
+          ltr_int_log_message("Stall detected (max reads path): %d calls, forcing reset #%d\n",
+                              consecutive_no_frame_calls, stall_reset_count);
+          ltr_int_pause_tir();
+          ltr_int_usleep(500000);
+          ltr_int_resume_tir();
+          ltr_int_usleep(100000);
+          reset_error_tracking();
+          consecutive_no_frame_calls = 0;
+          size = 0;
+          ptr = 0;
+        }
+        return 0;
       }
       
       // If read returned 0 bytes (timeout), immediately try again but still count it
@@ -647,39 +757,16 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
       break;
     }
 
-    // Check for persistent desync - if we see enough errors in time window, reset camera
+    // Check for persistent desync - only log for debugging now.
+    // We no longer trigger camera resets based on packet errors, because
+    // TIR5V3 hardware sends many "unrecognized" but harmless packets.
+    /*
     int recent_errors = count_recent_errors();
     if(recent_errors >= ERROR_THRESHOLD){
-      static int desync_count = 0;
-      desync_count++;
-      ltr_int_log_message("USB desync #%d (%d errors in %ds window), resetting camera...\n",
-                          desync_count, recent_errors, ERROR_WINDOW_SECONDS);
-
-      // Reset the camera hardware to force resync
-      ltr_int_pause_tir();
-      ltr_int_usleep(100000);  // 100ms pause
-      ltr_int_resume_tir();
-      ltr_int_usleep(50000);   // 50ms to stabilize
-
-      // Flush any stale data after reset
-      size_t flush_size;
-      int flush_count = 0;
-      while(flush_count < 10){
-        if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet,
-                                  sizeof(ltr_int_packet), &flush_size, 20)){
-          break;
-        }
-        if(flush_size == 0) break;
-        flush_count++;
-      }
-
-      // Reset parser and buffer state
-      reset_error_tracking();
-      ptr = 0;
-      size = 0;
-      ltr_int_log_message("Camera reset complete, flushed %d packets\n", flush_count);
-      return 0;
+       ltr_int_log_message("Protocol noise: %d consecutive errors/unknown packets skipped.\n", recent_errors);
+       reset_error_tracking();
     }
+    */
 
     if(ltr_int_got_new_request()){
       break;
@@ -687,6 +774,9 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
   }
 
   if(have_frame){
+    consecutive_no_frame_calls = 0;  // Reset stall counter on valid frame
+    last_good_frame_time = time(NULL);  // Record time of good frame for stall detection
+    stall_detection_active = true;  // We've seen at least one frame, enable stall detection
     int res = ltr_int_stripes_to_blobs(MAX_BLOBS, blt, min, max, img);
 /*
     if(pic != NULL){
@@ -703,6 +793,39 @@ int ltr_int_read_blobs_tir(struct bloblist_type *blt, int min, int max, image_t 
 */
     return res;
   }else{
+    // Track stalled state - no valid frames
+    consecutive_no_frame_calls++;
+    if(consecutive_no_frame_calls >= MAX_NO_FRAME_BEFORE_RESET){
+      static int stall_reset_count = 0;
+      stall_reset_count++;
+      ltr_int_log_message("Stall detected: %d calls without valid frame, forcing reset #%d\n",
+                          consecutive_no_frame_calls, stall_reset_count);
+
+      // Force camera reset
+      ltr_int_pause_tir();
+      ltr_int_usleep(500000);  // 500ms pause for stall recovery
+      ltr_int_resume_tir();
+      ltr_int_usleep(100000);  // 100ms stabilize
+
+      // Flush data
+      size_t flush_size;
+      int flush_count = 0;
+      while(flush_count < 50){
+        if(!ltr_int_receive_data(ltr_int_data_in_ep, ltr_int_packet,
+                                  sizeof(ltr_int_packet), &flush_size, 20)){
+          break;
+        }
+        if(flush_size == 0) break;
+        flush_count++;
+      }
+
+      // Reset all state
+      reset_error_tracking();
+      consecutive_no_frame_calls = 0;
+      size = 0;
+      ptr = 0;
+      ltr_int_log_message("Stall reset complete, flushed %d packets\n", flush_count);
+    }
     return 0;
   }
 }

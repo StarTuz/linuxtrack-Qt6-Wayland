@@ -18,6 +18,7 @@ typedef bool (receive_data_fun)(int in_ep, unsigned char data[], size_t size, si
 typedef void (finish_usb_fun)(unsigned int interface);
 typedef bool (ctrl_data_fun)(uint8_t req_type, uint8_t req, uint16_t val, uint16_t index,
                             unsigned char data[], size_t size);
+typedef bool (reset_usb_fun)(void);
 
 
 #ifndef USB_IMPL_ONLY
@@ -29,6 +30,7 @@ extern send_data_fun *ltr_int_send_data;
 extern receive_data_fun *ltr_int_receive_data;
 extern ctrl_data_fun *ltr_int_ctrl_data;
 extern finish_usb_fun *ltr_int_finish_usb;
+extern reset_usb_fun *ltr_int_reset_usb_device;
 #else
 /*
 bool ltr_int_init_usb();
@@ -47,6 +49,7 @@ extern send_data_fun ltr_int_send_data;
 extern receive_data_fun ltr_int_receive_data;
 extern ctrl_data_fun ltr_int_ctrl_data;
 extern finish_usb_fun ltr_int_finish_usb;
+extern reset_usb_fun ltr_int_reset_usb_device;
 
 
 #endif

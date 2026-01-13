@@ -9,4 +9,5 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb, struct frame_typ
                               bool *frame_acquired);
 int ltr_int_tracker_resume();
 int ltr_int_tracker_close();
+int ltr_int_tracker_usb_reset();  // Nuclear USB reset (TIR only)
 #endif

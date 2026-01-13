@@ -1201,6 +1201,33 @@ bool ltr_int_resume_tir()
   return res;
 }
 
+bool ltr_int_reset_usb_tir()
+{
+  ltr_int_log_message("USB reset requested by user (nuclear option).\n");
+
+  // Signal to the tracking loop that a reset is happening
+  // This lets it reset its internal state (error counters, buffers, etc.)
+  ltr_int_signal_usb_reset_occurred();
+
+  // Stop the camera first
+  stop_camera_tir();
+  set_status_led_tir(false);
+  ltr_int_usleep(100000);  // 100ms
+
+  // Perform the actual USB device reset
+  bool res = ltr_int_reset_usb_device();
+
+  // Wait for USB to stabilize after reset
+  ltr_int_usleep(500000);  // 500ms
+
+  // Restart the camera
+  start_camera_tir();
+  set_status_led_tir(true);
+
+  ltr_int_log_message("USB reset complete, camera restarted.\n");
+  return res;
+}
+
 static bool close_camera_tir2(){
   ltr_int_log_message("Closing TIR2 camera!\n");
   stop_camera_tir();

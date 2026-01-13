@@ -56,6 +56,7 @@ private slots:
   void logsPackaged(int exitCode, QProcess::ExitStatus exitStatus);
   void on_UdpBridgeCheck_stateChanged(int state);
   void on_UdpSettingsButton_pressed();
+  void on_NativeHotkeysConfigButton_pressed();
 
 private:
   Ui::LinuxtrackMainForm ui;

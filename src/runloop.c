@@ -137,3 +137,15 @@ int ltr_int_rl_wakeup()
   return signal_request();
 }
 
+// USB reset (TIR only - weak implementation for other drivers)
+__attribute__((weak)) int ltr_int_tracker_usb_reset()
+{
+  ltr_int_log_message("USB reset not supported by this device.\n");
+  return -1;
+}
+
+int ltr_int_rl_usb_reset()
+{
+  return ltr_int_tracker_usb_reset();
+}
+

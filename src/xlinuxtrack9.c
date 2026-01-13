@@ -80,16 +80,7 @@ static XPLMCommandRef stop_cmd;
 static XPLMCommandRef pause_cmd;
 static XPLMCommandRef recenter_cmd;
 static bool initialized = false;
-static bool was_in_cockpit = true;
 
-// Robustness: retry/reconnect state
-static int init_retry_count = 0;
-static float init_retry_timer = 0.0f;
-static int reconnect_attempts = 0;
-#define INIT_RETRY_DELAY_SEC 3.0f
-#define MAX_INIT_RETRIES 10
-#define RECONNECT_DELAY_SEC 5.0f
-#define MAX_RECONNECT_ATTEMPTS 3
 #define MAX_MSGBOX_LINES 20
 
 static int xplane_ver;
@@ -512,69 +503,17 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   //  fprintf(stderr, "PV_ENABLED=%d\n", XPLMGetDatai(PV_Enabled_DR));
     //XPLMSetDatai(PV_Enabled_DR, active_flag);
   
-  // Robustness: Check if linuxtrack became available after X-Plane started
-  // Only retry init if we don't have a valid connection yet
   if(!initialized){
-    linuxtrack_state_type state = linuxtrack_get_tracking_state();
-    if(state != STOPPED && state >= LINUXTRACK_OK){
-      // Server became available - mark as initialized
+    if(linuxtrack_get_tracking_state() != STOPPED){
       initialized = true;
-      init_retry_count = 0;
-      init_retry_timer = 0.0f;
-      linuxtrack_suspend();  // Suspend until user activates
-    } else if(state < 0 && init_retry_count < MAX_INIT_RETRIES){
-      // Server not yet available or crashed - retry init periodically
-      init_retry_timer += inElapsedSinceLastCall;
-      if(init_retry_timer >= INIT_RETRY_DELAY_SEC){
-        init_retry_timer = 0.0f;
-        // Shutdown any partial state before retrying
-        linuxtrack_shutdown();
-        state = linuxtrack_init(NULL);
-        if(state >= LINUXTRACK_OK){
-          initialized = true;
-          init_retry_count = 0;
-          reconnect_attempts = 0;
-          linuxtrack_suspend();  // Suspend until user activates
-        } else {
-          init_retry_count++;
-        }
-      }
-    }
-  } else {
-    // Robustness: Reconnection logic - if tracking server dies or stops, clean up
-    linuxtrack_state_type state = linuxtrack_get_tracking_state();
-    if(state == STOPPED || state < 0){
-      // Tracking died or was stopped intentionally - attempt to clean up
-      linuxtrack_shutdown();
-      initialized = false;
-      init_retry_count = 0;
-      init_retry_timer = 0.0f;
-      if(state < 0) reconnect_attempts++;
-    } else if(state >= LINUXTRACK_OK){
-      // Tracking is healthy, reset reconnect counter
-      reconnect_attempts = 0;
+      linuxtrack_suspend();
     }
   }
   
-  // Transition logic: Handle view-based tracking control (fwfa behavior)
-  if (!view_changed && !was_in_cockpit) {
-    // Transition: External -> Cockpit
-    if (active_flag) {
-      linuxtrack_wakeup();
-    }
-    was_in_cockpit = true;
-  } else if (view_changed && was_in_cockpit) {
-    // Transition: Cockpit -> External
-    linuxtrack_suspend();
-    was_in_cockpit = false;
-  }
-
   if(!active_flag){
     return -1.0;
   }
   
-  // Return early when NOT in 3D cockpit - allows seamless external camera switching
-  // TrackIR stays active but doesn't interfere with external views
   if(view_changed){
     // Reset roll to prevent view artifacts when switching views
     if(head_roll != NULL){
@@ -583,28 +522,20 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
     return -1.0;
   }
 
-  int retval = 0;
+  int retval;
   unsigned int counter;
-  linuxtrack_state_type state = linuxtrack_get_tracking_state();
   
-  if(initialized && (freeze == false) && (state == RUNNING)){
+  if(initialized && (freeze == false)){
     retval = linuxtrack_get_pose(&current_head_heading,&current_head_pitch,&current_head_roll,
                                    &current_head_x, &current_head_y, &current_head_z, &counter);
     if (retval < 0) {
       return -1.0;
     }
-    if (retval > 0) {
-      current_head_x       *= 1e-3f;
-      current_head_y       *= 1e-3f;
-      current_head_z       *= 1e-3f;
-      current_head_heading *= -1.0f;
-      current_head_roll    *= -1.0f;
-    }
-  } else {
-    // Revert view to neutral if we aren't running (prevents frozen offsets)
-    revertView();
-    // Return early if not running - avoids freezing X-Plane loop if library blocks
-    return -1.0;
+    current_head_x       *= 1e-3f;
+    current_head_y       *= 1e-3f;
+    current_head_z       *= 1e-3f;
+    current_head_heading *= -1.0f;
+    current_head_roll    *= -1.0f;
   }
 
   if(pv_present){

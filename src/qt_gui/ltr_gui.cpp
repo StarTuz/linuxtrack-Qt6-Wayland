@@ -499,3 +499,40 @@ void LinuxtrackGui::stopHotkeyDaemon() {
     hotkeyProcess->waitForFinished(1000);
   }
 }
+
+void LinuxtrackGui::on_NativeHotkeysConfigButton_pressed() {
+  // Launch ltr_hotkey_gui
+  QProcess *guiProcess = new QProcess(this);
+  connect(guiProcess, &QProcess::finished, guiProcess, &QObject::deleteLater);
+  
+  // Try to find the GUI executable
+  QString exePath;
+  QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
+  
+  if (!appDir.isEmpty()) {
+    QString appImagePath = appDir + QString::fromLatin1("/usr/bin/ltr_hotkey_gui");
+     if (QFile::exists(appImagePath)) {
+      exePath = appImagePath;
+    }
+  }
+  
+  if (exePath.isEmpty()) {
+    QString installPath = QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkey_gui");
+    if (QFile::exists(installPath)) {
+      exePath = installPath;
+    }
+  }
+  
+  if (exePath.isEmpty()) {
+    QString siblingPath = QCoreApplication::applicationDirPath() + QString::fromLatin1("/ltr_hotkey_gui");
+    if (QFile::exists(siblingPath)) {
+      exePath = siblingPath;
+    }
+  }
+
+  if (!exePath.isEmpty()) {
+    guiProcess->start(exePath, QStringList());
+  } else {
+    QMessageBox::warning(this, QStringLiteral("Error"), QStringLiteral("Could not find ltr_hotkey_gui executable!"));
+  }
+}

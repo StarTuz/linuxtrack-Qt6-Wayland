@@ -21,6 +21,7 @@ prepare_device_fun *ltr_int_prepare_device = NULL;
 send_data_fun *ltr_int_send_data = NULL;
 receive_data_fun *ltr_int_receive_data = NULL;
 finish_usb_fun *ltr_int_finish_usb = NULL;
+reset_usb_fun *ltr_int_reset_usb_device = NULL;
 
 static lib_fun_def_t functions[] = {
   {(char *)"ltr_int_init_usb", (void*) &ltr_int_init_usb},
@@ -29,6 +30,7 @@ static lib_fun_def_t functions[] = {
   {(char *)"ltr_int_send_data", (void*) &ltr_int_send_data},
   {(char *)"ltr_int_receive_data", (void*) &ltr_int_receive_data},
   {(char *)"ltr_int_finish_usb", (void*) &ltr_int_finish_usb},
+  {(char *)"ltr_int_reset_usb_device", (void*) &ltr_int_reset_usb_device},
   {NULL, NULL}
 };
 static void *libhandle = NULL;
@@ -107,7 +109,7 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb, struct frame_typ
     last_threshold = tmp_thr;
     ltr_int_set_threshold_tir(tmp_thr);
   }
-  int res = ltr_int_read_blobs_tir(&(f->bloblist), ltr_int_tir_get_min_blob(), 
+  int res = ltr_int_read_blobs_tir(&(f->bloblist), ltr_int_tir_get_min_blob(),
 				ltr_int_tir_get_max_blob(), &img, &info);
   *frame_acquired = true;
   return res;
@@ -130,6 +132,11 @@ int ltr_int_tracker_close()
   ltr_int_unload_library(libhandle, functions);
   libhandle = NULL;
   return res;
+}
+
+int ltr_int_tracker_usb_reset()
+{
+  return ltr_int_reset_usb_tir() ? 0 : -1;
 }
 
 int ltr_int_tir_found(bool *have_firmware, bool *have_permissions)

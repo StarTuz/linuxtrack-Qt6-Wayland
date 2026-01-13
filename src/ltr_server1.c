@@ -70,8 +70,11 @@ static void validate_paths(void) {
 }
 
 int main(int argc, char *argv[]) {
-  (void)argc;
-  (void)argv;
+  if (argc == 2 && strcmp(argv[1], "-v") == 0) {
+    printf("ltr_server1 version %s\n", "1.1.11");
+    return 0;
+  }
+
   ltr_int_check_root();
 
   // Validate paths early to catch configuration issues
@@ -81,9 +84,12 @@ int main(int argc, char *argv[]) {
   signal(SIGPIPE, SIG_IGN);
   if (argc == 1) {
     ltr_int_master(true);
-  } else {
+  } else if (argc >= 6) {
     // Parameter is name of profile
     ltr_int_slave(argv[1], argv[2], argv[3], argv[4], argv[5]);
+  } else {
+    fprintf(stderr, "Usage: ltr_server1 [profile master_socket_path slave_socket_path mmap_path lock_path]\n");
+    return 1;
   }
   return 0;
 }

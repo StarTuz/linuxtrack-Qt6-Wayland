@@ -47,6 +47,7 @@ bool ltr_int_open_tir(bool force_fw_load, bool ir_on);
 void ltr_int_get_tir_info(tir_info *info);
 bool ltr_int_pause_tir();
 bool ltr_int_resume_tir();
+bool ltr_int_reset_usb_tir();  // Nuclear USB reset for desync recovery
 bool ltr_int_close_tir();
 bool ltr_int_set_threshold_tir(unsigned int val);
 
