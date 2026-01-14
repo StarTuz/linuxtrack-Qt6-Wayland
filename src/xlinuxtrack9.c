@@ -308,6 +308,7 @@ PLUGIN_API int XPluginStart(char *outName,
     linuxtrack_state_type state = linuxtrack_init(NULL);
     if(state >= LINUXTRACK_OK){
       initialized = true;
+      linuxtrack_suspend();  // Start in standby (amber LEDs) until user activates
     } else {
       messageBox("Linuxtrack Problem", linuxtrack_explain(state));
     }
