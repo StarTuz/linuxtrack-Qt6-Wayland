@@ -80,6 +80,7 @@ static XPLMCommandRef stop_cmd;
 static XPLMCommandRef pause_cmd;
 static XPLMCommandRef recenter_cmd;
 static bool initialized = false;
+static int lastView = 1026;  // Track previous frame's view for transition detection
 
 #define MAX_MSGBOX_LINES 20
 
@@ -491,14 +492,15 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
   (void) inRefcon;
   
   int currentView = XPLMGetDatai(view);
-  bool view_changed = (currentView != 1026);
+  bool view_transitioning = (currentView != lastView);  // View changed THIS frame
+  bool not_in_cockpit = (currentView != 1026);
+  lastView = currentView;
 
   if(pos_init_flag){
     pos_init_flag = 0;
     base_x = XPLMGetDataf(head_x);
     base_y = XPLMGetDataf(head_y);
     base_z = XPLMGetDataf(head_z);
-    view_changed = false;
   }
   //if(PV_Enabled_DR)
   //  fprintf(stderr, "PV_ENABLED=%d\n", XPLMGetDatai(PV_Enabled_DR));
@@ -515,11 +517,10 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
     return -1.0;
   }
   
-  if(view_changed){
-    // Reset roll to prevent view artifacts when switching views
-    if(head_roll != NULL){
-      XPLMSetDataf(head_roll, 0);
-    }
+  // Handle view transitions gracefully: when view is changing or not in cockpit,
+  // revert head to neutral and let X-Plane handle the view
+  if(view_transitioning || not_in_cockpit){
+    revertView();
     return -1.0;
   }
 
@@ -547,22 +548,14 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
     XPLMSetDataf(PV_TIR_Heading_DR, current_head_heading);
     XPLMSetDataf(PV_TIR_Roll_DR, current_head_roll);
   }else if(head_control_enable != 0){
-    if(!view_changed){
-      XPLMSetDataf(head_x, base_x + current_head_x);
-      XPLMSetDataf(head_y, base_y + current_head_y);
-      XPLMSetDataf(head_z, base_z + current_head_z);
-      XPLMSetDataf(head_psi,current_head_heading);
-      XPLMSetDataf(head_the,current_head_pitch);
-      if(head_roll != NULL){
-        XPLMSetDataf(head_roll, current_head_roll);
-      }
-    }else{
-      //Make sure to cancel any roll, otherwise bad things start to happening
-      //  e.g. mising HUD in forward with HUD view or rolled view in other
-      //  views... Also the roll seems to be persistent!
-      if(head_roll != NULL){
-        XPLMSetDataf(head_roll, 0);
-      }
+    // We only reach here when in cockpit view and not transitioning
+    XPLMSetDataf(head_x, base_x + current_head_x);
+    XPLMSetDataf(head_y, base_y + current_head_y);
+    XPLMSetDataf(head_z, base_z + current_head_z);
+    XPLMSetDataf(head_psi,current_head_heading);
+    XPLMSetDataf(head_the,current_head_pitch);
+    if(head_roll != NULL){
+      XPLMSetDataf(head_roll, current_head_roll);
     }
   }
   return -1.0;
