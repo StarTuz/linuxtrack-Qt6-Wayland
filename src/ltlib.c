@@ -308,6 +308,16 @@ linuxtrack_state_type ltr_recenter(void)
   return LINUXTRACK_OK;
 }
 
+linuxtrack_state_type ltr_usb_reset(void)
+{
+  struct ltr_comm *com = mmm.data;
+  if((!initialized) || (com == NULL)) return err_NOT_INITIALIZED;
+  ltr_int_lockSemaphore(mmm.sem);
+  com->usb_reset = true;
+  ltr_int_unlockSemaphore(mmm.sem);
+  return LINUXTRACK_OK;
+}
+
 linuxtrack_state_type ltr_notification_on(void)
 {
   struct ltr_comm *com = mmm.data;
