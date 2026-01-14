@@ -97,20 +97,6 @@ if(EXISTS "/usr/include/xplane_sdk/XPLM")
         PREFIX ""
         OUTPUT_NAME "xlinuxtrack9"
     )
-
-    # 32-bit X-Plane Plugin
-    if(HAS_LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 8)
-        add_library(xlinuxtrack9_32 SHARED xlinuxtrack9.c linuxtrack.c)
-        target_include_directories(xlinuxtrack9_32 PRIVATE ${XPL_INCLUDE_DIRS} ..)
-        target_compile_definitions(xlinuxtrack9_32 PRIVATE XPLM200 LINUX)
-        set_target_properties(xlinuxtrack9_32 PROPERTIES 
-            COMPILE_FLAGS "-m32"
-            LINK_FLAGS "-m32"
-            PREFIX ""
-            OUTPUT_NAME "xlinuxtrack9_32"
-        )
-        target_link_libraries(xlinuxtrack9_32 PRIVATE ${LTR_LIBM} ${LTR_LIBDL})
-    endif()
 endif()
 
 # --- Executables ---
@@ -176,7 +162,7 @@ add_subdirectory(ltr_hotkey_gui)
 install(TARGETS ltr linuxtrack DESTINATION lib/linuxtrack)
 
 # 2. Drivers (Plugins)
-foreach(DRV wc tir joy ft ltusb1 xlinuxtrack9 xlinuxtrack9_32)
+foreach(DRV wc tir joy ft ltusb1 xlinuxtrack9)
     if(TARGET ${DRV})
         install(TARGETS ${DRV} DESTINATION lib/linuxtrack)
     endif()
@@ -196,7 +182,7 @@ install(TARGETS ${BIN_TARGETS} DESTINATION bin)
 install(FILES linuxtrack1.conf linuxtrack.c linuxtrack_hello_world.c linuxtrack_hello_world_adv.c 
         DESTINATION share/linuxtrack)
 install(FILES 99-TIR.rules 99-Mickey.rules DESTINATION share/linuxtrack)
-if(HAS_OPENCV)
+if(OPENCV_FOUND)
     install(FILES haarcascade_frontalface_alt2.xml DESTINATION share/linuxtrack)
 endif()
 

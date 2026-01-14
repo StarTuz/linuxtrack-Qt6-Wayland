@@ -419,6 +419,24 @@ QString PrefProxy::getDataPath(QString file)
                                             QApplication::applicationDirPath().toUtf8().constData());
   QString res = QString::fromUtf8(path);
   free(path);
+  
+  // Fallback for development/build directory
+  if (!QFile::exists(res)) {
+      QString fallback = QApplication::applicationDirPath() + QString::fromUtf8("/../") + file;
+      if (QFile::exists(fallback)) {
+          return fallback;
+      }
+      // Try one level deeper just in case (e.g. build/src/qt_gui)
+      fallback = QApplication::applicationDirPath() + QString::fromUtf8("/../../src/") + file;
+      if (QFile::exists(fallback)) {
+          return fallback;
+      }
+      // Try three levels up for standard CMake out-of-source build (build/src/qt_gui -> root -> src)
+      fallback = QApplication::applicationDirPath() + QString::fromUtf8("/../../../src/") + file;
+      if (QFile::exists(fallback)) {
+          return fallback;
+      }
+  }
   return res;
 /*
   QString appPath = QApplication::applicationDirPath();
