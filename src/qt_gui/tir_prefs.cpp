@@ -69,12 +69,8 @@ bool TirPrefs::Activate(const QString &ID, bool init) {
   initializing = init;
   QString sec;
   if (PREF.getFirstDeviceSection(QString::fromUtf8("Tir"), sec)) {
-    QString currentDev, currentSection;
-    deviceType_t devType;
-    if (!PREF.getActiveDevice(devType, currentDev, currentSection) ||
-        (sec != currentSection)) {
-      PREF.activateDevice(sec);
-    }
+    // Always activate the device when selected
+    PREF.activateDevice(sec);
   } else {
     sec = QString::fromUtf8("TrackIR");
     initializing = false;

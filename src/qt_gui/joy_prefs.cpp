@@ -77,11 +77,8 @@ bool JoyPrefs::Activate(const QString &ID, bool init)
   QString joyId = ID;
   ltr_int_log_message("Activating joystick ID: '%s'.\n", joyId.toUtf8().constData());
   if(PREF.getFirstDeviceSection(QString::fromUtf8("Joystick"), joyId, sec)){
-    QString currentDev, currentSection;
-    deviceType_t devType;
-    if(!PREF.getActiveDevice(devType, currentDev, currentSection) || (sec !=currentSection)){
-      PREF.activateDevice(sec);
-    }
+    // Always activate the device when selected
+    PREF.activateDevice(sec);
     if(!ltr_int_joy_init_prefs()){
       initializing = false;
       ltr_int_log_message("Couldn't initialize joystick preferences.\n");

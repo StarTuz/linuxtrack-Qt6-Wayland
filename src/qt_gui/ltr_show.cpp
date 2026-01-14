@@ -120,6 +120,7 @@ void LtrGuiForm::on_startButton_pressed()
   fpsTimer->start(250);
   stopwatch->start();
   static QString sec(QString::fromUtf8("Default"));
+  PREF.savePrefs();
   TRACKER.start(sec);
 }
 
