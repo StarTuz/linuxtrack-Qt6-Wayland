@@ -112,12 +112,18 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
     }
     on_WebcamFtFormats_activated(fmt_index);
     const char *cascade = ltr_int_wc_get_cascade();
-    QString cascadePath;
-    if((cascade == nullptr) || (!QFile::exists(QString::fromUtf8(cascade)))){
-      cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
-      ltr_int_wc_set_cascade(cascadePath.toUtf8().constData());
-    }else{
-      cascadePath = QString::fromUtf8(cascade);
+    QString cascadePath = (cascade != nullptr) ? QString::fromUtf8(cascade) : QString();
+    if(cascadePath.isEmpty() || !QFile::exists(cascadePath)){
+      cascadePath = PrefProxy::getDataPath(QString::fromUtf8("face_detection_yunet.onnx"));
+      if(!QFile::exists(cascadePath)){
+        cascadePath = PrefProxy::getDataPath(QString::fromUtf8("head-localizer.onnx"));
+      }
+      if(!QFile::exists(cascadePath)){
+        cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
+      }
+      if(QFile::exists(cascadePath)){
+        ltr_int_wc_set_cascade(cascadePath.toUtf8().constData());
+      }
     }
     ui.CascadePath->setText(cascadePath);
     int n = (2.0 / ltr_int_wc_get_eff()) - 2;
@@ -168,7 +174,7 @@ void WebcamFtPrefs::on_FindCascade_pressed()
     path = tmp.filePath(path);
   }
   QString fileName = QFileDialog::getOpenFileName(nullptr,
-     QString::fromUtf8("Find Harr/LBP cascade"), path, QString::fromUtf8("xml Files (*.xml)"));
+     QString::fromUtf8("Find Face Tracker Model"), path, QString::fromUtf8("Model Files (*.xml *.onnx);;All Files (*)"));
   ui.CascadePath->setText(fileName);
   on_CascadePath_editingFinished();
 }
