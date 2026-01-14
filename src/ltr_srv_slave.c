@@ -279,14 +279,17 @@ static void ltr_int_slave_main_loop() {
   struct ltr_comm *com = mmm.data;
   ltr_cmd cmd = NOP_CMD;
   bool recenter = false;
+  bool usb_reset = false;
   while (!quit_flag) {
-    if ((com->cmd != NOP_CMD) || com->recenter || com->notify) {
+    if ((com->cmd != NOP_CMD) || com->recenter || com->notify || com->usb_reset) {
       ltr_int_lockSemaphore(mmm.sem);
       cmd = (ltr_cmd)com->cmd;
       com->cmd = NOP_CMD;
       recenter = com->recenter;
+      usb_reset = com->usb_reset;
       notify = com->notify;
       com->recenter = false;
+      com->usb_reset = false;
       ltr_int_unlockSemaphore(mmm.sem);
     }
     int res = 0;
@@ -327,6 +330,13 @@ static void ltr_int_slave_main_loop() {
       if (ltr_int_send_message(master_uplink, CMD_RECENTER, 0) >= 0) {
         // clear request only on successfull transmission
         recenter = false;
+      }
+    }
+    if (usb_reset) {
+      ltr_int_log_message("Slave sending master USB reset request!\n");
+      if (ltr_int_send_message(master_uplink, CMD_USB_RESET, 0) >= 0) {
+        // clear request only on successfull transmission
+        usb_reset = false;
       }
     }
     if (!parent_alive()) {

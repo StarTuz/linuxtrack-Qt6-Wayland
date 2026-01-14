@@ -5,9 +5,10 @@
  * without needing to alt-tab.
  *
  * Default hotkeys (configurable via ltr_hotkey_gui):
- *   F12      - Recenter tracking
- *   Pause    - Toggle pause/resume tracking
- *   Ctrl+F12 - Quit daemon
+ *   F12            - Recenter tracking
+ *   Pause          - Toggle pause/resume tracking
+ *   Ctrl+Shift+F12 - USB reset (nuclear option for frozen tracking)
+ *   Ctrl+F12       - Quit daemon
  *
  * Usage: ltr_hotkeyd [--help] [--verbose]
  *
@@ -51,12 +52,14 @@ typedef struct {
 /* Forward declarations */
 static void action_recenter(void);
 static void action_toggle_pause(void);
+static void action_usb_reset(void);
 static void action_quit(void);
 
 /* Default hotkeys - will be overridden by config */
-static hotkey_t hotkeys[4] = {
+static hotkey_t hotkeys[5] = {
     {XK_F12, 0, "Recenter", action_recenter},
     {XK_Pause, 0, "Toggle Pause", action_toggle_pause},
+    {XK_F12, ControlMask | ShiftMask, "USB Reset", action_usb_reset},
     {XK_F12, ControlMask, "Quit Daemon", action_quit},
     {0, 0, NULL, NULL} /* Sentinel */
 };
@@ -254,10 +257,17 @@ static void load_config(void) {
         log_msg("Pause key: %s (keysym=0x%lx, mods=0x%x)", value, keysym,
                 modifiers);
       }
-    } else if (strcmp(key, "quit_key") == 0) {
+    } else if (strcmp(key, "usb_reset_key") == 0) {
       if (parse_key_sequence(value, &keysym, &modifiers)) {
         hotkeys[2].keysym = keysym;
         hotkeys[2].modifiers = modifiers;
+        log_msg("USB Reset key: %s (keysym=0x%lx, mods=0x%x)", value, keysym,
+                modifiers);
+      }
+    } else if (strcmp(key, "quit_key") == 0) {
+      if (parse_key_sequence(value, &keysym, &modifiers)) {
+        hotkeys[3].keysym = keysym;
+        hotkeys[3].modifiers = modifiers;
         log_msg("Quit key: %s (keysym=0x%lx, mods=0x%x)", value, keysym,
                 modifiers);
       }
@@ -283,6 +293,17 @@ static void action_toggle_pause(void) {
     log_msg("Pausing tracking (current state: %s)...", linuxtrack_explain(state));
     linuxtrack_suspend();
     tracking_paused = true;
+  }
+}
+
+static void action_usb_reset(void) {
+  linuxtrack_state_type state = linuxtrack_get_tracking_state();
+  log_msg("USB reset requested (current state: %s)...", linuxtrack_explain(state));
+  linuxtrack_state_type res = linuxtrack_usb_reset();
+  if (res < LINUXTRACK_OK) {
+    log_msg("USB reset not available: %s", linuxtrack_explain(res));
+  } else {
+    log_msg("USB reset command sent.");
   }
 }
 
@@ -393,12 +414,18 @@ static int run_x11_daemon(void) {
   }
 
   printf("ltr_hotkeyd: Ready (X11 backend). Hotkeys active.\n");
-  printf("  Recenter     = %s%s\n",
+  printf("  Recenter     = %s%s%s\n",
          hotkeys[0].modifiers & ControlMask ? "Ctrl+" : "",
+         hotkeys[0].modifiers & ShiftMask ? "Shift+" : "",
          XKeysymToString(hotkeys[0].keysym));
-  printf("  Toggle Pause = %s%s\n",
+  printf("  Toggle Pause = %s%s%s\n",
          hotkeys[1].modifiers & ControlMask ? "Ctrl+" : "",
+         hotkeys[1].modifiers & ShiftMask ? "Shift+" : "",
          XKeysymToString(hotkeys[1].keysym));
+  printf("  USB Reset    = %s%s%s\n",
+         hotkeys[2].modifiers & ControlMask ? "Ctrl+" : "",
+         hotkeys[2].modifiers & ShiftMask ? "Shift+" : "",
+         XKeysymToString(hotkeys[2].keysym));
 
   /* Main event loop */
   XEvent event;
@@ -447,9 +474,11 @@ static void on_shortcut_activated(GDBusConnection *connection,
             action_recenter();
         } else if (strcmp(shortcut_id, "toggle_pause") == 0) {
             action_toggle_pause();
+        } else if (strcmp(shortcut_id, "usb_reset") == 0) {
+            action_usb_reset();
         }
         g_variant_iter_free(options);
-    } 
+    }
     /* Fallback to (osa{sv}) as per spec */
     else if (g_variant_is_of_type(parameters, G_VARIANT_TYPE("(osa{sv})"))) {
         g_variant_get(parameters, "(&o&sa{sv})", &session_handle, &shortcut_id, &options);
@@ -458,6 +487,8 @@ static void on_shortcut_activated(GDBusConnection *connection,
             action_recenter();
         } else if (strcmp(shortcut_id, "toggle_pause") == 0) {
             action_toggle_pause();
+        } else if (strcmp(shortcut_id, "usb_reset") == 0) {
+            action_usb_reset();
         }
         g_variant_iter_free(options);
     }
@@ -503,6 +534,12 @@ static void on_portal_response(GDBusConnection *connection,
             g_variant_builder_add(&pause_options, "{sv}", "description", g_variant_new_string("Toggle Tracking Pause"));
             g_variant_builder_add(&pause_options, "{sv}", "preferred_trigger", g_variant_new_string("Pause"));
             g_variant_builder_add(&shortcuts_builder, "(sa{sv})", "toggle_pause", &pause_options);
+
+            GVariantBuilder usb_reset_options;
+            g_variant_builder_init(&usb_reset_options, G_VARIANT_TYPE("a{sv}"));
+            g_variant_builder_add(&usb_reset_options, "{sv}", "description", g_variant_new_string("USB Reset (Nuclear Option)"));
+            g_variant_builder_add(&usb_reset_options, "{sv}", "preferred_trigger", g_variant_new_string("<Control><Shift>F12"));
+            g_variant_builder_add(&shortcuts_builder, "(sa{sv})", "usb_reset", &usb_reset_options);
 
             GVariantBuilder bind_opt_builder;
             g_variant_builder_init(&bind_opt_builder, G_VARIANT_TYPE_VARDICT);
@@ -635,6 +672,7 @@ static void print_usage(const char *progname) {
          "Default Hotkeys (configurable via ltr_hotkey_gui):\n"
          "  F12             Recenter tracking\n"
          "  Pause           Toggle pause/resume tracking\n"
+         "  Ctrl+Shift+F12  USB reset (nuclear option for frozen tracking)\n"
          "  Ctrl+F12        Quit this daemon\n"
          "\n"
          "Configuration is read from:\n"

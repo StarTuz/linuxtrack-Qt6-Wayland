@@ -26,6 +26,7 @@
 #include <tracker.h>
 
 #include "buffering.h"
+#include "camera_view_widget.h"
 
 QWidget *label;
 static bool running = false;
@@ -42,7 +43,7 @@ LtrGuiForm::LtrGuiForm(const Ui::LinuxtrackMainForm &tmp_gui, QSettings &setting
               : glw(nullptr), cv(nullptr), allowClose(false), main_gui(tmp_gui)
 {
   ui.setupUi(this);
-  cv = new CameraView(label);
+  cv = new CameraViewWidget(this);  // New camera preview widget that auto-connects to TRACKER.newFrame
   ui.pix_box->addWidget(cv);
   trackerStopped();
   settings.beginGroup(QString::fromUtf8("TrackingWindow"));
@@ -179,7 +180,7 @@ void LtrGuiForm::update()
   }
   int fps = fps_mean / 8.0;
   ui.status->setText(QString::fromUtf8("%1.frame @ %2 fps").arg(cnt).arg(fps, 4));
-  cv->redraw();  
+  // CameraViewWidget auto-updates via TRACKER.newFrame signal - no manual redraw needed
 }
 
 void LtrGuiForm::stateChanged(int current_state)
@@ -255,35 +256,8 @@ void LtrGuiForm::on_tabWidget_currentChanged(int index)
 }
 
 
-CameraView::CameraView(QWidget *parent)
-  : QWidget(parent)
-{
-  scene = new QGraphicsScene();
-  item = new QGraphicsPixmapItem();
-  scene->addItem(item);
-  view = new QGraphicsView();
-  view->setScene(scene);
-  layout = new QVBoxLayout();
-  layout->addWidget(view);
-  setLayout(layout);
-}
-
-CameraView::~CameraView()
-{
-}
-
-void CameraView::redraw()
-{
-  if(!camViewEnable){
-    return;
-  }
-  buffer *b;
-  buffering *buf = TRACKER.getBuffers();
-  if(buf->readBuffer(&b)){
-    item->setPixmap(QPixmap::fromImage(*(b->getImage())));
-    buf->bufferRead();
-  }
-}
+// Old CameraView class removed - now using CameraViewWidget which
+// connects directly to TRACKER.newFrame() signal
 
 #include "moc_ltr_show.cpp"
 

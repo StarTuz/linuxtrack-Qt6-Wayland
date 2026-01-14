@@ -31,6 +31,7 @@ protected:
 private slots:
   void onRecenterRedefine();
   void onPauseRedefine();
+  void onUsbResetRedefine();
   void onQuitClicked();
   void onStartStopClicked();
   void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
@@ -49,9 +50,11 @@ private:
   // UI elements
   QLabel *recenterLabel;
   QLabel *pauseLabel;
+  QLabel *usbResetLabel;
   QLabel *statusLabel;
   QPushButton *recenterBtn;
   QPushButton *pauseBtn;
+  QPushButton *usbResetBtn;
   QPushButton *startStopBtn;
   QPushButton *quitBtn;
 
@@ -62,6 +65,7 @@ private:
   QSettings *settings;
   QKeySequence recenterKey;
   QKeySequence pauseKey;
+  QKeySequence usbResetKey;
   QKeySequence quitKey;
 
   // Daemon process

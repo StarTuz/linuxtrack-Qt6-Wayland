@@ -27,7 +27,7 @@ typedef struct{
 } message_t;
 
 enum cmds {CMD_NOP, CMD_NEW_SOCKET, CMD_PAUSE, CMD_WAKEUP, CMD_RECENTER, CMD_POSE, CMD_PARAM,
-           CMD_FRAMES, CMD_PROFILE_CHANGE};
+           CMD_FRAMES, CMD_PROFILE_CHANGE, CMD_USB_RESET};
 
 #ifdef __cplusplus
 extern "C" {

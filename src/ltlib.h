@@ -34,6 +34,7 @@ struct ltr_comm{
   uint8_t cmd;
   uint8_t recenter;
   uint8_t notify;
+  uint8_t usb_reset;  // Nuclear USB reset for desync recovery
   int8_t state;
   linuxtrack_full_pose_t full_pose;
   uint8_t dead_man_button;
@@ -50,6 +51,7 @@ extern "C" {
 
 linuxtrack_state_type ltr_init(const char *cust_section);
 linuxtrack_state_type ltr_recenter(void);
+linuxtrack_state_type ltr_usb_reset(void);  // Nuclear USB reset for desync recovery
 linuxtrack_state_type ltr_shutdown(void);
 
 

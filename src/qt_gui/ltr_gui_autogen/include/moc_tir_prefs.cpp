@@ -51,6 +51,7 @@ template <> constexpr inline auto TirPrefs::qt_create_metaobjectdata<qt_meta_tag
         "on_TirSignalizeStatus_stateChanged",
         "state",
         "on_TirUseGrayscale_stateChanged",
+        "on_TirVideoOnDelay_valueChanged",
         "on_TirInstallFirmware_pressed",
         "TirFirmwareDLFinished"
     };
@@ -86,10 +87,14 @@ template <> constexpr inline auto TirPrefs::qt_create_metaobjectdata<qt_meta_tag
         QtMocHelpers::SlotData<void(int)>(11, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Int, 10 },
         }}),
+        // Slot 'on_TirVideoOnDelay_valueChanged'
+        QtMocHelpers::SlotData<void(int)>(12, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 4 },
+        }}),
         // Slot 'on_TirInstallFirmware_pressed'
-        QtMocHelpers::SlotData<void()>(12, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(13, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'TirFirmwareDLFinished'
-        QtMocHelpers::SlotData<void(bool)>(13, 2, QMC::AccessPrivate, QMetaType::Void, {{
+        QtMocHelpers::SlotData<void(bool)>(14, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Bool, 10 },
         }}),
     };
@@ -123,8 +128,9 @@ void TirPrefs::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, vo
         case 5: _t->on_TirIrBright_valueChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
         case 6: _t->on_TirSignalizeStatus_stateChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
         case 7: _t->on_TirUseGrayscale_stateChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 8: _t->on_TirInstallFirmware_pressed(); break;
-        case 9: _t->TirFirmwareDLFinished((*reinterpret_cast<std::add_pointer_t<bool>>(_a[1]))); break;
+        case 8: _t->on_TirVideoOnDelay_valueChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 9: _t->on_TirInstallFirmware_pressed(); break;
+        case 10: _t->TirFirmwareDLFinished((*reinterpret_cast<std::add_pointer_t<bool>>(_a[1]))); break;
         default: ;
         }
     }
@@ -153,14 +159,14 @@ int TirPrefs::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 10)
+        if (_id < 11)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 10;
+        _id -= 11;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 10)
+        if (_id < 11)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 10;
+        _id -= 11;
     }
     return _id;
 }

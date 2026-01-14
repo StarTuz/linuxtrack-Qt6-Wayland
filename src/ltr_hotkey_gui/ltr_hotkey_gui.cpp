@@ -21,7 +21,7 @@
 HotkeyGUI::HotkeyGUI(QWidget *parent)
     : QMainWindow(parent), daemonProcess(nullptr), statusTimer(nullptr) {
   setWindowTitle("Linuxtrack - Native Hotkey Controller");
-  setFixedSize(420, 200);
+  setFixedSize(420, 240);
 
   settings = new QSettings("linuxtrack", "ltr_hotkey_gui");
 
@@ -64,6 +64,12 @@ void HotkeyGUI::setupUI() {
   gridLayout->addWidget(pauseLabel, 1, 0);
   gridLayout->addWidget(pauseBtn, 1, 1);
 
+  // USB Reset key
+  usbResetLabel = new QLabel("USB Reset: Ctrl+Shift+F12", this);
+  usbResetBtn = new QPushButton("Redefine", this);
+  gridLayout->addWidget(usbResetLabel, 2, 0);
+  gridLayout->addWidget(usbResetBtn, 2, 1);
+
   mainLayout->addWidget(hotkeyGroup);
 
   // Status
@@ -86,6 +92,8 @@ void HotkeyGUI::setupUI() {
   connect(recenterBtn, &QPushButton::clicked, this,
           &HotkeyGUI::onRecenterRedefine);
   connect(pauseBtn, &QPushButton::clicked, this, &HotkeyGUI::onPauseRedefine);
+  connect(usbResetBtn, &QPushButton::clicked, this,
+          &HotkeyGUI::onUsbResetRedefine);
   connect(startStopBtn, &QPushButton::clicked, this,
           &HotkeyGUI::onStartStopClicked);
   connect(quitBtn, &QPushButton::clicked, this, &HotkeyGUI::onQuitClicked);
@@ -134,12 +142,15 @@ void HotkeyGUI::onTrayActivated(QSystemTrayIcon::ActivationReason reason) {
 void HotkeyGUI::loadSettings() {
   recenterKey = QKeySequence(settings->value("recenter_key", "F12").toString());
   pauseKey = QKeySequence(settings->value("pause_key", "Pause").toString());
+  usbResetKey =
+      QKeySequence(settings->value("usb_reset_key", "Ctrl+Shift+F12").toString());
   quitKey = QKeySequence(settings->value("quit_key", "Ctrl+F12").toString());
 }
 
 void HotkeyGUI::saveSettings() {
   settings->setValue("recenter_key", recenterKey.toString());
   settings->setValue("pause_key", pauseKey.toString());
+  settings->setValue("usb_reset_key", usbResetKey.toString());
   settings->setValue("quit_key", quitKey.toString());
   settings->sync();
 }
@@ -147,6 +158,7 @@ void HotkeyGUI::saveSettings() {
 void HotkeyGUI::updateHotkeyLabels() {
   recenterLabel->setText(QString("Recenter: %1").arg(recenterKey.toString()));
   pauseLabel->setText(QString("Toggle Pause: %1").arg(pauseKey.toString()));
+  usbResetLabel->setText(QString("USB Reset: %1").arg(usbResetKey.toString()));
 }
 
 void HotkeyGUI::onRecenterRedefine() {
@@ -193,6 +205,29 @@ void HotkeyGUI::onPauseRedefine() {
     edit->deleteLater();
   });
 }
+
+void HotkeyGUI::onUsbResetRedefine() {
+  QKeySequenceEdit *edit = new QKeySequenceEdit(usbResetKey, this);
+  edit->setWindowFlags(Qt::Dialog);
+  edit->setWindowTitle("Press new USB Reset key");
+  edit->setFixedSize(200, 50);
+  edit->show();
+  edit->setFocus();
+
+  connect(edit, &QKeySequenceEdit::editingFinished, this, [this, edit]() {
+    if (!edit->keySequence().isEmpty()) {
+      usbResetKey = edit->keySequence();
+      updateHotkeyLabels();
+      saveSettings();
+      if (isDaemonRunning()) {
+        stopDaemon();
+        startDaemon();
+      }
+    }
+    edit->deleteLater();
+  });
+}
+
 
 void HotkeyGUI::onStartStopClicked() {
   if (isDaemonRunning()) {

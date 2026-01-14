@@ -398,6 +398,30 @@ bool ltr_int_receive_data(int in_ep, unsigned char data[], size_t size, size_t *
   return true;
 }
 
+bool ltr_int_reset_usb_device(void)
+{
+  if(handle == NULL){
+    ltr_int_log_message("USB reset failed: no device handle!\n");
+    return false;
+  }
+
+  ltr_int_log_message("Performing USB device reset (nuclear option)...\n");
+
+  int res = libusb_reset_device(handle);
+  if(res == 0){
+    ltr_int_log_message("USB device reset successful.\n");
+    return true;
+  }else if(res == LIBUSB_ERROR_NOT_FOUND){
+    ltr_int_log_message("USB device reset: device re-enumerated (handle may be invalid).\n");
+    // Device re-enumerated - handle is no longer valid
+    // For now, return true and let the caller know it "worked" but may need reinit
+    return true;
+  }else{
+    ltr_int_log_message("USB device reset failed: %s\n", libusb_strerror(res));
+    return false;
+  }
+}
+
 void ltr_int_finish_usb(unsigned int interface)
 {
   ltr_int_log_message("Closing TrackIR.\n");

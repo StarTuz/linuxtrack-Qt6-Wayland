@@ -9,19 +9,15 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/dnn.hpp>
 
-// ... existing code ...
-
-
-
+#include "one_euro_filter.h"
 #include "utils.h"
+#include <chrono>
 #include <condition_variable>
-#include <math.h>
 #include <mutex>
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 
-static cv::CascadeClassifier *cascade = nullptr;
 static cv::Ptr<cv::FaceDetectorYN> dnn_detector;
 static bool use_dnn = false;
 static double scale = 0.5;
@@ -38,16 +34,14 @@ static float face_x1 = 0.0;
 static float face_y1 = 0.0;
 static float face_x2 = 0.0;
 static float face_y2 = 0.0;
-static float last_face_x = 0.0;
-static float last_face_y = 0.0;
-static float last_face_w = 0.0;
-static float last_face_h = 0.0;
-static cv::Rect lastCandidate(0, 0, 0, 0);
-static bool init = true;
 static float expFiltFactor = 0.1;
 static int missing_frames = 0;
 static const int max_missing_frames = 5;
-static const float confidence_threshold = 0.45f;
+
+// One Euro Filter instances for smoothed face tracking
+static one_euro_filter_t filter_x, filter_y, filter_w, filter_h;
+static std::chrono::steady_clock::time_point last_frame_time;
+static bool filters_initialized = false;
 
 static float sigmoid(float x) {
     return 1.0f / (1.0f + std::exp(-x));
@@ -63,30 +57,7 @@ static cv::Size minFace(40, 40);
 // static float expFiltFactor = 0.2; // Removed duplicate
 // static bool init = true; // Removed duplicate
 
-float ltr_int_expfilt(float x, float y_minus_1, float filterfactor);
-
-void ltr_int_find_faces(cv::Mat &img, float factor) {
-  cv::Size s(lastCandidate.width * roi_factor,
-             lastCandidate.height * roi_factor);
-  cv::Rect new_roi(lastCandidate.x - s.width, lastCandidate.y - s.height,
-                   lastCandidate.width + 2 * s.width,
-                   lastCandidate.height + 2 * s.height);
-  new_roi &= cv::Rect(0, 0, img.cols, img.rows);
-  cv::Mat roi(img, new_roi);
-  // faces.clear(); // faces is now local to ltr_int_detect for Haar
-  // if ((new_roi.width > 0) && (new_roi.height > 0)) {
-  //   cascade->detectMultiScale(roi, faces, factor, 2, 0, minFace);
-  // }
-  // if (faces.size() == 0) {
-  //   cascade->detectMultiScale(img, faces, factor, 2, 0, minFace);
-  // } else {
-  //   for (std::vector<cv::Rect>::iterator i = faces.begin(); i != faces.end();
-  //        ++i) {
-  //     i->x += new_roi.x;
-  //     i->y += new_roi.y;
-  //   }
-  // }
-}
+// ROI logic removed as DNN handles full frame efficiently or provides its own optimization
 
 void ltr_int_detect(cv::Mat &img) {
   if (use_dnn && dnn_detector) {
@@ -99,7 +70,7 @@ void ltr_int_detect(cv::Mat &img) {
     // For YuNet, we prefer square-ish or proportional sizes. 
     // 320x320 is the default in many examples.
     if (optim == 0) {
-      cv::resize(img, resized, cv::Size(320, 320));
+      resized = img; 
     } else {
       cv::resize(img, resized, cv::Size(img.cols >> optim, img.rows >> optim));
     }
@@ -124,94 +95,94 @@ void ltr_int_detect(cv::Mat &img) {
       float h = detections.at<float>(0, 3) * scale_y;
       float confidence = detections.at<float>(0, 14);
       
-      if (confidence > confidence_threshold) {
+      float conf_thresh = ltr_int_wc_get_confidence_threshold();
+      if (confidence > conf_thresh) {
         missing_frames = 0;
-        float x = (x1 + w * 0.5f) - (frame_w * 0.5f);
-        float y = (y1 + h * 0.5f) - (frame_h * 0.5f);
         
-        face_x = x;
-        face_y = y;
-        face_w = w;
-        face_h = h;
-        face_x1 = x1;
-        face_y1 = y1;
-        face_x2 = x1 + w;
-        face_y2 = y1 + h;
+        // Raw center coordinates
+        float rx = (x1 + w * 0.5f) - (frame_w * 0.5f);
+        float ry = (y1 + h * 0.5f) - (frame_h * 0.5f);
+        
+        // Calculate dt for 1-Euro filter
+        auto now = std::chrono::steady_clock::now();
+        float dt = 1.0f / 30.0f; // Default
+        if (filters_initialized) {
+          dt = std::chrono::duration<float>(now - last_frame_time).count();
+        } else {
+          // Repurpose "Exp-filter-factor" preference for 1-Euro Beta (0.0 to 0.1 range)
+          float beta = ltr_int_wc_get_eff();
+          one_euro_init(&filter_x, 0.5f, beta, 1.0f);
+          one_euro_init(&filter_y, 0.5f, beta, 1.0f);
+          one_euro_init(&filter_w, 0.5f, beta, 1.0f);
+          one_euro_init(&filter_h, 0.5f, beta, 1.0f);
+          filters_initialized = true;
+        }
+        last_frame_time = now;
+        
+        // Update params from GUI in case they changed
+        float current_beta = ltr_int_wc_get_eff();
+        one_euro_set_params(&filter_x, 0.5f, current_beta);
+        one_euro_set_params(&filter_y, 0.5f, current_beta);
+        one_euro_set_params(&filter_w, 0.5f, current_beta);
+        one_euro_set_params(&filter_h, 0.5f, current_beta);
+
+        // Apply 1-Euro Filter
+        face_x = one_euro_filter(&filter_x, rx, dt);
+        face_y = one_euro_filter(&filter_y, ry, dt);
+        face_w = one_euro_filter(&filter_w, w, dt);
+        face_h = one_euro_filter(&filter_h, h, dt);
+        
+        face_x1 = (x1 < 0) ? 0 : x1;
+        face_y1 = (y1 < 0) ? 0 : y1;
+        face_x2 = (x1 + w >= frame_w) ? frame_w - 1 : x1 + w;
+        face_y2 = (y1 + h >= frame_h) ? frame_h - 1 : y1 + h;
+        
+        static int log_cnt = 0;
+        if(++log_cnt % 60 == 0) {
+            ltr_int_log_message("Face detected (smoothed): rx=%g ry=%g area=%g conf=%g dt=%f beta=%f\n", 
+                                face_x, face_y, face_w * face_h, confidence, dt, current_beta);
+        }
       } else {
+        static int conf_log_cnt = 0;
+        if(++conf_log_cnt % 30 == 0) {
+            ltr_int_log_message("Face found but low confidence: %g\n", confidence);
+        }
         missing_frames++;
       }
     } else {
+      static int no_face_log_cnt = 0;
+      if(++no_face_log_cnt % 60 == 0) {
+          cv::Scalar mean = cv::mean(resized);
+          ltr_int_log_message("No face candidates in DNN. Image mean brightness: %.1f\n", mean[0]);
+      }
       missing_frames++;
     }
     
     if (missing_frames >= max_missing_frames) {
       face_w = face_h = 0;
+      filters_initialized = false; // Reset filters on lost tracking
     }
-  } else if (cascade != nullptr) {
-    std::vector<cv::Rect> faces;
-    int optim = ltr_int_wc_get_optim_level();
-    cv::Mat resized;
-    if (optim > 0) {
-      cv::resize(img, resized, cv::Size(img.cols >> optim, img.rows >> optim));
-    } else {
-      resized = img;
-    }
-    cascade->detectMultiScale(resized, faces, 1.2, 3,
-                              cv::CASCADE_FIND_BIGGEST_OBJECT |
-                                  cv::CASCADE_DO_ROUGH_SEARCH,
-                              cv::Size(resized.cols / 4, resized.rows / 4));
-    if (faces.size() > 0) {
-      float x = (faces[0].x + faces[0].width / 2) << optim;
-      float y = (faces[0].y + faces[0].height / 2) << optim;
-      float w = faces[0].width << optim;
-      float h = faces[0].height << optim;
-      
-      face_x1 = faces[0].x << optim;
-      face_y1 = faces[0].y << optim;
-      face_x2 = (faces[0].x + faces[0].width) << optim;
-      face_y2 = (faces[0].y + faces[0].height) << optim;
-
-      if (init) {
-        last_face_x = face_x = x;
-        last_face_y = face_y = y;
-        last_face_w = face_w = w;
-        last_face_h = face_h = h;
-        init = false;
-      } else {
-        face_x = ltr_int_expfilt(x, last_face_x, expFiltFactor);
-        face_y = ltr_int_expfilt(y, last_face_y, expFiltFactor);
-        face_w = ltr_int_expfilt(w, last_face_w, expFiltFactor);
-        face_h = ltr_int_expfilt(h, last_face_h, expFiltFactor);
-        last_face_x = face_x;
-        last_face_y = face_y;
-        last_face_w = face_w;
-        last_face_h = face_h;
-      }
-    } else {
-      face_w = face_h = 0;
-    }
+  } else {
+    // Haar Cascade support removed for modernization
   }
 }
 
 static bool run = true;
 static enum { READY, PROCESSING, DONE } frame_status = DONE;
-// static bool request_frame = false;
-static std::condition_variable frame_cv;
 static std::mutex frame_mx;
+static std::condition_variable frame_cv;
 static pthread_t detect_thread_handle;
 
 void *ltr_int_detector_thread(void *) {
   while (run) {
     {
       std::unique_lock<std::mutex> lock(frame_mx);
-      while (frame_status != READY) {
-        frame_cv.wait(lock);
-      }
+      frame_cv.wait(lock, [] { return frame_status == READY || !run; });
+      if (!run) break;
       frame_status = PROCESSING;
     }
-    if (!run) {
-      break;
-    }
+    
+    // ltr_int_log_message("Detector thread: starting detection on new frame\n");
     double t = (double)cv::getTickCount();
     ltr_int_detect(*cvimage);
     t = (double)cv::getTickCount() - t;
@@ -223,16 +194,12 @@ void *ltr_int_detector_thread(void *) {
       frame_status = DONE;
     }
   }
-  delete cascade;
-  cascade = nullptr;
-  delete cvimage;
-  cvimage = nullptr;
-  free(frame);
-  frame = nullptr;
+  // Cleanup moved to ltr_int_stop_face_detect
   return nullptr;
 }
 
 bool ltr_int_init_face_detect() {
+  ltr_int_log_message("ltr_int_init_face_detect() starting...\n");
   cv::setNumThreads(0); // Use all available threads
   const char *cascade_path = ltr_int_wc_get_cascade();
   if (cascade_path == nullptr) {
@@ -255,18 +222,10 @@ bool ltr_int_init_face_detect() {
       return false;
     }
   } else {
-    cascade = new cv::CascadeClassifier();
-    if (!cascade->load(cascade_path)) {
-      ltr_int_log_message("Couldn't load cascade '%s'!\n", cascade_path);
-      delete cascade;
-      cascade = nullptr;
-      return false;
-    }
-    use_dnn = false;
-    ltr_int_log_message("Loaded Haar cascade '%s'\n", cascade_path);
+    ltr_int_log_message("Non-ONNX models are no longer supported for face tracking.\n");
+    return false;
   }
   
-  lastCandidate = cv::Rect(0, 0, 0, 0);
   run = true;
   return pthread_create(&detect_thread_handle, nullptr, ltr_int_detector_thread,
                         nullptr) == 0;
@@ -276,13 +235,23 @@ void ltr_int_stop_face_detect() {
   run = false;
   {
     std::lock_guard<std::mutex> lock(frame_mx);
-    frame_status = READY;
+    frame_status = READY; // Wake up the thread to see 'run = false'
     frame_cv.notify_all();
   }
   pthread_join(detect_thread_handle, nullptr);
   ltr_int_log_message("Facetracker thread joined!\n");
-  init = true;
+  dnn_detector.release(); // Release DNN model resources
+  if (cvimage != nullptr) {
+    delete cvimage;
+    cvimage = nullptr;
+  }
+  if (frame != nullptr) {
+    free(frame);
+    frame = nullptr;
+  }
+  // init = true; // No longer used
   frame_status = DONE;
+  filters_initialized = false; // Ensure filters are reset for next init
 }
 
 void ltr_int_face_detect(image_t *img, struct bloblist_type *blt) {
@@ -330,12 +299,7 @@ void ltr_int_face_detect(image_t *img, struct bloblist_type *blt) {
   }
 }
 
-float ltr_int_expfilt(float x, float y_minus_1, float filterfactor) {
-  float y;
-
-  y = y_minus_1 * (1.0 - filterfactor) + filterfactor * x;
-  return y;
-}
+// Expfilt removed in favor of 1-Euro Filter
 
 void ltr_int_mjpg_to_gray(unsigned char *src, size_t src_len, unsigned char *dest, int w, int h)
 {

@@ -21,6 +21,7 @@ static bool flip = false;
 static char *cascade = NULL;
 static float exp_filt = 0.1;
 static int optim_level = 0;
+static float confidence_threshold = 0.5;
 
 static char max_blob_key[] = "Max-blob";
 static char min_blob_key[] = "Min-blob";
@@ -33,6 +34,7 @@ static char flip_key[] = "Upside-down";
 static char cascade_key[] = "Cascade";
 static char exp_filter_key[] = "Exp-filter-factor";
 static char optim_key[] = "Optimization-level";
+static char confidence_key[] = "Confidence-threshold";
 
 bool ltr_int_wc_init_prefs()
 {
@@ -96,6 +98,9 @@ bool ltr_int_wc_init_prefs()
   }
   if(!ltr_int_get_key_int(dev, optim_key, &optim_level)){
     optim_level= 0;
+  }
+  if(!ltr_int_get_key_flt(dev, confidence_key, &confidence_threshold)){
+    confidence_threshold = 0.5;
   }
   free(dev);
   return true;
@@ -275,5 +280,21 @@ bool ltr_int_wc_set_optim_level(int opt)
 {
   optim_level = opt;
   return ltr_int_change_key_int(ltr_int_get_device_section(), optim_key, opt);
+}
+
+float ltr_int_wc_get_confidence_threshold()
+{
+  return confidence_threshold;
+}
+
+bool ltr_int_wc_set_confidence_threshold(float val)
+{
+  char tmp[1024];
+  if(snprintf(tmp, sizeof(tmp), "%g", val) != 0){
+    confidence_threshold = val;
+    return ltr_int_change_key(ltr_int_get_device_section(), confidence_key, tmp);
+  }else{
+    return false;
+  }
 }
 

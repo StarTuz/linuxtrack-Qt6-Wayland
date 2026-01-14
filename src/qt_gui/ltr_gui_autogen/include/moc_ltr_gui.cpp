@@ -64,7 +64,10 @@ template <> constexpr inline auto LinuxtrackGui::qt_create_metaobjectdata<qt_met
         "logsPackaged",
         "exitCode",
         "QProcess::ExitStatus",
-        "exitStatus"
+        "exitStatus",
+        "on_UdpBridgeCheck_stateChanged",
+        "on_UdpSettingsButton_pressed",
+        "on_NativeHotkeysConfigButton_pressed"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -116,6 +119,14 @@ template <> constexpr inline auto LinuxtrackGui::qt_create_metaobjectdata<qt_met
         QtMocHelpers::SlotData<void(int, QProcess::ExitStatus)>(23, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Int, 24 }, { 0x80000000 | 25, 26 },
         }}),
+        // Slot 'on_UdpBridgeCheck_stateChanged'
+        QtMocHelpers::SlotData<void(int)>(27, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 14 },
+        }}),
+        // Slot 'on_UdpSettingsButton_pressed'
+        QtMocHelpers::SlotData<void()>(28, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_NativeHotkeysConfigButton_pressed'
+        QtMocHelpers::SlotData<void()>(29, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -156,6 +167,9 @@ void LinuxtrackGui::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 14: _t->on_PackageLogsButton_pressed(); break;
         case 15: _t->onLALClicked(); break;
         case 16: _t->logsPackaged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<QProcess::ExitStatus>>(_a[2]))); break;
+        case 17: _t->on_UdpBridgeCheck_stateChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 18: _t->on_UdpSettingsButton_pressed(); break;
+        case 19: _t->on_NativeHotkeysConfigButton_pressed(); break;
         default: ;
         }
     }
@@ -180,14 +194,14 @@ int LinuxtrackGui::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 17)
+        if (_id < 20)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 17;
+        _id -= 20;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 17)
+        if (_id < 20)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 17;
+        _id -= 20;
     }
     return _id;
 }

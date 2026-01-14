@@ -157,40 +157,24 @@
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_7">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_5">
           <property name="text">
-           <string>Precision</string>
+           <string>Responsiveness (Beta):</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>None</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
          </widget>
         </item>
         <item row="0" column="2">
-         <widget class="QSlider" name="OptimLevel">
-          <property name="maximum">
-           <number>3</number>
-          </property>
-          <property name="pageStep">
-           <number>1</number>
-          </property>
-          <property name="value">
-           <number>0</number>
-          </property>
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="tickPosition">
-           <enum>QSlider::TicksBelow</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_10">
-          <property name="text">
-           <string>Optimize for:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
          <widget class="QSlider" name="ExpFilterFactor">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -203,34 +187,53 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_5">
+        <item row="0" column="3">
+         <widget class="QLabel" name="label">
           <property name="text">
-           <string>Smoothing:</string>
+           <string>Max</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_thresh">
+          <property name="text">
+           <string>Confidence:</string>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLabel" name="label_2">
+         <widget class="QLabel" name="label_low">
           <property name="text">
-           <string>None</string>
+           <string>Low</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
          </widget>
         </item>
-        <item row="0" column="3">
-         <widget class="QLabel" name="label_9">
-          <property name="text">
-           <string>Speed</string>
+        <item row="1" column="2">
+         <widget class="QSlider" name="ConfidenceThreshold">
+          <property name="maximum">
+           <number>100</number>
+          </property>
+          <property name="value">
+           <number>50</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="tickPosition">
+           <enum>QSlider::TicksBelow</enum>
+          </property>
+          <property name="tickInterval">
+           <number>10</number>
           </property>
          </widget>
         </item>
         <item row="1" column="3">
-         <widget class="QLabel" name="label">
+         <widget class="QLabel" name="label_high">
           <property name="text">
-           <string>Max</string>
+           <string>High</string>
           </property>
          </widget>
         </item>

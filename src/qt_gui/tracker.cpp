@@ -54,6 +54,9 @@ static void ltr_int_new_frame(struct frame_type *frame, void *param)
   local_frame.width = frame->width;
   local_frame.height = frame->height;
   local_frame.counter = frame->counter;
+  
+  // Save the incoming bitmap for CameraViewWidget BEFORE buffer manipulation
+  local_frame.bitmap = frame->bitmap;
 
   if(initBuffers){
     buf.resizeBuffers(frame->width, frame->height);

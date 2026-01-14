@@ -224,6 +224,8 @@ void ltr_int_wakeup_cmd() { ltr_int_wakeup(); }
 
 void ltr_int_recenter_cmd() { ltr_int_recenter(); }
 
+void ltr_int_usb_reset_cmd() { ltr_int_usb_reset(); }
+
 static bool gui_shutdown_request = false;
 
 size_t ltr_int_request_shutdown() {
@@ -394,6 +396,9 @@ int ltr_int_master_main_loop(int socket) {
                 break;
               case CMD_RECENTER:
                 ltr_int_recenter_cmd();
+                break;
+              case CMD_USB_RESET:
+                ltr_int_usb_reset_cmd();
                 break;
               case CMD_NEW_SOCKET:
                 // ltr_int_log_message("Cmd to register new slave...\n");

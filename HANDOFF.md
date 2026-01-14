@@ -1,6 +1,6 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-01-08
+**Last Updated:** 2026-01-14
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
@@ -200,6 +200,12 @@ The project now compiles successfully on modern Linux with:
 - **One Euro Filter dt Fix:** Fixed bug where the One Euro filter was not receiving the correct delta time (`dt`) from the tracking loop. The filter now uses the actual frame-to-frame timing instead of a hardcoded value.
 - **TrackIR Thread Freeze Fix:** Solved a freeze issue in the TrackIR driver by adding a yield in the read loop.
 - **Version Bump:** Project version advanced to `1.1.11`.
+
+**Recent Additions (2026-01-14) [v1.1.15]:**
+
+- **Version Synchronization:** Synchronized version strings across the codebase to match git tag `v1.1.15`.
+- **AppImage Build Status:** Verified AppImage build process and identified face tracking decoding gaps.
+- **Version Bump:** Project version advanced to `1.1.15`.
 
 **Recent Additions (2026-01-08) [v1.1.12]:**
 

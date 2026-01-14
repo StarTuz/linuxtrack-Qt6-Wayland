@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_LinuxtrackGui_t {
-    const uint offsetsAndSize[58];
-    char stringdata0[570];
+    const uint offsetsAndSize[60];
+    char stringdata0[607];
 };
 #define QT_MOC_LITERAL(ofs, len) \
     uint(offsetof(qt_meta_stringdata_LinuxtrackGui_t, stringdata0) + ofs), len 
@@ -57,7 +57,8 @@ QT_MOC_LITERAL(469, 8), // "exitCode"
 QT_MOC_LITERAL(478, 20), // "QProcess::ExitStatus"
 QT_MOC_LITERAL(499, 10), // "exitStatus"
 QT_MOC_LITERAL(510, 30), // "on_UdpBridgeCheck_stateChanged"
-QT_MOC_LITERAL(541, 28) // "on_UdpSettingsButton_pressed"
+QT_MOC_LITERAL(541, 28), // "on_UdpSettingsButton_pressed"
+QT_MOC_LITERAL(570, 36) // "on_NativeHotkeysConfigButton_..."
 
     },
     "LinuxtrackGui\0show\0\0on_QuitButton_pressed\0"
@@ -75,7 +76,8 @@ QT_MOC_LITERAL(541, 28) // "on_UdpSettingsButton_pressed"
     "on_PackageLogsButton_pressed\0onLALClicked\0"
     "logsPackaged\0exitCode\0QProcess::ExitStatus\0"
     "exitStatus\0on_UdpBridgeCheck_stateChanged\0"
-    "on_UdpSettingsButton_pressed"
+    "on_UdpSettingsButton_pressed\0"
+    "on_NativeHotkeysConfigButton_pressed"
 };
 #undef QT_MOC_LITERAL
 
@@ -85,7 +87,7 @@ static const uint qt_meta_data_LinuxtrackGui[] = {
       10,       // revision
        0,       // classname
        0,    0, // classinfo
-      19,   14, // methods
+      20,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -93,25 +95,26 @@ static const uint qt_meta_data_LinuxtrackGui[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    0,  128,    2, 0x0a,    1 /* Public */,
-       3,    0,  129,    2, 0x08,    2 /* Private */,
-       4,    0,  130,    2, 0x08,    3 /* Private */,
-       5,    0,  131,    2, 0x08,    4 /* Private */,
-       6,    0,  132,    2, 0x08,    5 /* Private */,
-       7,    0,  133,    2, 0x08,    6 /* Private */,
-       8,    1,  134,    2, 0x08,    7 /* Private */,
-      10,    1,  137,    2, 0x08,    9 /* Private */,
-      13,    1,  140,    2, 0x08,   11 /* Private */,
-      15,    1,  143,    2, 0x08,   13 /* Private */,
-      16,    1,  146,    2, 0x08,   15 /* Private */,
-      18,    1,  149,    2, 0x08,   17 /* Private */,
-      19,    0,  152,    2, 0x08,   19 /* Private */,
-      20,    0,  153,    2, 0x08,   20 /* Private */,
-      21,    0,  154,    2, 0x08,   21 /* Private */,
-      22,    0,  155,    2, 0x08,   22 /* Private */,
-      23,    2,  156,    2, 0x08,   23 /* Private */,
-      27,    1,  161,    2, 0x08,   26 /* Private */,
-      28,    0,  164,    2, 0x08,   28 /* Private */,
+       1,    0,  134,    2, 0x0a,    1 /* Public */,
+       3,    0,  135,    2, 0x08,    2 /* Private */,
+       4,    0,  136,    2, 0x08,    3 /* Private */,
+       5,    0,  137,    2, 0x08,    4 /* Private */,
+       6,    0,  138,    2, 0x08,    5 /* Private */,
+       7,    0,  139,    2, 0x08,    6 /* Private */,
+       8,    1,  140,    2, 0x08,    7 /* Private */,
+      10,    1,  143,    2, 0x08,    9 /* Private */,
+      13,    1,  146,    2, 0x08,   11 /* Private */,
+      15,    1,  149,    2, 0x08,   13 /* Private */,
+      16,    1,  152,    2, 0x08,   15 /* Private */,
+      18,    1,  155,    2, 0x08,   17 /* Private */,
+      19,    0,  158,    2, 0x08,   19 /* Private */,
+      20,    0,  159,    2, 0x08,   20 /* Private */,
+      21,    0,  160,    2, 0x08,   21 /* Private */,
+      22,    0,  161,    2, 0x08,   22 /* Private */,
+      23,    2,  162,    2, 0x08,   23 /* Private */,
+      27,    1,  167,    2, 0x08,   26 /* Private */,
+      28,    0,  170,    2, 0x08,   28 /* Private */,
+      29,    0,  171,    2, 0x08,   29 /* Private */,
 
  // slots: parameters
     QMetaType::Void,
@@ -132,6 +135,7 @@ static const uint qt_meta_data_LinuxtrackGui[] = {
     QMetaType::Void,
     QMetaType::Void, QMetaType::Int, 0x80000000 | 25,   24,   26,
     QMetaType::Void, QMetaType::Int,   14,
+    QMetaType::Void,
     QMetaType::Void,
 
        0        // eod
@@ -162,6 +166,7 @@ void LinuxtrackGui::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _i
         case 16: _t->logsPackaged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QProcess::ExitStatus>>(_a[2]))); break;
         case 17: _t->on_UdpBridgeCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
         case 18: _t->on_UdpSettingsButton_pressed(); break;
+        case 19: _t->on_NativeHotkeysConfigButton_pressed(); break;
         default: ;
         }
     }
@@ -175,7 +180,7 @@ const QMetaObject LinuxtrackGui::staticMetaObject = { {
     nullptr,
 qt_incomplete_metaTypeArray<qt_meta_stringdata_LinuxtrackGui_t
 , QtPrivate::TypeAndForceComplete<LinuxtrackGui, std::true_type>
-, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<linuxtrack_state_type, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<double, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<QProcess::ExitStatus, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>
+, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<linuxtrack_state_type, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<double, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<QProcess::ExitStatus, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<int, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>, QtPrivate::TypeAndForceComplete<void, std::false_type>
 
 
 >,
@@ -202,13 +207,13 @@ int LinuxtrackGui::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 19)
+        if (_id < 20)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 19;
+        _id -= 20;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 19)
+        if (_id < 20)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 19;
+        _id -= 20;
     }
     return _id;
 }

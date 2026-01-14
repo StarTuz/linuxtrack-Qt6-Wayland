@@ -42,6 +42,9 @@ bool ltr_int_wc_set_eff(float new_eff);
 int ltr_int_wc_get_optim_level();
 bool ltr_int_wc_set_optim_level(int opt);
 
+float ltr_int_wc_get_confidence_threshold();
+bool ltr_int_wc_set_confidence_threshold(float val);
+
 #ifdef __cplusplus
 }
 #endif

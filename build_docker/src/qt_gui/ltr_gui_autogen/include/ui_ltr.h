@@ -72,6 +72,13 @@ public:
     QDoubleSpinBox *FocalLength;
     QCheckBox *UdpBridgeCheck;
     QPushButton *UdpSettingsButton;
+    QFrame *NativeHotkeysFrame;
+    QVBoxLayout *verticalLayout_24;
+    QLabel *NativeHotkeysLabel;
+    QHBoxLayout *NativeHotkeysLayout;
+    QCheckBox *NativeHotkeysCheck;
+    QLabel *NativeHotkeysStatus;
+    QPushButton *NativeHotkeysConfigButton;
     QSpacerItem *verticalSpacer_2;
     QHBoxLayout *horizontalLayout_6;
     QPushButton *HelpButton;
@@ -299,6 +306,44 @@ public:
 
         verticalLayout_3->addWidget(frame_7);
 
+        NativeHotkeysFrame = new QFrame(frame_2);
+        NativeHotkeysFrame->setObjectName(QString::fromUtf8("NativeHotkeysFrame"));
+        NativeHotkeysFrame->setFrameShape(QFrame::StyledPanel);
+        NativeHotkeysFrame->setFrameShadow(QFrame::Raised);
+        verticalLayout_24 = new QVBoxLayout(NativeHotkeysFrame);
+        verticalLayout_24->setObjectName(QString::fromUtf8("verticalLayout_24"));
+        NativeHotkeysLabel = new QLabel(NativeHotkeysFrame);
+        NativeHotkeysLabel->setObjectName(QString::fromUtf8("NativeHotkeysLabel"));
+        sizePolicy2.setHeightForWidth(NativeHotkeysLabel->sizePolicy().hasHeightForWidth());
+        NativeHotkeysLabel->setSizePolicy(sizePolicy2);
+        NativeHotkeysLabel->setFont(font);
+        NativeHotkeysLabel->setAlignment(Qt::AlignCenter);
+
+        verticalLayout_24->addWidget(NativeHotkeysLabel);
+
+        NativeHotkeysLayout = new QHBoxLayout();
+        NativeHotkeysLayout->setObjectName(QString::fromUtf8("NativeHotkeysLayout"));
+        NativeHotkeysCheck = new QCheckBox(NativeHotkeysFrame);
+        NativeHotkeysCheck->setObjectName(QString::fromUtf8("NativeHotkeysCheck"));
+
+        NativeHotkeysLayout->addWidget(NativeHotkeysCheck);
+
+        NativeHotkeysStatus = new QLabel(NativeHotkeysFrame);
+        NativeHotkeysStatus->setObjectName(QString::fromUtf8("NativeHotkeysStatus"));
+
+        NativeHotkeysLayout->addWidget(NativeHotkeysStatus);
+
+        NativeHotkeysConfigButton = new QPushButton(NativeHotkeysFrame);
+        NativeHotkeysConfigButton->setObjectName(QString::fromUtf8("NativeHotkeysConfigButton"));
+
+        NativeHotkeysLayout->addWidget(NativeHotkeysConfigButton);
+
+
+        verticalLayout_24->addLayout(NativeHotkeysLayout);
+
+
+        verticalLayout_3->addWidget(NativeHotkeysFrame);
+
         verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout_3->addItem(verticalSpacer_2);
@@ -383,6 +428,10 @@ public:
         label_2->setText(QCoreApplication::translate("LinuxtrackMainForm", "Focal length (pixels)", nullptr));
         UdpBridgeCheck->setText(QCoreApplication::translate("LinuxtrackMainForm", "Enable UDP Bridge", nullptr));
         UdpSettingsButton->setText(QCoreApplication::translate("LinuxtrackMainForm", "Configure UDP...", nullptr));
+        NativeHotkeysLabel->setText(QCoreApplication::translate("LinuxtrackMainForm", "Native Hotkeys (Linux/X11)", nullptr));
+        NativeHotkeysCheck->setText(QCoreApplication::translate("LinuxtrackMainForm", "Enable ltr_hotkeyd", nullptr));
+        NativeHotkeysStatus->setText(QCoreApplication::translate("LinuxtrackMainForm", "Status: Stopped", nullptr));
+        NativeHotkeysConfigButton->setText(QCoreApplication::translate("LinuxtrackMainForm", "Configure Hotkeys...", nullptr));
         LtrTab->setTabText(LtrTab->indexOf(tab_4), QCoreApplication::translate("LinuxtrackMainForm", "Misc.", nullptr));
         HelpButton->setText(QCoreApplication::translate("LinuxtrackMainForm", "Help", nullptr));
         DefaultsButton->setText(QCoreApplication::translate("LinuxtrackMainForm", "Load Defaults", nullptr));

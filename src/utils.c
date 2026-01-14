@@ -175,8 +175,18 @@ void ltr_int_valog_message(const char *format, va_list va) {
 
   fprintf(output_stream, "[%s] ", buf);
   // fprintf(output_stream, "[%s %lld] ", buf, (long long)tv.tv_usec);
+  
+  va_list va2;
+  va_copy(va2, va);
   vfprintf(output_stream, format, va);
   fflush(output_stream);
+
+  // Duplicating to stderr so user sees it in terminal
+  if(output_stream != stderr) {
+    fprintf(stderr, "[LTR-DBG][%s] ", buf);
+    vfprintf(stderr, format, va2);
+  }
+  va_end(va2);
 }
 
 void ltr_int_log_message(const char *format, ...) {

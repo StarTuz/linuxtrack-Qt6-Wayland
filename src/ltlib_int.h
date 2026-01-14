@@ -24,6 +24,7 @@ int ltr_int_shutdown(void);
 int ltr_int_suspend(void);
 int ltr_int_wakeup(void);
 void ltr_int_recenter(void);
+void ltr_int_usb_reset(void);  // Nuclear USB reset for desync recovery
 int ltr_int_get_camera_update(linuxtrack_full_pose_t *pose);
 linuxtrack_state_type ltr_int_get_tracking_state(void);
 void ltr_int_register_cbk(ltr_new_frame_callback_t new_frame_cbk, void *param1,

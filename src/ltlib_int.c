@@ -162,6 +162,11 @@ void ltr_int_recenter(void)
   ltr_int_recenter_tracking();
 }
 
+void ltr_int_usb_reset(void)
+{
+  ltr_int_cal_usb_reset();
+}
+
 linuxtrack_state_type ltr_int_get_tracking_state(void)
 {
   return ltr_int_cal_get_state();

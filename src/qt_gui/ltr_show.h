@@ -14,24 +14,12 @@
 #include <QElapsedTimer>
 
 #include "window.h"
-#include "buffering.h"
+#include "camera_view_widget.h"  // New camera preview widget
 
 class LtrGuiForm;
 class QSettings;
 
-class CameraView : public QWidget
-{
-  Q_OBJECT
- public:
-  CameraView(QWidget *parent = 0);
-  ~CameraView();
-  void redraw();
- private:
-  QGraphicsScene *scene;
-  QGraphicsView *view;
-  QGraphicsPixmapItem *item;
-  QVBoxLayout *layout;
-};
+// CameraView is now replaced by CameraViewWidget in camera_view_widget.h
 
 class LtrGuiForm : public QWidget
 {
@@ -65,7 +53,7 @@ class LtrGuiForm : public QWidget
    QTimer *timer;
    QTimer *fpsTimer;
    QElapsedTimer *stopwatch;
-   CameraView *cv;
+   CameraViewWidget *cv;  // Camera preview widget
    bool allowClose;
    float fps;
    const Ui::LinuxtrackMainForm &main_gui;

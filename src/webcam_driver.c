@@ -59,6 +59,7 @@ static webcam_info wc_info;
 
 int ltr_int_tracker_wakeup();
 int ltr_int_tracker_suspend();
+int ltr_int_tracker_pause();
 
 static char *get_webcam_id(int fd) {
   struct v4l2_capability capability;
@@ -624,6 +625,7 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
 
 int ltr_int_tracker_close() {
   ltr_int_log_message("Webcam shutting down!\n");
+  ltr_int_tracker_pause();
   release_buffers();
   free(wc_info.bw_frame);
   v4l2_close(wc_info.fd);
@@ -723,6 +725,14 @@ static void get_bw_image(unsigned char *source_buf, unsigned char *dest_buf,
         dest_buf[cntr1] = 0;
       }
     }
+  } else if (wc_info.fourcc == *(__u32 *)"MJPG") {
+#ifdef OPENCV
+    ltr_int_mjpg_to_gray(source_buf, bytes_used, dest_buf, wc_info.w, wc_info.h);
+#else
+    for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
+      dest_buf[cntr] = 0;
+    }
+#endif
   } else {
     for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
       dest_buf[cntr] = 0;

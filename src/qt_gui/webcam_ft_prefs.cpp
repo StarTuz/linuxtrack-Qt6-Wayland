@@ -126,10 +126,11 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       }
     }
     ui.CascadePath->setText(cascadePath);
-    int n = (2.0 / ltr_int_wc_get_eff()) - 2;
-    ui.ExpFilterFactor->setValue(n);
-    on_ExpFilterFactor_valueChanged(n);
-    ui.OptimLevel->setValue(ltr_int_wc_get_optim_level());
+    int beta_val = (int)(ltr_int_wc_get_eff() * 1000.0f);
+    ui.ExpFilterFactor->setValue(beta_val);
+    on_ExpFilterFactor_valueChanged(beta_val);
+    int thresh_val = (int)(ltr_int_wc_get_confidence_threshold() * 100.0f);
+    ui.ConfidenceThreshold->setValue(thresh_val);
   }
   initializing = false;
   return res;
@@ -188,17 +189,16 @@ void WebcamFtPrefs::on_CascadePath_editingFinished()
 
 void WebcamFtPrefs::on_ExpFilterFactor_valueChanged(int value)
 {
-  float a = 2 / (value + 2.0); //EWMA window size
-//  ui.ExpFiltFactorVal->setText(QString("%1").arg(a, 0, 'g', 2));
+  float beta = value / 1000.0f; // Map 0-100 to 0.0 - 0.1
   if(!initializing){
-    ltr_int_wc_set_eff(a);
+    ltr_int_wc_set_eff(beta);
   }
 }
 
-void WebcamFtPrefs::on_OptimLevel_valueChanged(int value)
+void WebcamFtPrefs::on_ConfidenceThreshold_valueChanged(int value)
 {
   if(!initializing){
-    ltr_int_wc_set_optim_level(value);
+    ltr_int_wc_set_confidence_threshold(value / 100.0f);
   }
 }
 

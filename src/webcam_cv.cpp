@@ -186,6 +186,12 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
     ltr_int_prepare_for_processing(current_width, current_height);
     
     ltr_int_log_message("OpenCV Webcam initialized: %dx%d\n", current_width, current_height);
+    
+#ifdef OPENCV
+    if(!ltr_int_init_face_detect()) {
+        ltr_int_log_message("Face detection initialization failed!\n");
+    }
+#endif
     return 0;
 }
 
@@ -193,6 +199,9 @@ int ltr_int_tracker_shutdown() { // Header signature
     if(cap.isOpened()) {
         cap.release();
     }
+#ifdef OPENCV
+    ltr_int_stop_face_detect();
+#endif
     ltr_int_cleanup_after_processing();
     return 0;
 }
@@ -286,6 +295,15 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb, struct frame_typ
             .bitmap = internal_buffer.data(),
             .ratio = 1.0f
         };
+        
+        static int face_log_cnt = 0;
+        if(++face_log_cnt % 60 == 0) {
+            ltr_int_log_message("Calling ltr_int_face_detect: %dx%d bitmap=%p\n", 
+                                current_width, current_height, img.bitmap);
+            ltr_int_log_message("Pixel[0,0]=%d [W/2,H/2]=%d\n", 
+                                internal_buffer[0], 
+                                internal_buffer[(current_height/2) * current_width + (current_width/2)]);
+        }
         
         // Call face detection - this also draws the rectangle on the display
         ltr_int_face_detect(&img, &(f->bloblist));
