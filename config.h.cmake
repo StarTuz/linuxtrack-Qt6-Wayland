@@ -28,6 +28,7 @@
 #cmakedefine HAVE__BOOL
 #cmakedefine LIBV4L2
 #cmakedefine V4L2
+#cmakedefine01 HAVE_ONNXRUNTIME
 
 #define PACKAGE "@PROJECT_NAME@"
 #define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"

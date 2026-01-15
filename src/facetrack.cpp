@@ -8,6 +8,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/dnn.hpp>
+#include <opencv2/calib3d.hpp>
 
 #include "one_euro_filter.h"
 #include "utils.h"
@@ -17,6 +18,14 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+
+// Neural Network Face Tracker (OpenTrack port)
+#ifdef HAVE_ONNXRUNTIME
+#include "neuralnet_tracker.h"
+static std::unique_ptr<ltr_neuralnet::NeuralNetTracker> nn_tracker;
+static bool use_neuralnet = false;
+#endif
 
 static cv::Ptr<cv::FaceDetectorYN> dnn_detector;
 static bool use_dnn = false;
@@ -42,6 +51,30 @@ static const int max_missing_frames = 5;
 static one_euro_filter_t filter_x, filter_y, filter_w, filter_h;
 static std::chrono::steady_clock::time_point last_frame_time;
 static bool filters_initialized = false;
+static bool lm_filters_initialized = false;
+static bool pose_filters_initialized = false;
+static one_euro_filter_t landmark_filters[10];
+static one_euro_filter_t pose_filters[6];
+
+// 6DOF data exchange globals
+static float pose_pitch = 0.0f;
+static float pose_yaw = 0.0f;
+static float pose_roll = 0.0f;
+static float pose_tx = 0.0f;
+static float pose_ty = 0.0f;
+static float pose_tz = 0.0f;
+static bool pose_valid = false;
+static std::mutex pose_mutex_6dof;
+
+// Persistent PnP guess state
+static cv::Mat pnp_rvec = cv::Mat::zeros(3, 1, CV_64F);
+static cv::Mat pnp_tvec = cv::Mat::zeros(3, 1, CV_64F);
+static bool pnp_has_guess = false;
+
+// Visual Marker Globals (Absolute Image Coordinates)
+static float vis_face_x1 = 0, vis_face_y1 = 0, vis_face_x2 = 0, vis_face_y2 = 0;
+static float vis_lm_x[5], vis_lm_y[5];
+static bool vis_valid = false;
 
 static float sigmoid(float x) {
     return 1.0f / (1.0f + std::exp(-x));
@@ -60,6 +93,62 @@ static cv::Size minFace(40, 40);
 // ROI logic removed as DNN handles full frame efficiently or provides its own optimization
 
 void ltr_int_detect(cv::Mat &img) {
+  // Neural Net Tracker (OpenTrack port) - Direct 6DOF pose estimation
+#ifdef HAVE_ONNXRUNTIME
+  if (use_neuralnet && nn_tracker) {
+    float pitch, yaw, roll, tx, ty, tz;
+    bool detected = nn_tracker->detect(img, pitch, yaw, roll, tx, ty, tz);
+    
+    if (detected) {
+      std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+      pose_pitch = pitch;
+      pose_yaw = yaw;
+      pose_roll = roll;
+      pose_tx = tx;
+      pose_ty = ty;
+      pose_tz = tz;
+      pose_valid = true;
+      
+      // For visualization compatibility, set face dimensions
+      auto roi = nn_tracker->last_face_box();
+      if (roi) {
+        face_w = roi->width;
+        face_h = roi->height;
+        face_x = roi->x + roi->width / 2 - img.cols / 2;
+        face_y = roi->y + roi->height / 2 - img.rows / 2;
+        face_x1 = roi->x;
+        face_y1 = roi->y;
+        face_x2 = roi->x + roi->width;
+        face_y2 = roi->y + roi->height;
+        vis_face_x1 = face_x1;
+        vis_face_y1 = face_y1;
+        vis_face_x2 = face_x2;
+        vis_face_y2 = face_y2;
+        vis_valid = true;
+      }
+      
+      static int nn_log = 0;
+      if (++nn_log % 60 == 0) {
+        ltr_int_log_message("NeuralNet 6DOF: P=%.1f Y=%.1f R=%.1f TX=%.1f TY=%.1f TZ=%.1f (%.1fms loc + %.1fms pose)\n",
+                            pitch, yaw, roll, tx, ty, tz,
+                            nn_tracker->last_localizer_time_ms(),
+                            nn_tracker->last_posenet_time_ms());
+      }
+      
+      missing_frames = 0;
+    } else {
+      pose_valid = false;
+      vis_valid = false;
+      missing_frames++;
+      
+      if (missing_frames >= max_missing_frames) {
+        face_w = face_h = 0;
+      }
+    }
+    return; // Skip YuNet+PnP path
+  }
+#endif
+
   if (use_dnn && dnn_detector) {
     int optim = ltr_int_wc_get_optim_level();
     cv::Mat resized;
@@ -99,9 +188,13 @@ void ltr_int_detect(cv::Mat &img) {
       if (confidence > conf_thresh) {
         missing_frames = 0;
         
+        // Detect current frame size to avoid race conditions
+        int current_fw = img.cols;
+        int current_fh = img.rows;
+
         // Raw center coordinates
-        float rx = (x1 + w * 0.5f) - (frame_w * 0.5f);
-        float ry = (y1 + h * 0.5f) - (frame_h * 0.5f);
+        float rx = (x1 + w * 0.5f) - (current_fw * 0.5f);
+        float ry = (y1 + h * 0.5f) - (current_fh * 0.5f);
         
         // Calculate dt for 1-Euro filter
         auto now = std::chrono::steady_clock::now();
@@ -109,12 +202,22 @@ void ltr_int_detect(cv::Mat &img) {
         if (filters_initialized) {
           dt = std::chrono::duration<float>(now - last_frame_time).count();
         } else {
-          // Repurpose "Exp-filter-factor" preference for 1-Euro Beta (0.0 to 0.1 range)
-          float beta = ltr_int_wc_get_eff();
-          one_euro_init(&filter_x, 0.5f, beta, 1.0f);
-          one_euro_init(&filter_y, 0.5f, beta, 1.0f);
-          one_euro_init(&filter_w, 0.5f, beta, 1.0f);
-          one_euro_init(&filter_h, 0.5f, beta, 1.0f);
+          // Landmarks usually need even more smoothing than the box
+          float eff = ltr_int_wc_get_eff();
+          float lm_beta = eff * 0.1f; 
+          
+          for(int i=0; i<10; ++i) one_euro_init(&landmark_filters[i], 0.1, 0.05, 1.0);
+          lm_filters_initialized = true;
+
+          // Pose filters (beta balanced for responsiveness vs stability)
+          float pose_beta = eff * 0.15f; 
+          for(int i=0; i<6; ++i) one_euro_init(&pose_filters[i], 0.05, pose_beta, 1.0);
+          pose_filters_initialized = true;
+
+          one_euro_init(&filter_x, 0.5f, eff, 1.0f);
+          one_euro_init(&filter_y, 0.5f, eff, 1.0f);
+          one_euro_init(&filter_w, 0.5f, eff, 1.0f);
+          one_euro_init(&filter_h, 0.5f, eff, 1.0f);
           filters_initialized = true;
         }
         last_frame_time = now;
@@ -125,6 +228,16 @@ void ltr_int_detect(cv::Mat &img) {
         one_euro_set_params(&filter_y, 0.5f, current_beta);
         one_euro_set_params(&filter_w, 0.5f, current_beta);
         one_euro_set_params(&filter_h, 0.5f, current_beta);
+        
+        if(lm_filters_initialized){
+            for(int i=0; i<10; ++i) one_euro_set_params(&landmark_filters[i], 0.1, 0.05);
+        }
+        if(pose_filters_initialized){
+            // Hardcode strong smoothing for EPNP stability (Beta 0.005)
+            // Previous dynamic calculation (current_beta * 0.15) yielded ~0.08 which was too jittery
+            float pose_beta = 0.005f; 
+            for(int i=0; i<6; ++i) one_euro_set_params(&pose_filters[i], 0.05, pose_beta);
+        }
 
         // Apply 1-Euro Filter
         face_x = one_euro_filter(&filter_x, rx, dt);
@@ -136,6 +249,130 @@ void ltr_int_detect(cv::Mat &img) {
         face_y1 = (y1 < 0) ? 0 : y1;
         face_x2 = (x1 + w >= frame_w) ? frame_w - 1 : x1 + w;
         face_y2 = (y1 + h >= frame_h) ? frame_h - 1 : y1 + h;
+
+        // Clamp to image bounds to prevent crashes in drawing functions
+        if(face_x1 < 0) face_x1 = 0;
+        if(face_y1 < 0) face_y1 = 0;
+        if(face_x2 >= frame_w) face_x2 = frame_w - 1;
+        if(face_y2 >= frame_h) face_y2 = frame_h - 1;
+
+        // 6DOF Implementation - Generic 3D Face Model (based on anthropometric data)
+        // Units: mm. Origin: Midpoint between eyes, Z=0.
+        static std::vector<cv::Point3f> model_points = {
+            cv::Point3f(30.0f,  0.0f, 0.0f),  // Left Eye
+            cv::Point3f(-30.0f, 0.0f, 0.0f), // Right Eye
+            cv::Point3f(0.0f,   35.0f, 25.0f), // Nose Tip
+            cv::Point3f(25.0f,  70.0f, 10.0f), // Left Mouth Corner
+            cv::Point3f(-25.0f, 70.0f, 10.0f) // Right Mouth Corner
+        };
+
+        // Use pointer access to avoid template syntax issues
+        float* det_ptr = detections.ptr<float>(0);
+        
+        // Adjust landmarks by scale factor from resizing
+        // YuNet Layout: 4,5=RightEye; 6,7=LeftEye; 8,9=Nose; 10,11=RightMouth; 12,13=LeftMouth
+        // (Subject relative: RightEye is on image Left, LeftEye is on image Right)
+        float re_x_val = one_euro_filter(&landmark_filters[0], det_ptr[4] * scale_x, dt);
+        float re_y_val = one_euro_filter(&landmark_filters[1], det_ptr[5] * scale_y, dt);
+        float le_x_val = one_euro_filter(&landmark_filters[2], det_ptr[6] * scale_x, dt);
+        float le_y_val = one_euro_filter(&landmark_filters[3], det_ptr[7] * scale_y, dt);
+        float nose_x_val = one_euro_filter(&landmark_filters[4], det_ptr[8] * scale_x, dt);
+        float nose_y_val = one_euro_filter(&landmark_filters[5], det_ptr[9] * scale_y, dt);
+        float rmouth_x_val = one_euro_filter(&landmark_filters[6], det_ptr[10] * scale_x, dt);
+        float rmouth_y_val = one_euro_filter(&landmark_filters[7], det_ptr[11] * scale_y, dt);
+        float lmouth_x_val = one_euro_filter(&landmark_filters[8], det_ptr[12] * scale_x, dt);
+        float lmouth_y_val = one_euro_filter(&landmark_filters[9], det_ptr[13] * scale_y, dt);
+
+        {
+            std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+            // Convert center-relative box to absolute image coordinates
+            float cx = face_x + (current_fw * 0.5f);
+            float cy = face_y + (current_fh * 0.5f);
+            vis_face_x1 = cx - face_w/2.0f;
+            vis_face_y1 = cy - face_h/2.0f;
+            vis_face_x2 = cx + face_w/2.0f;
+            vis_face_y2 = cy + face_h/2.0f;
+            
+            vis_lm_x[0] = le_x_val; vis_lm_y[0] = le_y_val;
+            vis_lm_x[1] = re_x_val; vis_lm_y[1] = re_y_val;
+            vis_lm_x[2] = nose_x_val; vis_lm_y[2] = nose_y_val;
+            vis_lm_x[3] = lmouth_x_val; vis_lm_y[3] = lmouth_y_val;
+            vis_lm_x[4] = rmouth_x_val; vis_lm_y[4] = rmouth_y_val;
+            vis_valid = true;
+        }
+
+        std::vector<cv::Point2f> image_points;
+        // Map to model points order: Left Eye, Right Eye, Nose, Left Mouth, Right Mouth
+        try {
+            image_points.push_back(cv::Point2f(le_x_val, le_y_val)); // Subject Left (Image Right) -> Model +30
+            image_points.push_back(cv::Point2f(re_x_val, re_y_val)); // Subject Right (Image Left) -> Model -30
+            image_points.push_back(cv::Point2f(nose_x_val, nose_y_val)); 
+            image_points.push_back(cv::Point2f(lmouth_x_val, lmouth_y_val)); // Subject Left Mouth -> Model +25
+            image_points.push_back(cv::Point2f(rmouth_x_val, rmouth_y_val)); // Subject Right Mouth -> Model -25
+
+            // Camera Internals - 500.0 is more typical for 640x480 webcams
+            float focal_length = 500.0f; 
+            cv::Point2f center((float)current_fw / 2.0f, (float)current_fh / 2.0f);
+            cv::Mat camera_matrix = (cv::Mat_<double>(3, 3) << focal_length, 0, center.x, 0, focal_length, center.y, 0, 0, 1);
+            cv::Mat dist_coeffs = cv::Mat::zeros(4, 1, cv::DataType<double>::type); 
+
+            // Revert to EPNP (Responsive but needs filtering) as SQPNP was unresponsive
+            bool pnp_success = cv::solvePnP(model_points, image_points, camera_matrix, dist_coeffs, pnp_rvec, pnp_tvec, false, cv::SOLVEPNP_EPNP);
+
+            if (pnp_success) {
+                pnp_has_guess = true;
+                // Convert rvec (Rodrigues) to Euler angles (degrees)
+                cv::Mat rot;
+                cv::Rodrigues(pnp_rvec, rot);
+                
+                // Translation Vector (mm)
+                double tx = pnp_tvec.at<double>(0);
+                double ty = pnp_tvec.at<double>(1);
+                double tz = pnp_tvec.at<double>(2);
+
+                // Rotation Matrix decomposition to Euler
+                double sy = sqrt(rot.at<double>(0,0) * rot.at<double>(0,0) +  rot.at<double>(1,0) * rot.at<double>(1,0));
+                bool singular = sy < 1e-6;
+                double x, y, z;
+                if (!singular) {
+                    x = atan2(rot.at<double>(2,1), rot.at<double>(2,2));
+                    y = atan2(-rot.at<double>(2,0), sy);
+                    z = atan2(rot.at<double>(1,0), rot.at<double>(0,0));
+                } else {
+                    x = atan2(-rot.at<double>(1,2), rot.at<double>(1,1));
+                    y = atan2(-rot.at<double>(2,0), sy);
+                    z = 0;
+                }
+                std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+                // x=Pitch, y=Yaw, z=Roll (radians) -> degrees
+                pose_pitch = one_euro_filter(&pose_filters[0], x * 180.0f / (float)M_PI, dt);
+                pose_yaw = one_euro_filter(&pose_filters[1], y * 180.0f / (float)M_PI, dt);
+                pose_roll = one_euro_filter(&pose_filters[2], z * 180.0f / (float)M_PI, dt);
+
+                // Translations (mm)
+                pose_tx = one_euro_filter(&pose_filters[3], (float)tx, dt);
+                pose_ty = one_euro_filter(&pose_filters[4], (float)ty, dt);
+                pose_tz = one_euro_filter(&pose_filters[5], (float)tz, dt);
+                
+                pose_valid = true;
+                
+                static int pnp_log = 0;
+                if(++pnp_log % 60 == 0) {
+                    ltr_int_log_message("PnP raw: LM[0]=(%.1f,%.1f) TX=%.1f TZ=%.1f\n", 
+                                        le_x_val, le_y_val, tx, tz);
+                    ltr_int_log_message("PnP 6DOF (Filtered): P=%.1f Y=%.1f R=%.1f TX=%.1f TY=%.1f TZ=%.1f\n",
+                        pose_pitch, pose_yaw, pose_roll, pose_tx, pose_ty, pose_tz);
+                }
+            } else {
+                pose_valid = false;
+                static int pnp_fail_log = 0;
+                if(++pnp_fail_log % 60 == 0) {
+                    ltr_int_log_message("PnP failed (solvePnP returned false)\n");
+                }
+            }
+        } catch (const cv::Exception& e) {
+            ltr_int_log_message("PnP Exception: %s\n", e.what());
+        }
         
         static int log_cnt = 0;
         if(++log_cnt % 60 == 0) {
@@ -201,6 +438,67 @@ void *ltr_int_detector_thread(void *) {
 bool ltr_int_init_face_detect() {
   ltr_int_log_message("ltr_int_init_face_detect() starting...\n");
   cv::setNumThreads(0); // Use all available threads
+  
+#ifdef HAVE_ONNXRUNTIME
+  // Try to initialize Neural Net Tracker (OpenTrack port) first
+  // This provides better 6DOF tracking than YuNet+PnP
+  {
+    std::string data_dir(LTR_DATA_PATH);
+    std::string localizer_path;
+    std::string posenet_path;
+    
+    // Search order: models/ subdirectory first, then direct share path
+    std::vector<std::string> search_paths = {
+      data_dir + "/models",
+      data_dir
+    };
+    
+    for (const auto& base : search_paths) {
+      std::string loc = base + "/head-localizer.onnx";
+      if (access(loc.c_str(), R_OK) == 0) {
+        localizer_path = loc;
+        // Try posenet models in order of preference
+        std::vector<std::string> posenet_names = {
+          "/head-pose-0.4-big-int8.onnx",
+          "/head-pose-0.4-small-f32.onnx"
+        };
+        for (const auto& pn : posenet_names) {
+          std::string ppath = base + pn;
+          if (access(ppath.c_str(), R_OK) == 0) {
+            posenet_path = ppath;
+            break;
+          }
+        }
+        if (!posenet_path.empty()) break;
+      }
+    }
+    
+    // Check if both models were found
+    if (!localizer_path.empty() && !posenet_path.empty()) {
+      nn_tracker = std::make_unique<ltr_neuralnet::NeuralNetTracker>();
+      if (nn_tracker->init(localizer_path, posenet_path)) {
+        // Get camera FOV from preferences if available (default ~80 degrees diagonal)
+        nn_tracker->set_fov(80.0f);
+        use_neuralnet = true;
+        ltr_int_log_message("Neural net tracker initialized successfully (OpenTrack port)\n");
+        ltr_int_log_message("  Localizer: %s\n", localizer_path.c_str());
+        ltr_int_log_message("  PoseNet: %s\n", posenet_path.c_str());
+        
+        run = true;
+        return pthread_create(&detect_thread_handle, nullptr, ltr_int_detector_thread,
+                              nullptr) == 0;
+      } else {
+        ltr_int_log_message("Failed to initialize neural net tracker, falling back to YuNet\n");
+        nn_tracker.reset();
+      }
+    } else {
+      ltr_int_log_message("Neural net models not found in %s, falling back to YuNet\n", data_dir.c_str());
+      ltr_int_log_message("  (Checked: %s/models/ and %s/)\n", data_dir.c_str(), data_dir.c_str());
+    }
+  }
+#endif
+
+  // Fallback: YuNet face detection (2.5DOF or unreliable 6DOF via PnP)
   const char *cascade_path = ltr_int_wc_get_cascade();
   if (cascade_path == nullptr) {
     ltr_int_log_message("Model path not specified!\n");
@@ -216,7 +514,7 @@ bool ltr_int_init_face_detect() {
           return false;
       }
       use_dnn = true;
-      ltr_int_log_message("Loaded ONNX FaceDetectorYN model '%s'\n", cascade_path);
+      ltr_int_log_message("Loaded ONNX FaceDetectorYN model '%s' (fallback)\n", cascade_path);
     } catch (const cv::Exception &e) {
       ltr_int_log_message("OpenCV exception loading ONNX model: %s\n", e.what());
       return false;
@@ -240,7 +538,18 @@ void ltr_int_stop_face_detect() {
   }
   pthread_join(detect_thread_handle, nullptr);
   ltr_int_log_message("Facetracker thread joined!\n");
+  
+#ifdef HAVE_ONNXRUNTIME
+  if (nn_tracker) {
+    nn_tracker.reset();
+    use_neuralnet = false;
+    ltr_int_log_message("Neural net tracker released\n");
+  }
+#endif
+  
   dnn_detector.release(); // Release DNN model resources
+  use_dnn = false;
+  
   if (cvimage != nullptr) {
     delete cvimage;
     cvimage = nullptr;
@@ -276,24 +585,42 @@ void ltr_int_face_detect(image_t *img, struct bloblist_type *blt) {
     }
   }
   if (face_w * face_h > 0) {
-    blt->num_blobs = 1;
-    // Axis mapping for Linuxtrack 1pt tracker (see tracking.c:update_pose_1pt)
-    // Yaw uses (cx - x), Pitch uses (y - cy).
-    // face_x/y already center-relative.
-    // face_x positive = RIGHT, face_y positive = DOWN
-    // Yaw Right => blob.x should be negative.
-    // Pitch Up => blob.y should be negative? 
-    // Wait, tracking.c: Pitch = blob.y - cy. 
-    // If face UP, face_y is negative. We want Pitch positive.
-    // So blob.y = -face_y.
-    blt->blobs[0].x = -face_x; 
-    blt->blobs[0].y = -face_y;
+    blt->num_blobs = 3;
     blt->blobs[0].score = face_w * face_h;
+    
+    // Transport via blobs (Absolute Mode Layout):
+    {
+        std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+        blt->blobs[0].y = -pose_pitch; // Invert Up+ to Down+
+        blt->blobs[0].x = -pose_yaw;   // Invert Right+ to Left+ (Restored state)
+        blt->blobs[1].x = pose_roll;   // Z-Rotation+ is already TiltLeft+
+        
+        // Translations:
+        blt->blobs[1].y = pose_tx; 
+        blt->blobs[2].x = pose_ty;
+        blt->blobs[2].y = pose_tz;
+        
+        // Bridge debug - One-line summary
+        static int bridge_log = 0;
+        if(++bridge_log % 60 == 0){
+             ltr_int_log_message("Bridge 6DOF: Valid=%d Pitch=%.1f Yaw=%.1f\n", pose_valid, pose_pitch, pose_yaw);
+        }
+    }
     
     // Read smoothing from preferences
     expFiltFactor = ltr_int_wc_get_eff();
     
-    ltr_int_draw_empty_square(img, face_x1, face_y1, face_x2, face_y2);
+    if(vis_valid){
+        static int vis_log = 0;
+        if(++vis_log % 60 == 0){
+          ltr_int_log_message("Vis Status: Box(%.1f,%.1f) P/Y/R=(%.1f,%.1f,%.1f) Valid=%d\n", 
+                              vis_face_x1, vis_face_y1, pose_pitch, pose_yaw, pose_roll, pose_valid);
+        }
+        ltr_int_draw_empty_square(img, (int)vis_face_x1, (int)vis_face_y1, (int)vis_face_x2, (int)vis_face_y2);
+        for(int i=0; i<5; ++i){
+            ltr_int_draw_square(img, (int)vis_lm_x[i], (int)vis_lm_y[i], 3);
+        }
+    }
   } else {
     blt->num_blobs = 0;
   }

@@ -79,14 +79,32 @@ endif()
 
 # libft (Facetracker Plugin)
 if(OPENCV_FOUND AND HAS_V4L2 AND LTR_LIBV4L2)
-    if(USE_OPENCV_CAMERA)
-        add_library(ft MODULE webcam_cv.cpp webcam_driver.h runloop.c runloop.h facetrack.cpp facetrack.h)
-    else()
-        add_library(ft MODULE webcam_driver.c webcam_driver.h runloop.c runloop.h facetrack.cpp facetrack.h)
+    set(FT_SOURCES runloop.c runloop.h facetrack.cpp facetrack.h)
+    
+    # Add neural net tracker if ONNXRuntime available
+    if(HAVE_ONNXRUNTIME)
+        list(APPEND FT_SOURCES neuralnet_tracker.cpp neuralnet_tracker.h)
     endif()
+    
+    if(USE_OPENCV_CAMERA)
+        list(PREPEND FT_SOURCES webcam_cv.cpp webcam_driver.h)
+    else()
+        list(PREPEND FT_SOURCES webcam_driver.c webcam_driver.h)
+    endif()
+    
+    add_library(ft MODULE ${FT_SOURCES})
     target_compile_definitions(ft PRIVATE OPENCV)
     target_include_directories(ft PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCV_INCLUDE_DIRS})
     target_link_libraries(ft PRIVATE ltr ${LTR_LIBV4L2} ${LTR_LIBPTHREAD} ${OPENCV_LIBRARIES})
+    
+    if(HAVE_ONNXRUNTIME)
+        target_compile_definitions(ft PRIVATE HAVE_ONNXRUNTIME)
+        target_link_libraries(ft PRIVATE onnxruntime::onnxruntime)
+        if(OpenMP_FOUND)
+            target_link_libraries(ft PRIVATE OpenMP::OpenMP_CXX)
+        endif()
+    endif()
+    
     set_target_properties(ft PROPERTIES PREFIX "lib" LINK_FLAGS ${DRIVER_LDFLAGS})
 endif()
 

@@ -37,6 +37,33 @@ find_library(LTR_LIBDL dl)
 find_library(LTR_LIBPTHREAD pthread)
 find_library(LTR_LIBV4L2 v4l2)
 
+# Custom CMake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+# ONNXRuntime for neural network face tracking (optional)
+option(BUILD_NEURALNET_TRACKER "Build neural network face tracker (requires ONNXRuntime)" ON)
+if(BUILD_NEURALNET_TRACKER)
+    find_package(ONNXRuntime QUIET)
+    if(ONNXRuntime_FOUND)
+        message(STATUS "ONNXRuntime found - neural net face tracking enabled")
+        set(HAVE_ONNXRUNTIME TRUE)
+    else()
+        message(STATUS "ONNXRuntime not found - neural net face tracking disabled")
+        message(STATUS "  Install ONNXRuntime or set ONNXRuntime_DIR to enable")
+        set(HAVE_ONNXRUNTIME FALSE)
+    endif()
+else()
+    set(HAVE_ONNXRUNTIME FALSE)
+endif()
+
+# OpenMP for neural net threading (optional, used with ONNXRuntime)
+if(HAVE_ONNXRUNTIME)
+    find_package(OpenMP QUIET)
+    if(OpenMP_FOUND)
+        message(STATUS "OpenMP found - neural net threading enabled")
+    endif()
+endif()
+
 # Qt Dependencies for GUI and Mickey
 if(BUILD_GUI OR BUILD_MICKEY)
     find_package(Qt6 COMPONENTS Widgets Gui Network Help OpenGL OpenGLWidgets REQUIRED)
@@ -157,3 +184,14 @@ install(FILES src/linuxtrack.desktop src/linuxtrack-wii.desktop DESTINATION shar
 install(FILES src/linuxtrack.svg src/linuxtrack.png src/linuxtrack.xpm 
               src/linuxtrack-wii.svg src/linuxtrack-wii.png src/linuxtrack-wii.xpm
         DESTINATION share/pixmaps)
+
+# Install neural net models if ONNXRuntime is enabled
+if(HAVE_ONNXRUNTIME)
+    install(FILES 
+        models/head-localizer.onnx
+        models/head-pose-0.4-big-int8.onnx
+        models/head-pose-0.4-small-f32.onnx
+        DESTINATION share/linuxtrack/models
+    )
+endif()
+

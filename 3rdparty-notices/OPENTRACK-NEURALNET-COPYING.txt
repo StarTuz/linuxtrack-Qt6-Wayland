@@ -1,0 +1,42 @@
+OpenTrack NeuralNet Tracker
+===========================
+
+The neural network face tracking implementation in linuxtrack is ported from
+OpenTrack's tracker-neuralnet module.
+
+Original Author: Michael Welter <michael@welter-4d.de>
+Source: https://github.com/opentrack/opentrack
+
+License: ISC License
+
+Copyright (c) 2021 Michael Welter <michael@welter-4d.de>
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+---
+
+ONNX Model Files
+================
+
+The head-localizer.onnx and head-pose-*.onnx model files are trained and
+provided by the OpenTrack project under the same ISC license as above.
+
+These models are designed for real-time head pose estimation from webcam
+images and output:
+- Head position (x, y) and size in image coordinates
+- Head rotation as a quaternion
+
+Model variants:
+- head-localizer.onnx: Face detection/localization (288x224 input)
+- head-pose-0.4-big-int8.onnx: Quantized pose estimator (recommended)
+- head-pose-0.4-small-f32.onnx: Lightweight float32 variant
