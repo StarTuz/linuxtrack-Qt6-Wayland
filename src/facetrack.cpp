@@ -56,6 +56,13 @@ static bool pose_filters_initialized = false;
 static one_euro_filter_t landmark_filters[10];
 static one_euro_filter_t pose_filters[6];
 
+// Neural net specific filters (separate from YuNet path)
+#ifdef HAVE_ONNXRUNTIME
+static one_euro_filter_t nn_pose_filters[6];  // Pitch, Yaw, Roll, Tx, Ty, Tz
+static bool nn_filters_initialized = false;
+static std::chrono::steady_clock::time_point nn_last_frame_time;
+#endif
+
 // 6DOF data exchange globals
 static float pose_pitch = 0.0f;
 static float pose_yaw = 0.0f;
@@ -100,14 +107,42 @@ void ltr_int_detect(cv::Mat &img) {
     bool detected = nn_tracker->detect(img, pitch, yaw, roll, tx, ty, tz);
     
     if (detected) {
-      std::lock_guard<std::mutex> lock(pose_mutex_6dof);
-      pose_pitch = pitch;
-      pose_yaw = yaw;
-      pose_roll = roll;
-      pose_tx = tx;
-      pose_ty = ty;
-      pose_tz = tz;
-      pose_valid = true;
+      // Calculate dt for One Euro filter
+      auto now = std::chrono::steady_clock::now();
+      float dt = 1.0f / 30.0f; // Default
+      
+      if (!nn_filters_initialized) {
+        // Initialize filters with tuned parameters for neural net output
+        // Neural net output is already relatively stable, so use gentle filtering
+        // mincutoff=1.0 (Hz), beta=0.007 (low jitter reduction), dcutoff=1.0
+        for (int i = 0; i < 6; ++i) {
+          one_euro_init(&nn_pose_filters[i], 1.0, 0.007, 1.0);
+        }
+        nn_filters_initialized = true;
+        ltr_int_log_message("Neural net One Euro filters initialized\n");
+      } else {
+        dt = std::chrono::duration<float>(now - nn_last_frame_time).count();
+      }
+      nn_last_frame_time = now;
+      
+      // Apply One Euro filtering to smooth the neural net output
+      float f_pitch = one_euro_filter(&nn_pose_filters[0], pitch, dt);
+      float f_yaw = one_euro_filter(&nn_pose_filters[1], yaw, dt);
+      float f_roll = one_euro_filter(&nn_pose_filters[2], roll, dt);
+      float f_tx = one_euro_filter(&nn_pose_filters[3], tx, dt);
+      float f_ty = one_euro_filter(&nn_pose_filters[4], ty, dt);
+      float f_tz = one_euro_filter(&nn_pose_filters[5], tz, dt);
+      
+      {
+        std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+        pose_pitch = f_pitch;
+        pose_yaw = f_yaw;
+        pose_roll = f_roll;
+        pose_tx = f_tx;
+        pose_ty = f_ty;
+        pose_tz = f_tz;
+        pose_valid = true;
+      }
       
       // For visualization compatibility, set face dimensions
       auto roi = nn_tracker->last_face_box();
@@ -129,10 +164,8 @@ void ltr_int_detect(cv::Mat &img) {
       
       static int nn_log = 0;
       if (++nn_log % 60 == 0) {
-        ltr_int_log_message("NeuralNet 6DOF: P=%.1f Y=%.1f R=%.1f TX=%.1f TY=%.1f TZ=%.1f (%.1fms loc + %.1fms pose)\n",
-                            pitch, yaw, roll, tx, ty, tz,
-                            nn_tracker->last_localizer_time_ms(),
-                            nn_tracker->last_posenet_time_ms());
+        ltr_int_log_message("NeuralNet 6DOF (filtered): P=%.1f Y=%.1f R=%.1f TX=%.1f TY=%.1f TZ=%.1f dt=%.3f\n",
+                            f_pitch, f_yaw, f_roll, f_tx, f_ty, f_tz, dt);
       }
       
       missing_frames = 0;
@@ -143,6 +176,7 @@ void ltr_int_detect(cv::Mat &img) {
       
       if (missing_frames >= max_missing_frames) {
         face_w = face_h = 0;
+        nn_filters_initialized = false; // Reset filters on lost tracking
       }
     }
     return; // Skip YuNet+PnP path
