@@ -26,6 +26,8 @@ class WebcamFtPrefs : public QWidget{
 
   void on_ExpFilterFactor_valueChanged(int value);
   void on_ConfidenceThreshold_valueChanged(int value);
+  void on_AutoExposure_stateChanged(int state);
+  void on_ExposureSlider_valueChanged(int value);
 };
 
 

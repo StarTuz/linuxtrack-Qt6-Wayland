@@ -18,6 +18,8 @@ static int res_y = 0;
 static int fps_num = 0;
 static int fps_den = 0;
 static bool flip = false;
+static bool auto_exposure = true;
+static int exposure_val = 100;
 
 static float exp_filt = 0.1;
 static int optim_level = 0;
@@ -31,6 +33,8 @@ static char pix_fmt_key[] = "Pixel-format";
 static char res_key[] = "Resolution";
 static char fps_key[] = "Fps";
 static char flip_key[] = "Upside-down";
+static char auto_exposure_key[] = "Auto-Exposure";
+static char exposure_key[] = "Exposure";
 
 static char exp_filter_key[] = "Exp-filter-factor";
 static char optim_key[] = "Optimization-level";
@@ -88,6 +92,17 @@ bool ltr_int_wc_init_prefs()
     flip = false;
   }
   
+  tmp = ltr_int_get_key(dev, auto_exposure_key);
+  if(tmp != NULL){
+    auto_exposure = (strcasecmp(tmp, "Yes") == 0) ? true : false;
+    free(tmp);
+  } else {
+    auto_exposure = true;
+  }
+
+  if(!ltr_int_get_key_int(dev, exposure_key, &exposure_val)){
+    exposure_val = 100;
+  }
 
   if(!ltr_int_get_key_flt(dev, exp_filter_key, &exp_filt)){
     exp_filt = 0.1;
@@ -234,6 +249,31 @@ bool ltr_int_wc_set_flip(bool new_flip)
   char *val = (new_flip) ? yes : no;
   flip = new_flip;
   return ltr_int_change_key(ltr_int_get_device_section(), flip_key, val);
+}
+
+bool ltr_int_wc_get_auto_exposure()
+{
+  return auto_exposure;
+}
+
+bool ltr_int_wc_set_auto_exposure(bool auto_exp)
+{
+  char yes[] = "Yes";
+  char no[] = "No";
+  char *val = (auto_exp) ? yes : no;
+  auto_exposure = auto_exp;
+  return ltr_int_change_key(ltr_int_get_device_section(), auto_exposure_key, val);
+}
+
+int ltr_int_wc_get_exposure()
+{
+  return exposure_val;
+}
+
+bool ltr_int_wc_set_exposure(int val)
+{
+  exposure_val = val;
+  return ltr_int_change_key_int(ltr_int_get_device_section(), exposure_key, val);
 }
 
 

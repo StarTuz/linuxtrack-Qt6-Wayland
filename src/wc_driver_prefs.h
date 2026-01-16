@@ -33,6 +33,11 @@ bool ltr_int_wc_set_fps(int num, int den);
 bool ltr_int_wc_get_flip();
 bool ltr_int_wc_set_flip(bool new_flip);
 
+bool ltr_int_wc_get_auto_exposure();
+bool ltr_int_wc_set_auto_exposure(bool auto_exp);
+int ltr_int_wc_get_exposure();
+bool ltr_int_wc_set_exposure(int val);
+
 
 
 float ltr_int_wc_get_eff();

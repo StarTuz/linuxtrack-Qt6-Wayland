@@ -115,6 +115,12 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
     on_ExpFilterFactor_valueChanged(beta_val);
     int thresh_val = (int)(ltr_int_wc_get_confidence_threshold() * 100.0f);
     ui.ConfidenceThreshold->setValue(thresh_val);
+    
+    // Init Exposure UI
+    bool auto_exp = ltr_int_wc_get_auto_exposure();
+    ui.AutoExposure->setChecked(auto_exp);
+    ui.ExposureSlider->setEnabled(!auto_exp);
+    ui.ExposureSlider->setValue(ltr_int_wc_get_exposure());
   }
   initializing = false;
   return res;
@@ -163,6 +169,22 @@ void WebcamFtPrefs::on_ConfidenceThreshold_valueChanged(int value)
 {
   if(!initializing){
     ltr_int_wc_set_confidence_threshold(value / 100.0f);
+  }
+}
+
+void WebcamFtPrefs::on_AutoExposure_stateChanged(int state)
+{
+  bool is_auto = (state == Qt::Checked);
+  ui.ExposureSlider->setEnabled(!is_auto);
+  if(!initializing){
+    ltr_int_wc_set_auto_exposure(is_auto);
+  }
+}
+
+void WebcamFtPrefs::on_ExposureSlider_valueChanged(int value)
+{
+  if(!initializing){
+    ltr_int_wc_set_exposure(value);
   }
 }
 
