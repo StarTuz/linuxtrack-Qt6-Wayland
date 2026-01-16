@@ -213,7 +213,7 @@ install(FILES linuxtrack1.conf linuxtrack.c linuxtrack_hello_world.c linuxtrack_
         DESTINATION share/linuxtrack)
 install(FILES 99-TIR.rules 99-Mickey.rules DESTINATION share/linuxtrack)
 if(OPENCV_FOUND)
-    install(FILES haarcascade_frontalface_alt2.xml face_detection_yunet.onnx DESTINATION share/linuxtrack)
+    install(FILES haarcascade_frontalface_alt2.xml DESTINATION share/linuxtrack)
 endif()
 
 # 5. Headers

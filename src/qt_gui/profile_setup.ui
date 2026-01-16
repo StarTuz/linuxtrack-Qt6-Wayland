@@ -456,7 +456,7 @@
         <item>
          <widget class="QLabel" name="oneEuroMinCutoffLow">
           <property name="text">
-           <string>Jittery</string>
+           <string>Smooth</string>
           </property>
          </widget>
         </item>
@@ -485,7 +485,7 @@
         <item>
          <widget class="QLabel" name="oneEuroMinCutoffHigh">
           <property name="text">
-           <string>Smooth</string>
+           <string>Jittery</string>
           </property>
          </widget>
         </item>

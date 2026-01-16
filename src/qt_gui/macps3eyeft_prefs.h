@@ -29,8 +29,7 @@ class MacP3eFtPrefs : public QWidget{
   void on_AWB_stateChanged(int state);
   void on_AEX_stateChanged(int state);
   void on_PLF50_stateChanged(int state);
-  void on_FindCascadeMac_pressed();
-  void on_CascadePathMac_editingFinished();
+
   void on_ExpFilterFactorMac_valueChanged(int value);
   void on_OptimLevelMac_valueChanged(int value);
 };

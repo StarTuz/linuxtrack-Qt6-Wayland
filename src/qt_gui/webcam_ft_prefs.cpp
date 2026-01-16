@@ -79,9 +79,7 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       PREF.addKeyVal(sec, QString::fromUtf8("Pixel-format"), QString::fromUtf8(""));
       PREF.addKeyVal(sec, QString::fromUtf8("Resolution"), QString::fromUtf8(""));
       PREF.addKeyVal(sec, QString::fromUtf8("Fps"), QString::fromUtf8(""));
-      QString cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
-      QFileInfo finf = QFileInfo(cascadePath);
-      PREF.addKeyVal(sec, QString::fromUtf8("Cascade"), finf.canonicalFilePath());
+
       PREF.activateDevice(sec);
     }else{
       return false;
@@ -111,21 +109,7 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       ui.WebcamFtFormats->setCurrentIndex(fmt_index);
     }
     on_WebcamFtFormats_activated(fmt_index);
-    const char *cascade = ltr_int_wc_get_cascade();
-    QString cascadePath = (cascade != nullptr) ? QString::fromUtf8(cascade) : QString();
-    if(cascadePath.isEmpty() || !QFile::exists(cascadePath)){
-      cascadePath = PrefProxy::getDataPath(QString::fromUtf8("face_detection_yunet.onnx"));
-      if(!QFile::exists(cascadePath)){
-        cascadePath = PrefProxy::getDataPath(QString::fromUtf8("head-localizer.onnx"));
-      }
-      if(!QFile::exists(cascadePath)){
-        cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
-      }
-      if(QFile::exists(cascadePath)){
-        ltr_int_wc_set_cascade(cascadePath.toUtf8().constData());
-      }
-    }
-    ui.CascadePath->setText(cascadePath);
+
     int beta_val = (int)(ltr_int_wc_get_eff() * 1000.0f);
     ui.ExpFilterFactor->setValue(beta_val);
     on_ExpFilterFactor_valueChanged(beta_val);
@@ -165,27 +149,7 @@ bool WebcamFtPrefs::AddAvailableDevices(QComboBox &combo)
 
 
 
-void WebcamFtPrefs::on_FindCascade_pressed()
-{
-  QString path = ui.CascadePath->text();
-  if(path.isEmpty()){
-    path = QString::fromUtf8("/");
-  }else{
-    QDir tmp(path);
-    path = tmp.filePath(path);
-  }
-  QString fileName = QFileDialog::getOpenFileName(nullptr,
-     QString::fromUtf8("Find Face Tracker Model"), path, QString::fromUtf8("Model Files (*.xml *.onnx);;All Files (*)"));
-  ui.CascadePath->setText(fileName);
-  on_CascadePath_editingFinished();
-}
 
-void WebcamFtPrefs::on_CascadePath_editingFinished()
-{
-  if(!initializing){
-    ltr_int_wc_set_cascade(ui.CascadePath->text().toUtf8().constData());
-  }
-}
 
 void WebcamFtPrefs::on_ExpFilterFactor_valueChanged(int value)
 {

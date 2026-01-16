@@ -74,10 +74,7 @@ bool MacP3eFtPrefs::Activate(const QString &ID, bool init)
       PREF.addKeyVal(sec, QString::fromUtf8("AutoExposure"), QString::fromUtf8("0"));
       PREF.addKeyVal(sec, QString::fromUtf8("PowerLine-Frequency"), QString::fromUtf8("0"));
       PREF.addKeyVal(sec, QString::fromUtf8("Fps"), QString::fromUtf8("60"));
-      QString cascadePath = PrefProxy::getDataPath(
-                              QString::fromUtf8("/haarcascades/haarcascade_frontalface_alt2.xml"));
-	  QFileInfo finf = QFileInfo(cascadePath);
-	  PREF.addKeyVal(sec, QString::fromUtf8("Cascade"), finf.canonicalFilePath());
+
       PREF.activateDevice(sec);
     }else{
       return false;
@@ -153,16 +150,7 @@ bool MacP3eFtPrefs::Activate(const QString &ID, bool init)
     ui.AEX->setCheckState((ltr_int_ps3_get_ctrl_val(e_AUTOEXPOSURE)) ? Qt::Checked : Qt::Unchecked);
     ui.PLF50->setCheckState((ltr_int_ps3_get_ctrl_val(e_PLFREQ)) ? Qt::Checked : Qt::Unchecked);
 
-    const char *cascade = ltr_int_wc_get_cascade();
-    QString cascadePath;
-    if((cascade == nullptr) || (!QFile::exists(QString::fromUtf8(cascade)))){
-      cascadePath = PrefProxy::getDataPath(
-                      QString::fromUtf8("/haarcascades/haarcascade_frontalface_alt2.xml"));
-      ltr_int_wc_set_cascade(cascadePath.toUtf8().constData());
-    }else{
-      cascadePath = QString::fromUtf8(cascade);
-    }
-    ui.CascadePathMac->setText(cascadePath);
+
     int n = (2.0 / ltr_int_wc_get_eff()) - 2;
     ui.ExpFilterFactorMac->setValue(n);
     on_ExpFilterFactorMac_valueChanged(n);
@@ -303,27 +291,7 @@ void MacP3eFtPrefs::on_PLF50_stateChanged(int state)
   if(!initializing){ltr_int_ps3_set_ctrl_val(e_PLFREQ, state == Qt::Checked);}
 }
 
-void MacP3eFtPrefs::on_FindCascadeMac_pressed()
-{
-  QString path = ui.CascadePathMac->text();
-  if(path.isEmpty()){
-    path = QString::fromUtf8(ltr_int_get_data_path(""));
-  }else{
-    QDir tmp(path);
-    path = tmp.filePath(path);
-  }
-  QString fileName = QFileDialog::getOpenFileName(nullptr,
-     QString::fromUtf8("Find Harr/LBP cascade"), path, QString::fromUtf8("xml Files (*.xml)"));
-  ui.CascadePathMac->setText(fileName);
-  on_CascadePathMac_editingFinished();
-}
 
-void MacP3eFtPrefs::on_CascadePathMac_editingFinished()
-{
-  if(!initializing){
-    ltr_int_wc_set_cascade(ui.CascadePathMac->text().toUtf8().constData());
-  }
-}
 
 void MacP3eFtPrefs::on_ExpFilterFactorMac_valueChanged(int value)
 {

@@ -33,8 +33,7 @@ bool ltr_int_wc_set_fps(int num, int den);
 bool ltr_int_wc_get_flip();
 bool ltr_int_wc_set_flip(bool new_flip);
 
-const char *ltr_int_wc_get_cascade();
-bool ltr_int_wc_set_cascade(const char *new_cascade);
+
 
 float ltr_int_wc_get_eff();
 bool ltr_int_wc_set_eff(float new_eff);

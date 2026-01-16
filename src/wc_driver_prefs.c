@@ -18,7 +18,7 @@ static int res_y = 0;
 static int fps_num = 0;
 static int fps_den = 0;
 static bool flip = false;
-static char *cascade = NULL;
+
 static float exp_filt = 0.1;
 static int optim_level = 0;
 static float confidence_threshold = 0.5;
@@ -31,7 +31,7 @@ static char pix_fmt_key[] = "Pixel-format";
 static char res_key[] = "Resolution";
 static char fps_key[] = "Fps";
 static char flip_key[] = "Upside-down";
-static char cascade_key[] = "Cascade";
+
 static char exp_filter_key[] = "Exp-filter-factor";
 static char optim_key[] = "Optimization-level";
 static char confidence_key[] = "Confidence-threshold";
@@ -88,11 +88,7 @@ bool ltr_int_wc_init_prefs()
     flip = false;
   }
   
-  tmp = ltr_int_get_key(dev, cascade_key);
-  if(cascade != NULL){
-    free(cascade);
-  }
-  cascade = tmp;
+
   if(!ltr_int_get_key_flt(dev, exp_filter_key, &exp_filt)){
     exp_filt = 0.1;
   }
@@ -112,8 +108,7 @@ void ltr_int_wc_close_prefs()
   camera_id = NULL;
   free(pix_fmt);
   pix_fmt = NULL;
-  free(cascade);
-  cascade = NULL;
+
 }
 
 int ltr_int_wc_get_max_blob()
@@ -241,19 +236,7 @@ bool ltr_int_wc_set_flip(bool new_flip)
   return ltr_int_change_key(ltr_int_get_device_section(), flip_key, val);
 }
 
-const char *ltr_int_wc_get_cascade()
-{
-  return cascade;
-}
 
-bool ltr_int_wc_set_cascade(const char *new_cascade)
-{
-  if(cascade != NULL){
-    free(cascade);
-  }
-  cascade = (new_cascade != NULL) ? ltr_int_my_strdup(new_cascade) : NULL;
-  return ltr_int_change_key(ltr_int_get_device_section(), cascade_key, new_cascade);
-}
 
 float ltr_int_wc_get_eff()
 {
