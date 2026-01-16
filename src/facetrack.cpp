@@ -625,8 +625,11 @@ void ltr_int_face_detect(image_t *img, struct bloblist_type *blt) {
     // Transport via blobs (Absolute Mode Layout):
     {
         std::lock_guard<std::mutex> lock(pose_mutex_6dof);
-        blt->blobs[0].y = -pose_pitch; // Invert Up+ to Down+
-        blt->blobs[0].x = -pose_yaw;   // Invert Right+ to Left+ (Restored state)
+        // Compensate for tracking.c update_pose_1pt scaling (val * 200 / width)
+        float s = (frame_w > 0) ? ((float)frame_w / 200.0f) : 3.2f; 
+        
+        blt->blobs[0].y = -pose_pitch * s; // Input - -> Tracking - (Correct Pitch)
+        blt->blobs[0].x = pose_yaw * s;    // Input + -> Tracking - (Correct Yaw via invert)
         blt->blobs[1].x = pose_roll;   // Z-Rotation+ is already TiltLeft+
         
         // Translations:
