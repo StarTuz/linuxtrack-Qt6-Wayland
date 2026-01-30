@@ -132,11 +132,6 @@ export QT_PLUGIN_PATH="$CLEAN_PLUGINS"
 # Explicitly avoid SQL drivers which are the most common source of "libfbclient.so.2 not found"
 export QT_INSTALL_SQLDRIVERS=""
 
-if [ "$NO_STRIP" == "1" ]; then
-    echo "--> NO_STRIP is set, disabling symbol stripping..."
-    export STRIP=false
-fi
-
 # Find all libraries in our specific subdir to ensure linuxdeploy bundles them
 LIBRARY_FLAGS=""
 for lib in "$APP_DIR"/usr/lib/linuxtrack/*.so*; do
@@ -145,6 +140,10 @@ for lib in "$APP_DIR"/usr/lib/linuxtrack/*.so*; do
     fi
 done
 
+# Try linuxdeploy first (bundles dependencies and Qt plugins)
+# It may fail on strip step due to modern ELF .relr.dyn sections on Arch/Fedora
+echo "--> Running linuxdeploy to bundle dependencies..."
+set +e  # Don't exit on error - strip failures are recoverable
 "$LINUXDEPLOY" --appdir "$APP_DIR" \
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
     --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
@@ -158,28 +157,48 @@ done
     --exclude-library libqsqlmysql.so \
     --plugin qt \
     --output appimage
+LINUXDEPLOY_EXIT=$?
+set -e
 
 # 5. Cleanup (Post-bundling)
 # Remove libraries that MUST NOT be bundled to avoid driver conflicts
 echo "--> Purging system graphics libraries from AppDir to ensure host driver usage..."
-find "$APP_DIR" -name "libGL.so*" -delete
-find "$APP_DIR" -name "libEGL.so*" -delete
-find "$APP_DIR" -name "libgbm.so*" -delete
-find "$APP_DIR" -name "libdrm.so*" -delete
-find "$APP_DIR" -name "libxcb-dri*" -delete
-find "$APP_DIR" -name "libvulkan.so*" -delete
+find "$APP_DIR" -name "libGL.so*" -delete 2>/dev/null || true
+find "$APP_DIR" -name "libEGL.so*" -delete 2>/dev/null || true
+find "$APP_DIR" -name "libgbm.so*" -delete 2>/dev/null || true
+find "$APP_DIR" -name "libdrm.so*" -delete 2>/dev/null || true
+find "$APP_DIR" -name "libxcb-dri*" -delete 2>/dev/null || true
+find "$APP_DIR" -name "libvulkan.so*" -delete 2>/dev/null || true
 
-# Re-run linuxdeploy just to update the AppImage with the purged dir
-# (or just let the first run succeed and output the file)
-# Note: linuxdeploy creates the AppImage AFTER running plugins.
-# We might need to run linuxdeploy WITHOUT --output first, purge, then create.
+# Check if linuxdeploy created an AppImage
+if ls *.AppImage 1>/dev/null 2>&1; then
+    echo "--> linuxdeploy succeeded!"
+    ls -lh *.AppImage
+    exit 0
+fi
 
-echo "--> Final generation pass..."
-"$LINUXDEPLOY" --appdir "$APP_DIR" \
-    --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
-    --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
-    $LIBRARY_FLAGS \
-    --output appimage
+# If linuxdeploy failed (usually due to strip errors on modern distros),
+# use appimagetool directly to package the AppDir
+echo "--> linuxdeploy failed (likely strip errors), falling back to appimagetool..."
 
-echo "--> Done! AppImage created and purged of system GL libs."
+# Setup AppDir for appimagetool
+cp "$APP_DIR/usr/share/applications/$APP_NAME.desktop" "$APP_DIR/"
+cp "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" "$APP_DIR/"
+ln -sf "$APP_NAME.svg" "$APP_DIR/.DirIcon"
+
+# Get appimagetool if needed
+APPIMAGETOOL=$(which appimagetool 2>/dev/null || echo "")
+if [ -z "$APPIMAGETOOL" ]; then
+    echo "--> Downloading appimagetool..."
+    APPIMAGETOOL="$TOOLS_DIR/appimagetool-x86_64.AppImage"
+    if [ ! -f "$APPIMAGETOOL" ]; then
+        wget -q -O "$APPIMAGETOOL" "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+        chmod +x "$APPIMAGETOOL"
+    fi
+fi
+
+echo "--> Building AppImage with appimagetool..."
+ARCH=x86_64 "$APPIMAGETOOL" "$APP_DIR" "Linuxtrack-x86_64.AppImage"
+
+echo "--> Done! AppImage created."
 ls -lh *.AppImage
