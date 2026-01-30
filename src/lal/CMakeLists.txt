@@ -5,11 +5,22 @@ add_library(lal STATIC
 
 target_include_directories(lal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Link against standard libraries (nlohmann_json is header only)
-# If nlohmann_json needs to be found:
-find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp)
-if(NLOHMANN_JSON_INCLUDE_DIR)
-    target_include_directories(lal PRIVATE ${NLOHMANN_JSON_INCLUDE_DIR})
+# nlohmann-json is required for JSON parsing (header-only library)
+find_package(nlohmann_json QUIET)
+if(nlohmann_json_FOUND)
+    target_link_libraries(lal PRIVATE nlohmann_json::nlohmann_json)
+else()
+    # Fallback: try to find header directly
+    find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp
+        PATHS /usr/include /usr/local/include)
+    if(NLOHMANN_JSON_INCLUDE_DIR)
+        target_include_directories(lal PRIVATE ${NLOHMANN_JSON_INCLUDE_DIR})
+    else()
+        message(FATAL_ERROR "nlohmann-json not found. Install with:\n"
+            "  Arch/EndeavourOS: sudo pacman -S nlohmann-json\n"
+            "  Debian/Ubuntu:    sudo apt install nlohmann-json3-dev\n"
+            "  Fedora:           sudo dnf install nlohmann-json-devel")
+    endif()
 endif()
 
 # Since we use std::filesystem (C++17), ensure standards

@@ -157,7 +157,15 @@ If the 3D tracking view in `ltr_gui` shows a blank/black screen:
 
 ### 1. Build from Source (CMake)
 
-**Prerequisites:** Qt6 (likely 6.10+ recommended), OpenGLES/OpenGL drivers, libusb-1.0, libmxml, liblo.
+**Prerequisites:** Qt6, OpenGL drivers, libusb-1.0, libmxml, liblo, nlohmann-json.
+
+```bash
+# Arch/EndeavourOS:
+sudo pacman -S qt6-base qt6-tools libusb mxml liblo nlohmann-json
+
+# Debian/Ubuntu:
+sudo apt install qt6-base-dev libusb-1.0-0-dev libmxml-dev liblo-dev nlohmann-json3-dev
+```
 
 ```bash
 git clone https://github.com/StarTuz/linuxtrack.git
