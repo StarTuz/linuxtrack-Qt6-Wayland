@@ -370,32 +370,44 @@ char *ltr_int_get_data_path_prefix(const char *data, const char *prefix) {
 char *ltr_int_get_lib_path(const char *libname) {
   char *lib_path = ltr_int_get_lib_path_impl(libname);
   if (access(lib_path, F_OK) != 0) {
-    // Fallback 1: Try adjacent to binary (build/src/)
     char *bin_path = ltr_int_get_binary_path();
     if (bin_path) {
-      char *fallback = ltr_int_my_strcat(bin_path, "/");
-      char *lib_path_fallback1 = ltr_int_my_strcat(fallback, libname);
-      char *lib_path_fallback =
-          ltr_int_my_strcat(lib_path_fallback1, LIB_SUFFIX);
-      free(fallback);
-      free(lib_path_fallback1);
-      if (access(lib_path_fallback, F_OK) == 0) {
+      // Fallback 1: Try bin/../lib/linuxtrack/ (AppImage/standard install)
+      char *fallback_appimage = ltr_int_my_strcat(bin_path, "/../lib/linuxtrack/");
+      char *lib_path_appimage1 = ltr_int_my_strcat(fallback_appimage, libname);
+      char *lib_path_appimage = ltr_int_my_strcat(lib_path_appimage1, LIB_SUFFIX);
+      free(fallback_appimage);
+      free(lib_path_appimage1);
+      if (access(lib_path_appimage, F_OK) == 0) {
         free(lib_path);
-        lib_path = lib_path_fallback;
+        lib_path = lib_path_appimage;
       } else {
-        // Fallback 2: Try parent of binary (if bin is in build/src/qt_gui)
-        char *fallback_p = ltr_int_my_strcat(bin_path, "/../");
-        char *lib_path_fallback_p1 = ltr_int_my_strcat(fallback_p, libname);
-        char *lib_path_fallback_p =
-            ltr_int_my_strcat(lib_path_fallback_p1, LIB_SUFFIX);
-        free(fallback_p);
-        free(lib_path_fallback_p1);
-        if (access(lib_path_fallback_p, F_OK) == 0) {
+        free(lib_path_appimage);
+        // Fallback 2: Try adjacent to binary (build/src/)
+        char *fallback = ltr_int_my_strcat(bin_path, "/");
+        char *lib_path_fallback1 = ltr_int_my_strcat(fallback, libname);
+        char *lib_path_fallback =
+            ltr_int_my_strcat(lib_path_fallback1, LIB_SUFFIX);
+        free(fallback);
+        free(lib_path_fallback1);
+        if (access(lib_path_fallback, F_OK) == 0) {
           free(lib_path);
-          lib_path = lib_path_fallback_p;
+          lib_path = lib_path_fallback;
         } else {
-          free(lib_path_fallback_p);
           free(lib_path_fallback);
+          // Fallback 3: Try parent of binary (if bin is in build/src/qt_gui)
+          char *fallback_p = ltr_int_my_strcat(bin_path, "/../");
+          char *lib_path_fallback_p1 = ltr_int_my_strcat(fallback_p, libname);
+          char *lib_path_fallback_p =
+              ltr_int_my_strcat(lib_path_fallback_p1, LIB_SUFFIX);
+          free(fallback_p);
+          free(lib_path_fallback_p1);
+          if (access(lib_path_fallback_p, F_OK) == 0) {
+            free(lib_path);
+            lib_path = lib_path_fallback_p;
+          } else {
+            free(lib_path_fallback_p);
+          }
         }
       }
       free(bin_path);
