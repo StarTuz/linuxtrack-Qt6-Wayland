@@ -5,8 +5,10 @@
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 
-# Force xcb platform (skip wayland lookup)  
-export QT_QPA_PLATFORM=xcb
+# Avoid forcing software rendering by default, as it breaks modern OpenGL/Shaders
+# in the 3D cockpit view. Let the system decide the best backend.
+# export QSG_RHI_BACKEND=software
+# export LIBGL_ALWAYS_SOFTWARE=1
 
 # Use Fusion style which doesn't rely on platform-specific rendering
 export QT_STYLE_OVERRIDE=Fusion

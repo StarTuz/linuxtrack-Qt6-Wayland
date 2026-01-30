@@ -23,10 +23,10 @@
 
 // --- Shader Sources for Modern OpenGL (Qt6) ---
 static const char *vertexShaderSource = R"(
-    #version 300 es
-    in vec3 aPos;
-    in vec3 aNormal;
-    in vec2 aTexCoord;
+    #version 330 core
+    layout (location = 0) in vec3 aPos;
+    layout (location = 1) in vec2 aTexCoord;
+    layout (location = 2) in vec3 aNormal;
     
     uniform mat4 mvp;
     uniform mat3 normalBox;
@@ -42,8 +42,10 @@ static const char *vertexShaderSource = R"(
 )";
 
 static const char *fragmentShaderSource = R"(
-    #version 300 es
+    #version 330 core
+    #ifdef GL_ES
     precision mediump float;
+    #endif
     in vec2 TexCoord;
     in vec3 Normal;
     
@@ -272,6 +274,9 @@ void GLWidget::paintGL() {
     return;
   }
   if (drawCommands.empty()) {
+    // YELLOW background if no objects were loaded or processed
+    glClearColor(0.8f, 0.8f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
     return;
   }
 

@@ -111,13 +111,27 @@ export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines;xcbglintegration
 # linuxdeploy usually avoids them, but we make sure by moving them out if they sneak in.
 # These MUST be loaded from the host system to match the VGA driver.
 
-# Exclude optional plugins that have problematic dependencies on Arch
-# libqsqlibase.so requires libfbclient.so.2 (Firebird)
-# libqsqloci.so requires Oracle client libraries
-# kimg_jxr.so may require libjxrglue.so.0 on some systems
-export QT_INSTALL_SQLDRIVERS="/usr/lib/qt6/plugins/sqldrivers/libqsqlite.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlpsql.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlodbc.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlmysql.so"
-
 # Handle stripping
+# Arch/EndeavourOS uses modern ELF sections (.relr.dyn) that older strip versions
+# don't understand. We disable stripping by default to ensure build success.
+# Some linuxdeploy versions ignore STRIP=false, so we use STRIP=true as a bypass.
+export STRIP=${STRIP:-true}
+# Exclude optional plugins that have problematic dependencies on Arch
+# We do this by creating a controlled plugin environment
+echo "--> Isolating Qt plugins to avoid missing dependencies (SQL, etc)..."
+CLEAN_PLUGINS="$(pwd)/clean_qt_plugins"
+mkdir -p "$CLEAN_PLUGINS"
+# Only copy the plugins we actually need
+for type in platforms imageformats iconengines platformthemes xcbglintegrations wayland-graphics-integration-client; do
+    if [ -d "/usr/lib/qt6/plugins/$type" ]; then
+        cp -rn "/usr/lib/qt6/plugins/$type" "$CLEAN_PLUGINS/"
+    fi
+done
+# Point to our clean directory
+export QT_PLUGIN_PATH="$CLEAN_PLUGINS"
+# Explicitly avoid SQL drivers which are the most common source of "libfbclient.so.2 not found"
+export QT_INSTALL_SQLDRIVERS=""
+
 if [ "$NO_STRIP" == "1" ]; then
     echo "--> NO_STRIP is set, disabling symbol stripping..."
     export STRIP=false
@@ -135,6 +149,13 @@ done
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
     --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
     $LIBRARY_FLAGS \
+    --exclude-library libfbclient.so.2 \
+    --exclude-library liboci.so \
+    --exclude-library libqsqlibase.so \
+    --exclude-library libqsqloci.so \
+    --exclude-library libqsqlpsql.so \
+    --exclude-library libqsqlodbc.so \
+    --exclude-library libqsqlmysql.so \
     --plugin qt \
     --output appimage
 

@@ -417,11 +417,16 @@ bool PrefProxy::savePrefs() {
 
 QString PrefProxy::getDataPath(QString file) {
   QString appPath = QApplication::applicationDirPath();
+  QString appDirEnv = QString::fromLocal8Bit(qgetenv("APPDIR"));
 
   // If running from AppImage, prioritize internal share/linuxtrack folder
-  if (isAppImage) {
+  // Check via isAppImage flag OR explicit APPDIR environment variable
+  if (isAppImage || !appDirEnv.isEmpty()) {
+    QString baseDir = !appDirEnv.isEmpty()
+                          ? appDirEnv + QString::fromUtf8("/usr/bin")
+                          : appPath;
     QString internalPath =
-        appPath + QString::fromUtf8("/../share/linuxtrack/") + file;
+        baseDir + QString::fromUtf8("/../share/linuxtrack/") + file;
     if (QFile::exists(internalPath)) {
       return internalPath;
     }
@@ -432,27 +437,29 @@ QString PrefProxy::getDataPath(QString file) {
   QString res = QString::fromUtf8(path);
   free(path);
 
-  // Fallback for development/build directory
+  // Fallback for development/build directory or unusual AppImage layouts
   if (!QFile::exists(res)) {
-    QString fallback = appPath + QString::fromUtf8("/../") + file;
-    if (QFile::exists(fallback)) {
-      return fallback;
+    QStringList candidates;
+    candidates << appPath + QString::fromUtf8("/../") + file
+               << appPath + QString::fromUtf8("/../share/linuxtrack/") + file
+               << appPath + QString::fromUtf8("/../../src/") + file
+               << appPath + QString::fromUtf8("/../../src/qt_gui/") + file
+               << appPath + QString::fromUtf8("/../../../src/") + file
+               << appPath + QString::fromUtf8("/../../../src/qt_gui/") + file;
+
+    if (!appDirEnv.isEmpty()) {
+      candidates << appDirEnv + QString::fromUtf8("/usr/share/linuxtrack/") +
+                        file;
     }
-    // Try from share folder in build root
-    fallback = appPath + QString::fromUtf8("/../share/linuxtrack/") + file;
-    if (QFile::exists(fallback)) {
-      return fallback;
-    }
-    // Try one level deeper just in case (e.g. build/src/qt_gui)
-    fallback = appPath + QString::fromUtf8("/../../src/") + file;
-    if (QFile::exists(fallback)) {
-      return fallback;
-    }
-    // Try three levels up for standard CMake out-of-source build
-    // (build/src/qt_gui -> root -> src)
-    fallback = appPath + QString::fromUtf8("/../../../src/") + file;
-    if (QFile::exists(fallback)) {
-      return fallback;
+
+    foreach (const QString &candidate, candidates) {
+      std::cerr << "read_obj: Checking candidate path: "
+                << candidate.toStdString() << " ... ";
+      if (QFile::exists(candidate)) {
+        std::cerr << "FOUND!\n";
+        return candidate;
+      }
+      std::cerr << "not found.\n";
     }
   }
   return res;
