@@ -106,7 +106,8 @@ jobs:
           pacman -S --noconfirm \
             libusb zlib v4l-utils liblo opencv \
             qt6-base qt6-tools nlohmann-json \
-            mxml wine wget file onnxruntime
+            mxml wine wget file onnxruntime \
+            glu libx11 mesa
 
       - name: Build
         run: |
