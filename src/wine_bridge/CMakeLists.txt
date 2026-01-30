@@ -11,8 +11,6 @@ else()
     set(HAS_WINE64 OFF)
 endif()
 
-option(ENABLE_WINE32 "Build 32-bit Wine bridge" ON)
-
 
 # Helper to build a wine dll/exe
 function(add_wine_binary TARGET_NAME)
