@@ -71,7 +71,7 @@ static void validate_paths(void) {
 
 int main(int argc, char *argv[]) {
   if (argc == 2 && strcmp(argv[1], "-v") == 0) {
-    printf("ltr_server1 version %s\n", "1.2.0");
+    printf("ltr_server1 version %s\n", "1.3.0");
     return 0;
   }
 
