@@ -84,12 +84,20 @@ endif()
 if(BUILD_WINE_BRIDGE)
     find_program(WINEGCC winegcc)
     if(WINEGCC)
-        execute_process(COMMAND ${WINEGCC} -m32 -v OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE WINE32_RESULT)
+        # Try to actually link a tiny wine library to ensure 32-bit libs are present
+        file(WRITE "${CMAKE_BINARY_DIR}/wine32_test.c" "void wine32_test(){}\n")
+        execute_process(
+            COMMAND ${WINEGCC} -m32 -shared -o "${CMAKE_BINARY_DIR}/wine32_test.so" "${CMAKE_BINARY_DIR}/wine32_test.c"
+            OUTPUT_QUIET ERROR_QUIET 
+            RESULT_VARIABLE WINE32_RESULT
+        )
         if(WINE32_RESULT EQUAL 0)
             set(CAN_BUILD_WINE32 ON)
+            file(REMOVE "${CMAKE_BINARY_DIR}/wine32_test.so")
         else()
             set(CAN_BUILD_WINE32 OFF)
         endif()
+        file(REMOVE "${CMAKE_BINARY_DIR}/wine32_test.c")
     else()
         set(CAN_BUILD_WINE32 OFF)
     endif()
