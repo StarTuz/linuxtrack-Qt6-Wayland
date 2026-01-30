@@ -100,7 +100,12 @@ export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
 export ARCH=x86_64
 
 # Set Qt environment for proper plugin discovery
-export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines"
+export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines;xcbglintegrations/libqxcb-glx-integration.so;xcbglintegrations/libqxcb-egl-integration.so"
+
+# WARNING: Do NOT bundle system graphics libraries. They must come from the host system.
+# linuxdeploy usually avoids them, but we make sure by moving them out if they sneak in,
+# or by explicitly excluding them if the tool supports it (plugin-qt doesn't always listen to -e).
+# We relies on linuxdeploy's default blacklist.
 
 # Exclude optional plugins that have problematic dependencies on Arch
 # libqsqlibase.so requires libfbclient.so.2 (Firebird)
