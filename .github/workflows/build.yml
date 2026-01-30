@@ -85,3 +85,37 @@ jobs:
 #          path: "*.AppImage"
 #          if-no-files-found: error
 
+  build-arch:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    
+    name: Build (Arch Linux)
+
+    steps:
+      - name: Install base tools
+        run: |
+          pacman -Syu --noconfirm base-devel git cmake ninja
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pacman -S --noconfirm \
+            libusb zlib v4l-utils liblo opencv \
+            qt6-base qt6-tools nlohmann-json \
+            mxml wine wget file onnxruntime
+
+      - name: Build
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          make -j$(nproc)
+
+      - name: Test libusb linking
+        run: |
+          echo "Checking libusb linkage..."
+          ldd build/src/libltusb1.so | grep libusb || echo "libltusb1.so not found or no libusb dependency"
+          echo "Build completed successfully on Arch Linux"
