@@ -139,20 +139,6 @@ protontricks <appid> mfc42
 
 This installs the Microsoft Foundation Classes runtime. Note: Tracking usually works fine even without this fix.
 
-### 3D Tracking View Not Working (NVIDIA)
-
-If the 3D tracking view in `ltr_gui` shows a blank/black screen:
-
-> [!NOTE]
-> This may be an NVIDIA driver issue (reported on RTX 4080 Super). The 3D view uses OpenGL ES 3.0 shaders.
-
-**Workarounds to try:**
-
-1. Ensure you have the latest NVIDIA drivers installed
-2. Try running with `__GLX_VENDOR_LIBRARY_NAME=nvidia ltr_gui`
-3. Check if other OpenGL apps work (e.g., `glxgears`)
-4. Tracking still works — the 3D view is purely for visualization
-
 ## 🛠️ Installation
 
 ### 1. Build from Source (CMake)

@@ -10,8 +10,8 @@
 int main(int argc, char *argv[]) {
   ltr_int_check_root();
   ltr_int_log_message("Starting ltr_gui\n");
-  setenv("LC_ALL", "C", 1);
-  setlocale(LC_ALL, "C");
+  setenv("LC_ALL", "C.UTF-8", 1);
+  setlocale(LC_ALL, "C.UTF-8");
   QLocale::setDefault(QLocale::c());
 
   // Request Desktop OpenGL and a decent version

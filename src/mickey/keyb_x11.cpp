@@ -9,9 +9,7 @@ Reporting problems to user.
 #include <X11/Xproto.h>
 #include <cstdio>
 
-#if defined(QT5_OVERRIDES) || defined(QT6_OVERRIDES)
 #include <xcb/xcb.h>
-#endif
 
 static shortcutHash_t shortcutHash;
 static bool errorEncountered;
@@ -24,18 +22,10 @@ static bool grabKeyX(Display *display, Window &window, KeyCode code,
 static bool ungrabKeyX(Display *display, Window &window, KeyCode code,
                        unsigned int modifiers);
 
-#if defined(QT5_OVERRIDES) || defined(QT6_OVERRIDES)
-
 static hotKeyFilter *hkFilter = nullptr;
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 bool hotKeyFilter::nativeEventFilter(const QByteArray &eventType, void *message,
-                                     qintptr *result)
-#else
-bool hotKeyFilter::nativeEventFilter(const QByteArray &eventType, void *message,
-                                     long *result)
-#endif
-{
+                                     qintptr *result) {
   Q_UNUSED(result);
   if (eventType == "xcb_generic_event_t") {
     xcb_generic_event_t *ev = static_cast<xcb_generic_event_t *>(message);
@@ -73,55 +63,15 @@ bool hotKeyFilter::nativeEventFilter(const QByteArray &eventType, void *message,
   return false;
 }
 
-#else // QT < 5.0 (Qt4)
-
-static QAbstractEventDispatcher::EventFilter prevFilter = nullptr;
-
-static bool eventFilter(void *message) {
-  XEvent *event = (XEvent *)message;
-  bool pressed = event->type == KeyPress;
-  bool released = event->type == KeyRelease;
-  if (pressed || released) {
-    XKeyEvent *key = (XKeyEvent *)event;
-    keyPair_t kp(key->keycode,
-                 key->state & (ShiftMask | ControlMask | Mod1Mask | Mod4Mask));
-    shortcutHash_t::iterator i = shortcutHash.find(kp);
-    if (i != shortcutHash.end()) {
-      i->second->activate(pressed);
-      return true;
-    }
-  }
-  if (prevFilter != nullptr) {
-    return prevFilter(message);
-  }
-  return false;
-}
-#endif
-
 static void installFilter() {
-#if defined(QT5_OVERRIDES) || defined(QT6_OVERRIDES)
   hkFilter = new hotKeyFilter();
   QAbstractEventDispatcher::instance()->installNativeEventFilter(hkFilter);
-#else
-  if (prevFilter == nullptr) {
-    prevFilter =
-        QAbstractEventDispatcher::instance()->setEventFilter(eventFilter);
-    // printf("Handler installed!\n");
-  }
-#endif
 }
 
 static void uninstallFilter() {
-#if defined(QT5_OVERRIDES) || defined(QT6_OVERRIDES)
   QAbstractEventDispatcher::instance()->removeNativeEventFilter(hkFilter);
   delete hkFilter;
   hkFilter = nullptr;
-#else
-  if (prevFilter != nullptr) {
-    QAbstractEventDispatcher::instance()->setEventFilter(prevFilter);
-    // printf("Handler removed!\n");
-  }
-#endif
 }
 
 static int (*prev_x_errhandler)(Display *display, XErrorEvent *event);
@@ -142,13 +92,8 @@ static int my_x_errhandler(Display *display, XErrorEvent *event) {
   return 0;
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 static unsigned int getModifiers(QKeyCombination combined) {
   Qt::KeyboardModifiers mod = combined.keyboardModifiers();
-#else
-static unsigned int getModifiers(int key) {
-  int mod = key & (Qt::KeyboardModifierMask);
-#endif
   unsigned int modifiers = 0;
 
   modifiers |= (mod & Qt::ShiftModifier) ? ShiftMask : 0;
@@ -180,11 +125,7 @@ static bool removeIdFromHash(shortcut *shortcutId, keyPair_t *kp = nullptr) {
 
 static bool translateSequence(const QKeySequence &s, KeyCode &code,
                               unsigned int &modifiers) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   QKeySequence key = QKeySequence(s[0].key());
-#else
-  QKeySequence key = QKeySequence(s[0] & (~Qt::KeyboardModifierMask));
-#endif
   modifiers = getModifiers(s[0]);
   KeySym sym = XStringToKeysym(qPrintable(key.toString()));
   if (sym == NoSymbol) {
@@ -201,17 +142,12 @@ static bool translateSequence(const QKeySequence &s, KeyCode &code,
 
 bool setShortCut(const QKeySequence &s, shortcut *shortcutId) {
   if (display == nullptr) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     // Qt6 removed QX11Info, use native X11 display
     display = XOpenDisplay(nullptr);
     if (display == nullptr) {
       return false;
     }
     window = DefaultRootWindow(display);
-#else
-    display = QX11Info::display();
-    window = QX11Info::appRootWindow();
-#endif
   }
   removeIdFromHash(shortcutId);
   if (s.isEmpty()) {

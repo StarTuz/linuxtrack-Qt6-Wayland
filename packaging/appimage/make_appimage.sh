@@ -84,52 +84,29 @@ fi
 # 4. Generate AppImage
 echo "--> Generating AppImage..."
 
-# We need to set QMAKE path for the plugin to find Qt6
-# Try to find qmake6, qmake in common locations
-export QMAKE=$(which qmake6 || which qmake || find /usr/lib/qt6/bin -name qmake 2>/dev/null | head -n 1)
-if [ -z "$QMAKE" ]; then
-    echo "Warning: qmake not found. Attempting to use default Qt plugin detection."
-else
-    echo "Using qmake: $QMAKE"
+# Force Qt6
+export QMAKE=$(which qmake6 || find /usr/lib/qt6/bin -name qmake 2>/dev/null | head -n 1 || which qmake)
+if [[ "$QMAKE" != *"6"* ]] && [ -x "/usr/bin/qmake6" ]; then
+    QMAKE="/usr/bin/qmake6"
 fi
 
-# Run linuxdeploy
-# --appdir: target AppDir
-# --plugin qt: use Qt plugin to bundle Qt libs and plugins
-# --output appimage: create the actual file
-# Note: we use LD_LIBRARY_PATH to help linuxdeploy find our internal libraries
-# We only include our specific subdirectory to avoid confusing linuxdeploy-plugin-qt
-export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
+if [ -z "$QMAKE" ]; then
+    echo "Error: qmake (Qt6) not found. Cannot proceed with AppImage bundling."
+    exit 1
+fi
+echo "Using qmake: $QMAKE"
 
-# We must set ARCH because we bundle both 32-bit and 64-bit libraries
+# Run linuxdeploy
+export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
 export ARCH=x86_64
 
 # Set Qt environment for proper plugin discovery
-export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines;xcbglintegrations/libqxcb-glx-integration.so;xcbglintegrations/libqxcb-egl-integration.so;imageformats;wayland-graphics-integration-client"
+# We explicitly list common problematic plugins to ensure they are picked up
+export EXTRA_QT_PLUGINS="platforms/libqxcb.so;platforms/libqwayland.so;platformthemes/libqgtk3.so;iconengines;xcbglintegrations;imageformats;wayland-graphics-integration-client"
 
-# WARNING: Do NOT bundle system graphics libraries. They must come from the host system.
-# linuxdeploy usually avoids them, but we make sure by moving them out if they sneak in.
-# These MUST be loaded from the host system to match the VGA driver.
-
-# Handle stripping
-# Arch/EndeavourOS uses modern ELF sections (.relr.dyn) that older strip versions
-# don't understand. We disable stripping by default to ensure build success.
-# Some linuxdeploy versions ignore STRIP=false, so we use STRIP=true as a bypass.
 export STRIP=${STRIP:-true}
-# Exclude optional plugins that have problematic dependencies on Arch
-# We do this by creating a controlled plugin environment
-echo "--> Isolating Qt plugins to avoid missing dependencies (SQL, etc)..."
-CLEAN_PLUGINS="$(pwd)/clean_qt_plugins"
-mkdir -p "$CLEAN_PLUGINS"
-# Only copy the plugins we actually need
-for type in platforms imageformats iconengines platformthemes xcbglintegrations wayland-graphics-integration-client; do
-    if [ -d "/usr/lib/qt6/plugins/$type" ]; then
-        cp -rn "/usr/lib/qt6/plugins/$type" "$CLEAN_PLUGINS/"
-    fi
-done
-# Point to our clean directory
-export QT_PLUGIN_PATH="$CLEAN_PLUGINS"
-# Explicitly avoid SQL drivers which are the most common source of "libfbclient.so.2 not found"
+
+# Avoid SQL drivers which are the most common source of "libfbclient.so.2 not found"
 export QT_INSTALL_SQLDRIVERS=""
 
 # Find all libraries in our specific subdir to ensure linuxdeploy bundles them
@@ -185,6 +162,25 @@ echo "--> linuxdeploy failed (likely strip errors), falling back to appimagetool
 cp "$APP_DIR/usr/share/applications/$APP_NAME.desktop" "$APP_DIR/"
 cp "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" "$APP_DIR/"
 ln -sf "$APP_NAME.svg" "$APP_DIR/.DirIcon"
+
+# 4b. Explicitly bundle Qt6 platform plugins (CRITICAL fallback for modern distros)
+# linuxdeploy-plugin-qt often fails to bundle these when strip fails
+echo "--> Manually bundling critical Qt6 plugins..."
+QT_PLUGINS_DIR=$($QMAKE -query QT_INSTALL_PLUGINS)
+if [ -d "$QT_PLUGINS_DIR" ]; then
+    mkdir -p "$APP_DIR/usr/plugins/platforms"
+    mkdir -p "$APP_DIR/usr/plugins/xcbglintegrations"
+    mkdir -p "$APP_DIR/usr/plugins/wayland-graphics-integration-client"
+    
+    echo "    Copying from $QT_PLUGINS_DIR..."
+    cp -v "$QT_PLUGINS_DIR/platforms/libqxcb.so" "$APP_DIR/usr/plugins/platforms/" 2>/dev/null || true
+    cp -v "$QT_PLUGINS_DIR/platforms/libqwayland-egl.so" "$APP_DIR/usr/plugins/platforms/" 2>/dev/null || true
+    cp -v "$QT_PLUGINS_DIR/platforms/libqwayland-generic.so" "$APP_DIR/usr/plugins/platforms/" 2>/dev/null || true
+    cp -v "$QT_PLUGINS_DIR/xcbglintegrations/"*.so "$APP_DIR/usr/plugins/xcbglintegrations/" 2>/dev/null || true
+    cp -v "$QT_PLUGINS_DIR/wayland-graphics-integration-client/"*.so "$APP_DIR/usr/plugins/wayland-graphics-integration-client/" 2>/dev/null || true
+else
+    echo "Warning: Could not locate Qt6 plugins directory via qmake."
+fi
 
 # Get appimagetool if needed
 APPIMAGETOOL=$(which appimagetool 2>/dev/null || echo "")

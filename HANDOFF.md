@@ -675,20 +675,6 @@ libcwiid                 # Wiimote support
    - Cause: IDE doesn't understand `winegcc` include paths
    - These files compile correctly with the Wine toolchain
 
-5. **X-Plane External View Conflict** ⚠️ UNDER INVESTIGATION
-   - **Symptom:** Cannot switch to external view (Shift-4) while TrackIR is active
-   - **Visual:** Horizon lights/textures flash rapidly, as if view is being pulled back to cockpit
-   - **Workaround:** Pause tracking before switching views, or use `linuxtrack/ltr_pause` command
-   - **Root Cause:** Plugin applies cockpit coordinates every frame, overriding X-Plane's view change
-   - **Investigation Notes:** See `.agent/TEAM_FEEDBACK.md` post-mortem section
-   - **Reference:** fwfa123/linuxtrackx-ir fork reportedly handles this correctly
-   - **Status:** Requires proper side-by-side diff with fwfa fork to isolate fix
-   - **Next Steps (Team Recommendations):**
-     1. Check if `pv_present` is incorrectly true (bypasses view_changed guard)
-     2. Add debug logging with `XPLMDebugString()` to trace view_type during Shift-4
-     3. Line-by-line comparison of fwfa callback's early-return logic
-     4. Test if view_type oscillates between values during X-Plane view transition
-
 ### Historical Note
 
 This codebase was last actively maintained around 2015-2018. The original author is "uglyDwarf" (GitHub). The fixes in this session address API changes in:
@@ -879,22 +865,26 @@ The 3D cockpit view was showing desktop background bleeding through due to the O
 The fix applies multiple layers of defense while preserving internal alpha blending:
 
 1. **Widget attributes** in `GLWidget` constructor:
+
    ```cpp
    setAttribute(Qt::WA_OpaquePaintEvent, true);
    setAttribute(Qt::WA_NoSystemBackground, true);
    ```
 
 2. **Surface format** in `main.cpp`:
+
    ```cpp
    format.setAlphaBufferSize(0);
    ```
 
 3. **Force clear alpha** in `initializeGL()`:
+
    ```cpp
    glClearColor(c.redF(), c.greenF(), c.blueF(), 1.0f);
    ```
 
 4. **Post-render alpha clear** at end of `paintGL()` (the key fix):
+
    ```cpp
    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);  // Only write alpha
    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

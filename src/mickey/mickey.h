@@ -1,24 +1,6 @@
 #ifndef MICKEY__H
 #define MICKEY__H
 
-#include <QCloseEvent>
-#include <QDialog>
-#include <QElapsedTimer>
-#include <QMutex>
-#include <QSettings>
-#include <QThread>
-#include <QTime>
-#include <QTimer>
-#include <QVBoxLayout>
-#include <QWidget>
-#include <QtGlobal>
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-#include <QGuiApplication>
-#include <QScreen>
-#else
-#include <QApplication>
-#include <QDesktopWidget>
-#endif
 #include "help_view.h"
 #include "hotkey.h"
 #include "linuxtrack.h"
@@ -26,6 +8,19 @@
 #include "ui_calibration.h"
 #include "ui_chsettings.h"
 #include "ui_mickey.h"
+#include <QCloseEvent>
+#include <QDialog>
+#include <QElapsedTimer>
+#include <QGuiApplication>
+#include <QMutex>
+#include <QScreen>
+#include <QSettings>
+#include <QThread>
+#include <QTime>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QWidget>
+#include <QtGlobal>
 #include <iostream>
 
 /*
@@ -138,11 +133,7 @@ private:
   QElapsedTimer initTimer;
   QElapsedTimer updateElapsed;
   bool recenterFlag;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   QScreen *primaryScreen;
-#else
-  QDesktopWidget *dw;
-#endif
   QRect screenBBox;
   QPoint screenCenter;
   bool relative;

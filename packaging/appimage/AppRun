@@ -10,14 +10,20 @@ HERE=${SELF%/*}
 # export QSG_RHI_BACKEND=software
 # export LIBGL_ALWAYS_SOFTWARE=1
 
+# Force UTF-8 locale to satisfy Qt6
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
+
 # Use Fusion style which doesn't rely on platform-specific rendering
 export QT_STYLE_OVERRIDE=Fusion
 
 # Set library paths
 export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/linuxtrack:${LD_LIBRARY_PATH}"
 
-# Set Qt plugin paths - include both locations
+# Set Qt plugin paths
+# QT_PLUGIN_PATH is for general plugins (imageformats, integrations, etc.)
 export QT_PLUGIN_PATH="${HERE}/usr/plugins:${HERE}/usr/lib/qt6/plugins"
+# QT_QPA_PLATFORM_PLUGIN_PATH is specifically for platform plugins (xcb, wayland)
 export QT_QPA_PLATFORM_PLUGIN_PATH="${HERE}/usr/plugins/platforms:${HERE}/usr/lib/qt6/plugins/platforms"
 
 # Run the actual binary

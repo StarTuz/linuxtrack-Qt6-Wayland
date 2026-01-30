@@ -1,9 +1,6 @@
 # ltr_hotkey_gui - Native hotkey controller GUI
 
-find_package(Qt5 COMPONENTS Widgets QUIET)
-if(NOT Qt5_FOUND)
-    find_package(Qt6 COMPONENTS Widgets REQUIRED)
-endif()
+find_package(Qt6 COMPONENTS Widgets REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -15,10 +12,6 @@ add_executable(ltr_hotkey_gui
     ltr_hotkey_gui.h
 )
 
-if(Qt5_FOUND)
-    target_link_libraries(ltr_hotkey_gui Qt5::Widgets)
-else()
-    target_link_libraries(ltr_hotkey_gui Qt6::Widgets)
-endif()
+target_link_libraries(ltr_hotkey_gui Qt6::Widgets)
 
 install(TARGETS ltr_hotkey_gui DESTINATION bin)

@@ -18,7 +18,6 @@
 
 #include "pathconfig.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QFileInfo>
 
 // --- Shader Sources for Modern OpenGL (Qt6) ---
@@ -66,7 +65,6 @@ static const char *fragmentShaderSource = R"(
         fragColor = vec4(col.rgb * diff, col.a);
     }
 )";
-#endif
 
 // --- Threading ---
 ReaderThread::ReaderThread() : QThread() {}
@@ -79,7 +77,6 @@ void ReaderThread::run() {
 void GLWidget::objectsRead() {
   std::cerr << "GLWidget: objectsRead signal received in thread "
             << QThread::currentThreadId() << "\n";
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   objectsLoaded = true;
   if (glInitialized && program && program->isLinked()) {
     std::cerr << "GLWidget: context initialized, building buffers now.\n";
@@ -98,7 +95,6 @@ void GLWidget::objectsRead() {
   } else {
     std::cerr << "OpenGL context not ready yet, will build in initializeGL.\n";
   }
-#endif
   emit ready();
 }
 
@@ -117,15 +113,12 @@ GLWidget::GLWidget(QWidget *parent)
   yTrans = 0;
   zTrans = 0;
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-  trolltechPurple = QColor::fromRgbF(0.1, 0.1, 0.15, 1.0); // Dark blue-gray, fully opaque
+  trolltechPurple =
+      QColor::fromRgbF(0.1, 0.1, 0.15, 1.0); // Dark blue-gray, fully opaque
   setMinimumSize(320, 240);
   // Prevent compositor transparency bleed-through
   setAttribute(Qt::WA_OpaquePaintEvent, true);
   setAttribute(Qt::WA_NoSystemBackground, true);
-#else
-  trolltechPurple = QColor::fromCmykF(0.0, 0.0, 0.0, 0.0);
-#endif
 
   connect(rt.get(), SIGNAL(done()), this, SLOT(objectsRead()));
   rt->start();
@@ -135,7 +128,6 @@ GLWidget::~GLWidget() {
   if (rt->isRunning()) {
     rt->wait();
   }
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   makeCurrent();
   program.reset();
   delete texture;
@@ -155,13 +147,6 @@ GLWidget::~GLWidget() {
   }
   drawCommands.clear();
   doneCurrent();
-#else
-  makeCurrent();
-  std::vector<GLuint>::iterator i;
-  for (i = objects.begin(); i != objects.end(); ++i) {
-    glDeleteLists(*i, 1);
-  }
-#endif
 }
 
 QSize GLWidget::minimumSizeHint() const { return QSize(50, 50); }
@@ -187,7 +172,6 @@ void GLWidget::setYTrans(float val) { yTrans = val; }
 void GLWidget::setZTrans(float val) { zTrans = val; }
 
 void GLWidget::initializeGL() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   initializeOpenGLFunctions();
 
   const char *glVersion = (const char *)glGetString(GL_VERSION);
@@ -242,31 +226,14 @@ void GLWidget::initializeGL() {
   }
 
   update();
-#else
-  qglClearColor(trolltechPurple.darker());
-  makeObjects();
-  glShadeModel(GL_FLAT);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  glEnable(GL_TEXTURE_2D);
-#endif
 }
 
 void GLWidget::resizeGL(int width, int height) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   projection.setToIdentity();
   projection.perspective(55.0f, (float)width / height, 0.1f, 500.0f);
-#else
-  glViewport(0, 0, width, height);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluPerspective(55.0, (double)width / height, 0.1, 45.0);
-  glMatrixMode(GL_MODELVIEW);
-#endif
 }
 
 void GLWidget::paintGL() {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   if (!program || !program->isLinked()) {
@@ -328,33 +295,15 @@ void GLWidget::paintGL() {
   vao.release();
   program->release();
 
-  // Force framebuffer alpha to 1.0 to prevent compositor transparency bleed-through
-  // This preserves internal alpha blending but makes the final surface opaque
-  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);  // Only write to alpha
+  // Force framebuffer alpha to 1.0 to prevent compositor transparency
+  // bleed-through This preserves internal alpha blending but makes the final
+  // surface opaque
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE); // Only write to alpha
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
-  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);  // Restore full color writes
-#else
-  // Legacy Qt5 rendering
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glLoadIdentity();
-
-  glRotated(-xRot, 1.0, 0.0, 0.0);
-  glRotated(-yRot, 0.0, 1.0, 0.0);
-  glRotated(-zRot, 0.0, 0.0, 1.0);
-  glTranslated(-xTrans, -yTrans, -zTrans);
-
-  glPushMatrix();
-  glTranslated(0.0, -0.7, -2.265);
-  std::vector<GLuint>::const_iterator i;
-  for (i = objects.begin(); i != objects.end(); ++i) {
-    glCallList(*i);
-  }
-  glPopMatrix();
-#endif
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); // Restore full color writes
 }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 // Modern OpenGL makeObjects for Qt6
 bool GLWidget::makeObjects() {
   QMutexLocker locker(&object_table_mutex);
@@ -462,74 +411,3 @@ bool GLWidget::makeObjects() {
 
   return true;
 }
-#else
-// Legacy OpenGL makeObjects for Qt5
-bool textured;
-object_t obj;
-
-static void make_vortex(int index) {
-  vtx_t vtx = obj.vtx_table[index];
-  glNormal3f(vtx.nx, vtx.ny, vtx.nz);
-  if (textured)
-    glTexCoord2f(vtx.s, vtx.t);
-  glVertex3f(vtx.x, vtx.y, vtx.z);
-}
-
-static void make_triangle(int index1, int index2, int index3) {
-  make_vortex(index3);
-  make_vortex(index2);
-  make_vortex(index1);
-}
-
-bool GLWidget::makeObjects() {
-  int triangles = 0;
-  int cntr;
-  int objectsNumber = object_table.size();
-  bool textureChanged = false;
-  QString currentTexture;
-
-  for (cntr = 0; cntr < objectsNumber; ++cntr) {
-    obj = object_table[cntr];
-    if (currentTexture.compare(obj.texture) != 0) {
-      textureChanged = true;
-      currentTexture = obj.texture;
-    }
-
-    GLuint list = glGenLists(1);
-    objects.push_back(list);
-    glNewList(list, GL_COMPILE);
-
-    int i;
-    if (!obj.texture.isEmpty()) {
-      if (textureChanged) {
-        QImage img = QImage(QString(obj.texture))
-                         .convertToFormat(QImage::Format_RGBA8888)
-                         .mirrored();
-        GLuint texId;
-        glGenTextures(1, &texId);
-        glBindTexture(GL_TEXTURE_2D, texId);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        textureChanged = false;
-      }
-      textured = true;
-    } else {
-      textured = false;
-    }
-
-    glBegin(GL_TRIANGLES);
-    for (i = 0; i < (int)obj.tris_table.size(); ++i) {
-      triangles += obj.tris_table[i].count;
-      for (int j = 0; j < obj.tris_table[i].count; ++j) {
-        int index = obj.vtx_indices[obj.tris_table[i].offset + j];
-        make_vortex(index);
-      }
-    }
-    glEnd();
-    glEndList();
-  }
-  return true;
-}
-#endif
