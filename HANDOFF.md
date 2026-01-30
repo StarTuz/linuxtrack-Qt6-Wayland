@@ -105,7 +105,7 @@ The project now compiles successfully on modern Linux with:
 
 - **Native Games Support:** ltr_udp bridge for X4: Foundations and other OpenTrack-compatible games
 - **Global Hotkeys:** ltr_hotkeyd daemon for recenter/pause without alt-tabbing
-- **CI Modernization:** Fully automated AppImage build via GitHub Actions, including 32-bit Wine support (multi-pass build).
+- **CI Modernization**: Fully automated AppImage build via GitHub Actions, including 32-bit Wine support and a dedicated [release.yml](file:///home/startux/Code/linuxtrackfixed/linuxtrack/.github/workflows/release.yml) that creates GitHub Releases and uploads AppImage assets automatically upon pushing a version tag (`v*`).
 - **Codebase Cleanup:** Fixed relative includes for robust out-of-tree compilation.  
 - **Hotkey GUI:** ltr_hotkey_gui for configuring hotkeys (similar to Controller.exe for Wine)
 - **Profile Management:** "New Profile" button in ltr_gui for creating custom profiles
