@@ -48,21 +48,21 @@ static const char *fragmentShaderSource = R"(
     #endif
     in vec2 TexCoord;
     in vec3 Normal;
-    
+
     uniform sampler2D texture1;
     uniform bool useTexture;
-    
+
     out vec4 fragColor;
-    
+
     void main() {
         vec3 lightDir = normalize(vec3(0.5, 0.5, 1.0));
         float diff = max(dot(Normal, lightDir), 0.3);
-        vec4 col = vec4(1.0, 1.0, 1.0, 1.0); 
-        
+        vec4 col = vec4(1.0, 1.0, 1.0, 1.0);
+
         if (useTexture) {
             col = texture(texture1, TexCoord);
         }
-        
+
         fragColor = vec4(col.rgb * diff, col.a);
     }
 )";
@@ -118,8 +118,11 @@ GLWidget::GLWidget(QWidget *parent)
   zTrans = 0;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-  trolltechPurple = QColor::fromRgbF(0.1, 0.1, 0.15); // Dark blue-gray
+  trolltechPurple = QColor::fromRgbF(0.1, 0.1, 0.15, 1.0); // Dark blue-gray, fully opaque
   setMinimumSize(320, 240);
+  // Prevent compositor transparency bleed-through
+  setAttribute(Qt::WA_OpaquePaintEvent, true);
+  setAttribute(Qt::WA_NoSystemBackground, true);
 #else
   trolltechPurple = QColor::fromCmykF(0.0, 0.0, 0.0, 0.0);
 #endif
@@ -219,7 +222,7 @@ void GLWidget::initializeGL() {
   }
 
   QColor c = trolltechPurple;
-  glClearColor(c.redF(), c.greenF(), c.blueF(), c.alphaF());
+  glClearColor(c.redF(), c.greenF(), c.blueF(), 1.0f);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
@@ -324,6 +327,13 @@ void GLWidget::paintGL() {
 
   vao.release();
   program->release();
+
+  // Force framebuffer alpha to 1.0 to prevent compositor transparency bleed-through
+  // This preserves internal alpha blending but makes the final surface opaque
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);  // Only write to alpha
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);  // Restore full color writes
 #else
   // Legacy Qt5 rendering
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

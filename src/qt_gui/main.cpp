@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
   format.setRenderableType(QSurfaceFormat::OpenGL);
   format.setProfile(QSurfaceFormat::CoreProfile);
   format.setVersion(3, 3);
+  format.setAlphaBufferSize(0); // Ensure no transparency
   QSurfaceFormat::setDefaultFormat(format);
 
   QApplication app(argc, argv);
