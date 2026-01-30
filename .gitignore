@@ -13,9 +13,10 @@
 .deps/
 build/
 build32/
-build_local/
-dist32/
+build_*/
 AppDir/
+AppDir_v2/
+models_test/
 squashfs-root/
 *.AppImage
 Makefile
