@@ -117,8 +117,6 @@ GLWidget::GLWidget(QWidget *parent)
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   trolltechPurple = QColor::fromRgbF(0.1, 0.1, 0.15); // Dark blue-gray
-  setAttribute(Qt::WA_NativeWindow);
-  setAttribute(Qt::WA_OpaquePaintEvent);
   setMinimumSize(320, 240);
 #else
   trolltechPurple = QColor::fromCmykF(0.0, 0.0, 0.0, 0.0);
