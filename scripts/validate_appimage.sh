@@ -46,7 +46,6 @@ CRITICAL_FILES=(
     "usr/lib/linuxtrack/libwc.so"
     "usr/lib/linuxtrack/libft.so"
     "usr/share/linuxtrack/lal_manifest.json"
-    "usr/share/linuxtrack/models.conf"
     "usr/lib/linuxtrack/NPClient.dll.so"
     "usr/lib/linuxtrack/FreeTrackClient.dll.so"
 )

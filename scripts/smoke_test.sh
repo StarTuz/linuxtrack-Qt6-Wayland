@@ -36,11 +36,11 @@ for DISTRO in "${DISTROS[@]}"; do
     # Prepare dependencies for validation script
     DEP_CMD=""
     if [[ "$DISTRO" == archlinux* ]]; then
-        DEP_CMD="pacman -Syu --noconfirm fuse2 libxcb xcb-util-cursor file"
+        DEP_CMD="pacman -Syu --noconfirm fuse2 libxcb xcb-util-cursor file libglvnd"
     elif [[ "$DISTRO" == ubuntu* ]]; then
-        DEP_CMD="apt-get update && apt-get install -y libfuse2 libxcb1 libxcb-cursor0 file"
+        DEP_CMD="apt-get update && apt-get install -y libfuse2 libxcb1 libxcb-cursor0 file libgl1"
     elif [[ "$DISTRO" == fedora* ]]; then
-        DEP_CMD="dnf install -y fuse fuse-libs libxcb file findutils"
+        DEP_CMD="dnf install -y fuse fuse-libs libxcb file findutils libglvnd-glx libglvnd-opengl"
     fi
 
     # Run docker

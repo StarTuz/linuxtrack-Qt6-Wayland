@@ -141,9 +141,9 @@ jobs:
           
           DEP_CMD=""
           if [[ "${{ matrix.distro }}" == "archlinux" ]]; then
-            DEP_CMD="pacman -Syu --noconfirm fuse2 libxcb xcb-util-cursor file"
+            DEP_CMD="pacman -Syu --noconfirm fuse2 libxcb xcb-util-cursor file libglvnd"
           else
-            DEP_CMD="dnf install -y fuse fuse-libs libxcb file findutils"
+            DEP_CMD="dnf install -y fuse fuse-libs libxcb file findutils libglvnd-glx libglvnd-opengl"
           fi
 
           docker run --privileged --rm \
