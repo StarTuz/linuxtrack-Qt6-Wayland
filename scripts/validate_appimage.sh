@@ -41,7 +41,12 @@ CRITICAL_FILES=(
     "usr/bin/ltr_recenter"
     "usr/lib/linuxtrack/libltr.so"
     "usr/lib/linuxtrack/liblinuxtrack.so"
+    "usr/lib/linuxtrack/libltusb1.so"
+    "usr/lib/linuxtrack/libtir.so"
+    "usr/lib/linuxtrack/libwc.so"
+    "usr/lib/linuxtrack/libft.so"
     "usr/share/linuxtrack/lal_manifest.json"
+    "usr/share/linuxtrack/models.conf"
     "usr/lib/linuxtrack/NPClient.dll.so"
     "usr/lib/linuxtrack/FreeTrackClient.dll.so"
 )

@@ -108,12 +108,24 @@ export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines"
 # kimg_jxr.so may require libjxrglue.so.0 on some systems
 export QT_INSTALL_SQLDRIVERS="/usr/lib/qt6/plugins/sqldrivers/libqsqlite.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlpsql.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlodbc.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlmysql.so"
 
-# Note: No library exclusions for now - accept larger bundle for stability
-# Once GUI is stable, exclusions can be re-added incrementally
+# Handle stripping
+if [ "$NO_STRIP" == "1" ]; then
+    echo "--> NO_STRIP is set, disabling symbol stripping..."
+    export STRIP=false
+fi
+
+# Find all libraries in our specific subdir to ensure linuxdeploy bundles them
+LIBRARY_FLAGS=""
+for lib in "$APP_DIR"/usr/lib/linuxtrack/*.so*; do
+    if [ -f "$lib" ]; then
+        LIBRARY_FLAGS="$LIBRARY_FLAGS --library $lib"
+    fi
+done
 
 "$LINUXDEPLOY" --appdir "$APP_DIR" \
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
     --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
+    $LIBRARY_FLAGS \
     --plugin qt \
     --output appimage
 
