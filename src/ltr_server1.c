@@ -71,7 +71,7 @@ static void validate_paths(void) {
 
 int main(int argc, char *argv[]) {
   if (argc == 2 && strcmp(argv[1], "-v") == 0) {
-    printf("ltr_server1 version %s\n", "1.1.15");
+    printf("ltr_server1 version %s\n", "1.2.0");
     return 0;
   }
 
@@ -88,7 +88,8 @@ int main(int argc, char *argv[]) {
     // Parameter is name of profile
     ltr_int_slave(argv[1], argv[2], argv[3], argv[4], argv[5]);
   } else {
-    fprintf(stderr, "Usage: ltr_server1 [profile master_socket_path slave_socket_path mmap_path lock_path]\n");
+    fprintf(stderr, "Usage: ltr_server1 [profile master_socket_path "
+                    "slave_socket_path mmap_path lock_path]\n");
     return 1;
   }
   return 0;

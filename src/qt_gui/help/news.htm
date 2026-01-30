@@ -10,6 +10,19 @@
 <h1>What's new?</h1>
 This page summarizes the most notable changes in the Linuxtrack software.
 
+<h2>Linuxtrack 1.2.0</h2>
+<h3>EndeavourOS / Arch Modernization</h3>
+This release brings major compatibility improvements for modern Arch-based distributions like EndeavourOS. 
+Udev rules have been enhanced with <b>uaccess</b> tags to handle systemd-based seat permissions natively. 
+Dependencies have also been modernized, with robust <b>nlohmann-json</b> detection for the LAL subsystem.
+<h3>AppImage Path Resolution Fix</h3>
+A critical path resolution bug in the AppImage has been fixed. When installing stable libraries to 
+~/.local, the prefix is now correctly set to <b>~/.local/bin</b>, ensuring that all drivers and plugins 
+are located correctly.
+<h3>Improved Error Localisation</h3>
+Linuxtrack now distinguishes better between various USB errors, correctly identifying permission issues 
+and providing actionable advice in the GUI instead of misleading "udev rules not installed" messages.
+
 <h2>Linuxtrack 0.99.10</h2>
 <h3>SDK overhaul</h3>
 The SDK was overhauled to make it more programmer friendly; Linuxtrack GUI now contains SDK documentation and also two example programs are provided to make Linuxtrack's deployment easier. Another change is addition of "advanced" interface, allowing you to use Linuxtrack as a data source for your own "computer vision" applications.

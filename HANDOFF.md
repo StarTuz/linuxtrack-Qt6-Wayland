@@ -207,6 +207,17 @@ The project now compiles successfully on modern Linux with:
 - **AppImage Build Status:** Verified AppImage build process and identified face tracking decoding gaps.
 - **Version Bump:** Project version advanced to `1.1.15`.
 
+**Recent Additions (2026-01-29) [v1.2.0]:**
+
+- **EndeavourOS / Arch Modernization:**
+  - **Udev Rules:** Enhanced `99-TIR.rules` with `TAG+="uaccess"` for modern systemd-based permission handling.
+  - **Dependency Fix:** Added robust `nlohmann-json` detection to CMake, fixing compilation on systems where the header location differs.
+  - **Error Localization:** Improved libusb error reporting to distinguish between "permission denied" and other hardware errors, providing clearer troubleshooting in the GUI.
+- **AppImage Path Resolution Fix:**
+  - Resolved critical bug where `Prefix` pointing to `~/.local` caused broken library path resolution math (looking in `~/lib/` instead of `~/.local/lib/`).
+  - **Stable Installation:** `ltr_gui` now copies **all** drivers and data files (firmware manifests) to `~/.local` during X-Plane plugin installation, ensuring a complete and functional portable environment.
+- **Version Bump:** Project version advanced to `1.2.0`.
+
 **Recent Additions (2026-01-08) [v1.1.12]:**
 
 - **X-Plane Plugin Installation Fix:** Removed reference to non-existent `xlinuxtrack9_32.so` (32-bit plugin that was never built). The installer now correctly installs only the 64-bit plugin (`xlinuxtrack9.so`) to the `64/` directory, matching modern X-Plane 11/12 plugin structure.

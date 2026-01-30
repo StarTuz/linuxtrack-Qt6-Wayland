@@ -25,6 +25,8 @@ ltr_gui_autogen/timestamp: \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/CMakeLists.txt \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/buffering.cpp \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/buffering.h \
+	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/camera_view_widget.cpp \
+	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/camera_view_widget.h \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/device_setup.cpp \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/device_setup.h \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/downloading.cpp \
@@ -666,6 +668,7 @@ ltr_gui_autogen/timestamp: \
 	/usr/include/qt6/QtCore/qxptype_traits.h \
 	/usr/include/qt6/QtCore/qyieldcpu.h \
 	/usr/include/qt6/QtGui/QCloseEvent \
+	/usr/include/qt6/QtGui/QImage \
 	/usr/include/qt6/QtGui/QMatrix4x4 \
 	/usr/include/qt6/QtGui/QOpenGLFunctions \
 	/usr/include/qt6/QtGui/QRegularExpressionValidator \

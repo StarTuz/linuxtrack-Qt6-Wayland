@@ -7,6 +7,7 @@
   /home/startux/Code/linuxtrackfixed/linuxtrack/src/ltlib.h \
   /home/startux/Code/linuxtrackfixed/linuxtrack/src/ltlib_int.h \
   /home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/buffering.h \
+  /home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/camera_view_widget.h \
   /home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/tracker.h \
   /home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/window.h \
   /usr/include/alloca.h \
@@ -436,6 +437,7 @@
   /usr/include/qt6/QtCore/qxptype_traits.h \
   /usr/include/qt6/QtCore/qyieldcpu.h \
   /usr/include/qt6/QtGui/QCloseEvent \
+  /usr/include/qt6/QtGui/QImage \
   /usr/include/qt6/QtGui/QRgb \
   /usr/include/qt6/QtGui/QTransform \
   /usr/include/qt6/QtGui/qaction.h \
