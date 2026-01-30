@@ -218,6 +218,15 @@ The project now compiles successfully on modern Linux with:
   - **Stable Installation:** `ltr_gui` now copies **all** drivers and data files (firmware manifests) to `~/.local` during X-Plane plugin installation, ensuring a complete and functional portable environment.
 - **Version Bump:** Project version advanced to `1.3.0`.
 
+**Recent Additions (2026-01-29) [v1.3.1]:**
+
+- **32-bit Wine Auto-detection**: The build system now automatically detects if `winegcc -m32` can link 32-bit libraries. If missing (common on clean Arch/EndeavourOS installs), it gracefully disables 32-bit components while still building the 64-bit bridge, preventing build failures.
+- **Strengthened Test Harness**:
+  - Combined CI workflow now builds and validates AppImages on every push across Ubuntu, Arch, and Fedora.
+  - Added `scripts/smoke_test.sh` for local multi-distro verification using Docker.
+  - Improved `scripts/validate_appimage.sh` with explicit checks for Wine bridge binaries.
+- **Version Bump:** Project version advanced to `1.3.1`.
+
 **Recent Additions (2026-01-08) [v1.1.12]:**
 
 - **X-Plane Plugin Installation Fix:** Removed reference to non-existent `xlinuxtrack9_32.so` (32-bit plugin that was never built). The installer now correctly installs only the 64-bit plugin (`xlinuxtrack9.so`) to the `64/` directory, matching modern X-Plane 11/12 plugin structure.

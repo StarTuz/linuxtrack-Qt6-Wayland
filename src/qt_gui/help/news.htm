@@ -11,6 +11,16 @@
   <h1>What's new?</h1>
   This page summarizes the most notable changes in the Linuxtrack software.
 
+  <h2>Linuxtrack 1.3.1</h2>
+  <h3>Robust 32-bit Wine Support Detection</h3>
+  The build system now automatically detects if your system can compile 32-bit Wine components.
+  If multilib support is missing, it will gracefully skip those parts while still building the rest,
+  preventing build failures on clean Arch or EndeavourOS installs.
+  <h3>Strengthened CI and Validation</h3>
+  We've implemented a comprehensive test harness that automatically validates the AppImage across
+  multiple Linux distributions (Arch, Ubuntu, Fedora) on every update.
+  A new <b>smoke_test.sh</b> script is also available for local verification.
+
   <h2>Linuxtrack 1.3.0</h2>
   <h3>EndeavourOS / Arch Modernization</h3>
   This release brings major compatibility improvements for modern Arch-based distributions like EndeavourOS.
