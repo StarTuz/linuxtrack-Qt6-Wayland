@@ -48,7 +48,10 @@ CRITICAL_FILES=(
     "usr/share/linuxtrack/lal_manifest.json"
     "usr/lib/linuxtrack/NPClient.dll.so"
     "usr/lib/linuxtrack/FreeTrackClient.dll.so"
-)
+    "usr/share/linuxtrack/sphere.obj"
+    "usr/share/linuxtrack/sparow_opaq.obj"
+    "usr/share/linuxtrack/xm8_detail.png"
+ )
 
 ERRORS=0
 for f in "${CRITICAL_FILES[@]}"; do

@@ -52,10 +52,15 @@ if [ ! -f "$APP_DIR/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg" ] && [ 
     cp src/$APP_NAME.svg "$APP_DIR/usr/share/icons/hicolor/scalable/apps/"
 fi
 
-# Copy custom AppRun script that sets environment before Qt loads
-echo "--> Installing custom AppRun script..."
 cp packaging/appimage/AppRun "$APP_DIR/AppRun"
 chmod +x "$APP_DIR/AppRun"
+
+# 2b. Ensure Model Data is present
+echo "--> Verifying model data in AppDir..."
+mkdir -p "$APP_DIR/usr/share/linuxtrack"
+# Copy from source just in case install missed them or used wrong path
+cp -v src/qt_gui/*.obj "$APP_DIR/usr/share/linuxtrack/" || true
+cp -v src/qt_gui/sphere.png src/qt_gui/xm8_detail.png "$APP_DIR/usr/share/linuxtrack/" || true
 
 # 3. Download LinuxDeploy tools (if not present)
 TOOLS_DIR="packaging/tools"
