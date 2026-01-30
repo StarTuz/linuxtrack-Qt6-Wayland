@@ -68,22 +68,90 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_WINE32=OFF
           make -j$(nproc)
 
-#      - name: Generate AppImage
-#        env:
-#          BUILD_DIR: "build"
-#          APP_DIR: "AppDir"
-#        run: |
-#          chmod +x packaging/appimage/make_appimage.sh
-#          # The script creates AppDir, so we run it, then if we needed to inject we would.
-#          # But it's better if make_appimage.sh handles dist32.
-#          ./packaging/appimage/make_appimage.sh
+      - name: Generate AppImage
+        env:
+          BUILD_DIR: "build"
+          APP_DIR: "AppDir"
+          NO_STRIP: "1"
+        run: |
+          chmod +x packaging/appimage/make_appimage.sh
+          bash packaging/appimage/make_appimage.sh
+          # Rename to a standard name for easier handling in next job
+          mv *.AppImage Linuxtrack-latest-x86_64.AppImage
 
-#      - name: Upload AppImage
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: Linuxtrack-x86_64.AppImage
-#          path: "*.AppImage"
-#          if-no-files-found: error
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linuxtrack-AppImage
+          path: Linuxtrack-latest-x86_64.AppImage
+
+  validate-appimage:
+    needs: build-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.distro }}
+    name: Validate (${{ matrix.distro }})
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download AppImage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Linuxtrack-AppImage
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2 libxcb1 libxcb-cursor0 file
+
+      - name: Run validation script
+        run: |
+          chmod +x scripts/validate_appimage.sh
+          ./scripts/validate_appimage.sh Linuxtrack-latest-x86_64.AppImage
+
+  validate-appimage-docker:
+    needs: build-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [archlinux, fedora]
+    runs-on: ubuntu-latest
+    name: Validate (${{ matrix.distro }} Container)
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download AppImage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Linuxtrack-AppImage
+
+      - name: Run smoke test (Docker)
+        run: |
+          chmod +x scripts/validate_appimage.sh
+          
+          # Manually run the docker test command from smoke_test.sh logic
+          APPIMAGE_NAME="Linuxtrack-latest-x86_64.AppImage"
+          VALIDATE_SCRIPT="scripts/validate_appimage.sh"
+          
+          DEP_CMD=""
+          if [[ "${{ matrix.distro }}" == "archlinux" ]]; then
+            DEP_CMD="pacman -Syu --noconfirm fuse2 libxcb xcb-util-cursor file"
+          else
+            DEP_CMD="dnf install -y fuse fuse-libs libxcb file findutils"
+          fi
+
+          docker run --privileged --rm \
+            -v "$(pwd)/$APPIMAGE_NAME:/app/$APPIMAGE_NAME" \
+            -v "$(pwd)/$VALIDATE_SCRIPT:/app/validate_appimage.sh" \
+            -w /app \
+            "${{ matrix.distro }}:latest" \
+            bash -c "$DEP_CMD && ./validate_appimage.sh $APPIMAGE_NAME"
 
   build-arch:
     runs-on: ubuntu-latest

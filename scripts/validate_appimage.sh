@@ -42,6 +42,8 @@ CRITICAL_FILES=(
     "usr/lib/linuxtrack/libltr.so"
     "usr/lib/linuxtrack/liblinuxtrack.so"
     "usr/share/linuxtrack/lal_manifest.json"
+    "usr/lib/linuxtrack/NPClient.dll.so"
+    "usr/lib/linuxtrack/FreeTrackClient.dll.so"
 )
 
 ERRORS=0
