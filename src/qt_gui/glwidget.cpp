@@ -191,6 +191,14 @@ void GLWidget::initializeGL() {
   std::cerr << "GLWidget initializeGL: GL Version: "
             << (glVersion ? glVersion : "NULL") << "\n";
 
+  if (!glVersion) {
+    std::cerr << "CRITICAL: OpenGL context creation failed (glGetString "
+                 "returned NULL)!\n";
+    // We can't easily show a message box from initializeGL/paintGL in some
+    // scenarios, but we'll at least ensure we don't try to load shaders.
+    return;
+  }
+
   // Create Shader Program
   program = std::make_unique<QOpenGLShaderProgram>();
 
@@ -259,6 +267,10 @@ void GLWidget::paintGL() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   if (!program || !program->isLinked()) {
+    // If shader failed, draw a colored background so we know it's not JUST a
+    // black hole
+    glClearColor(0.8f, 0.2f, 0.2f, 1.0f); // Reddish background for error
+    glClear(GL_COLOR_BUFFER_BIT);
     return;
   }
   if (drawCommands.empty()) {

@@ -100,12 +100,11 @@ export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
 export ARCH=x86_64
 
 # Set Qt environment for proper plugin discovery
-export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines;xcbglintegrations/libqxcb-glx-integration.so;xcbglintegrations/libqxcb-egl-integration.so"
+export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines;xcbglintegrations/libqxcb-glx-integration.so;xcbglintegrations/libqxcb-egl-integration.so;imageformats;wayland-graphics-integration-client"
 
 # WARNING: Do NOT bundle system graphics libraries. They must come from the host system.
-# linuxdeploy usually avoids them, but we make sure by moving them out if they sneak in,
-# or by explicitly excluding them if the tool supports it (plugin-qt doesn't always listen to -e).
-# We relies on linuxdeploy's default blacklist.
+# linuxdeploy usually avoids them, but we make sure by moving them out if they sneak in.
+# These MUST be loaded from the host system to match the VGA driver.
 
 # Exclude optional plugins that have problematic dependencies on Arch
 # libqsqlibase.so requires libfbclient.so.2 (Firebird)
@@ -134,5 +133,27 @@ done
     --plugin qt \
     --output appimage
 
-echo "--> Done! AppImage created."
+# 5. Cleanup (Post-bundling)
+# Remove libraries that MUST NOT be bundled to avoid driver conflicts
+echo "--> Purging system graphics libraries from AppDir to ensure host driver usage..."
+find "$APP_DIR" -name "libGL.so*" -delete
+find "$APP_DIR" -name "libEGL.so*" -delete
+find "$APP_DIR" -name "libgbm.so*" -delete
+find "$APP_DIR" -name "libdrm.so*" -delete
+find "$APP_DIR" -name "libxcb-dri*" -delete
+find "$APP_DIR" -name "libvulkan.so*" -delete
+
+# Re-run linuxdeploy just to update the AppImage with the purged dir
+# (or just let the first run succeed and output the file)
+# Note: linuxdeploy creates the AppImage AFTER running plugins.
+# We might need to run linuxdeploy WITHOUT --output first, purge, then create.
+
+echo "--> Final generation pass..."
+"$LINUXDEPLOY" --appdir "$APP_DIR" \
+    --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
+    --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
+    $LIBRARY_FLAGS \
+    --output appimage
+
+echo "--> Done! AppImage created and purged of system GL libs."
 ls -lh *.AppImage
