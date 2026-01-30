@@ -1,24 +1,23 @@
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <errno.h>
-#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#include "ltr_srv_comm.h"
 #include "ipc_utils.h"
+#include "ltr_srv_comm.h"
 
 //==============Protocol dependent part==================
 
-int ltr_int_send_message(int socket, uint32_t cmd, uint32_t data)
-{
+int ltr_int_send_message(int socket, uint32_t cmd, uint32_t data) {
   message_t msg;
   memset(&msg, 0, sizeof(message_t));
   msg.cmd = cmd;
@@ -27,25 +26,24 @@ int ltr_int_send_message(int socket, uint32_t cmd, uint32_t data)
   return ltr_int_socket_send(socket, &msg, sizeof(message_t));
 }
 
-int ltr_int_send_message_w_str(int socket, uint32_t cmd, uint32_t data, char *str)
-{
+int ltr_int_send_message_w_str(int socket, uint32_t cmd, uint32_t data,
+                               char *str) {
   message_t msg;
   memset(&msg, 0, sizeof(message_t));
   msg.cmd = cmd;
   msg.data = data;
-  if(str != NULL){
+  if (str != NULL) {
     strncpy(&(msg.str[0]), str, 500);
-    msg.str[499] = '\0'; //in case the str is longer than 500 bytes,
-                         //  the copy would not be null terminated!
-  }else{
+    msg.str[499] = '\0'; // in case the str is longer than 500 bytes,
+                         //   the copy would not be null terminated!
+  } else {
     msg.str[0] = '\0';
   }
-  //printf("Sending string %s\n", msg.str);
+  // printf("Sending string %s\n", msg.str);
   return ltr_int_socket_send(socket, &msg, sizeof(message_t));
 }
 
-int ltr_int_send_data(int socket, const linuxtrack_full_pose_t *data)
-{
+int ltr_int_send_data(int socket, const linuxtrack_full_pose_t *data) {
   message_t msg;
   memset(&msg, 0, sizeof(message_t));
   msg.cmd = CMD_POSE;
@@ -54,9 +52,10 @@ int ltr_int_send_data(int socket, const linuxtrack_full_pose_t *data)
   return ltr_int_socket_send(socket, &msg, sizeof(message_t));
 }
 
-int ltr_int_send_param_update(int socket, uint32_t axis, uint32_t param, float value)
-{
+int ltr_int_send_param_update(int socket, uint32_t axis, uint32_t param,
+                              float value) {
   message_t msg;
+  memset(&msg, 0, sizeof(message_t));
   msg.cmd = CMD_PARAM;
   msg.data = 0;
   msg.param.axis_id = axis;
@@ -65,19 +64,14 @@ int ltr_int_send_param_update(int socket, uint32_t axis, uint32_t param, float v
   return ltr_int_socket_send(socket, &msg, sizeof(message_t));
 }
 
-const char *ltr_int_master_socket_name()
-{
+const char *ltr_int_master_socket_name() {
   static const char main_socket[] = "/tmp/ltr_m_sock";
   return main_socket;
 }
 
-const char *ltr_int_slave_socket_name()
-{
+const char *ltr_int_slave_socket_name() {
   static const char slave_socket[] = "/tmp/ltr_s_sock%02d";
   return slave_socket;
 }
 
-int ltr_int_max_slave_sockets()
-{
-  return 99;
-}
+int ltr_int_max_slave_sockets() { return 99; }

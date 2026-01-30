@@ -140,22 +140,11 @@ static bool ltr_int_process_message(int l_master_uplink) {
   case CMD_NOP:
     break;
   case CMD_POSE:
-    // printf("Have new pose!\n");
-    // printf(">>>>%f %f %f\n", msg.pose.raw_yaw, msg.pose.raw_pitch,
-    // msg.pose.raw_tz);
     ltr_int_postprocess_axes(axes, &(msg.pose.pose), &unfiltered);
-    // printf(">>>>%f %f %f\n", msg.pose.yaw, msg.pose.pitch, msg.pose.tz);
-    // printf("Raw center: %f  %f  %f\n", msg.pose.pose.raw_tx,
-    // msg.pose.pose.raw_ty, msg.pose.pose.raw_tz); printf("Raw angles: %f  %f
-    // %f\n", msg.pose.pose.raw_pitch, msg.pose.pose.raw_yaw,
-    // msg.pose.pose.raw_roll);
 
     com = mmm.data;
     ltr_int_lockSemaphore(mmm.sem);
-    // printf("STATUS: %d\n", msg.pose.status);
     if (msg.pose.pose.status == RUNNING) {
-      // printf("PASSING TO SHM: %f %f %f\n", msg.pose.yaw, msg.pose.pitch,
-      // msg.pose.tz);
       com->full_pose = msg.pose;
       com->full_pose.prev_pose = prev_filtered_pose;
       prev_filtered_pose = msg.pose.pose;
@@ -171,10 +160,9 @@ static bool ltr_int_process_message(int l_master_uplink) {
     }
     break;
   case CMD_PARAM:
-    // printf("Changing %s of %s to %f!!!\n",
-    // ltr_int_axis_param_get_desc(msg.param.param_id),
-    //   ltr_int_axis_get_desc(msg.param.axis_id), msg.param.flt_val);
     if (msg.param.axis_id == MISC) {
+      ltr_int_log_message("SLAVE: Received MISC param %d -> %f\n",
+                          msg.param.param_id, msg.param.flt_val);
       switch (msg.param.param_id) {
       case MISC_ALTER:
         ltr_int_set_use_alter(msg.param.flt_val > 0.5f);
@@ -189,23 +177,30 @@ static bool ltr_int_process_message(int l_master_uplink) {
         ltr_int_set_focal_length(msg.param.flt_val);
         break;
       default:
-        ltr_int_log_message("Wrong misc param: %d\n", msg.param.param_id);
+        ltr_int_log_message("SLAVE: Wrong misc param: %d\n",
+                            msg.param.param_id);
         return false;
         break;
       }
     } else if (msg.param.param_id == AXIS_ENABLED ||
                msg.param.param_id == AXIS_INVERTED ||
                msg.param.param_id == AXIS_ONE_EURO_ENABLED) {
+      ltr_int_log_message("SLAVE: Received axis %d bool param %d -> %d\n",
+                          msg.param.axis_id, msg.param.param_id,
+                          msg.param.flt_val > 0.5f);
       ltr_int_set_axis_bool_param(axes, msg.param.axis_id, msg.param.param_id,
                                   msg.param.flt_val > 0.5f);
     } else {
+      ltr_int_log_message("SLAVE: Received axis %d float param %d -> %f\n",
+                          msg.param.axis_id, msg.param.param_id,
+                          msg.param.flt_val);
       ltr_int_set_axis_param(axes, msg.param.axis_id, msg.param.param_id,
                              msg.param.flt_val);
     }
     break;
   case CMD_PROFILE_CHANGE:
     // Live profile switching: reinitialize axes with new profile
-    ltr_int_log_message("Slave switching to profile '%s'!\n", msg.str);
+    ltr_int_log_message("SLAVE: Switching to profile '%s'!\n", msg.str);
     ltr_int_close_axes(&axes);
     free(profile_name);
     profile_name = ltr_int_my_strdup(msg.str);
@@ -281,7 +276,8 @@ static void ltr_int_slave_main_loop() {
   bool recenter = false;
   bool usb_reset = false;
   while (!quit_flag) {
-    if ((com->cmd != NOP_CMD) || com->recenter || com->notify || com->usb_reset) {
+    if ((com->cmd != NOP_CMD) || com->recenter || com->notify ||
+        com->usb_reset) {
       ltr_int_lockSemaphore(mmm.sem);
       cmd = (ltr_cmd)com->cmd;
       com->cmd = NOP_CMD;
