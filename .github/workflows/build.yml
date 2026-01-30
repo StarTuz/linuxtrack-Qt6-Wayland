@@ -96,6 +96,7 @@ jobs:
     steps:
       - name: Install base tools
         run: |
+          echo -e "[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
           pacman -Syu --noconfirm base-devel git cmake ninja
 
       - name: Checkout code
@@ -107,7 +108,8 @@ jobs:
             libusb zlib v4l-utils liblo opencv \
             qt6-base qt6-tools nlohmann-json \
             mxml wine wget file onnxruntime \
-            glu libx11 mesa
+            glu libx11 mesa lib32-glibc lib32-gcc-libs \
+            mingw-w64-gcc
 
       - name: Build
         run: |
