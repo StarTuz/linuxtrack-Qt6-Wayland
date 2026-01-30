@@ -858,3 +858,52 @@ If editing `ltr_hotkeys.ini` manually, use these decimal codes:
 | **PageUp** | 33 | **PageDn** | 34 |
 
 *End of Handoff Document*
+
+## 10. Post-Mortem: 3D Cockpit Transparency (2026-01-30)
+
+### Status: ✅ FIXED
+
+The 3D cockpit view was showing desktop background bleeding through due to the OpenGL framebuffer's alpha channel being composited with the desktop by the window manager.
+
+### Failed Approaches (Do NOT Retry)
+
+1. **Force Alpha 1.0 in Fragment Shader** (`fragColor.a = 1.0`)
+   - **Result:** Broke sky/mountain rendering - these rely on internal alpha blending.
+2. **Texture format conversion (RGBA -> RGB)**
+   - **Result:** Broke texture loading, caused missing geometry.
+3. **`setAlphaBufferSize(0)` alone**
+   - **Result:** Ineffective - compositors can ignore this hint.
+
+### Working Solution (Commit 1b0e62a)
+
+The fix applies multiple layers of defense while preserving internal alpha blending:
+
+1. **Widget attributes** in `GLWidget` constructor:
+   ```cpp
+   setAttribute(Qt::WA_OpaquePaintEvent, true);
+   setAttribute(Qt::WA_NoSystemBackground, true);
+   ```
+
+2. **Surface format** in `main.cpp`:
+   ```cpp
+   format.setAlphaBufferSize(0);
+   ```
+
+3. **Force clear alpha** in `initializeGL()`:
+   ```cpp
+   glClearColor(c.redF(), c.greenF(), c.blueF(), 1.0f);
+   ```
+
+4. **Post-render alpha clear** at end of `paintGL()` (the key fix):
+   ```cpp
+   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);  // Only write alpha
+   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+   glClear(GL_COLOR_BUFFER_BIT);
+   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);     // Restore
+   ```
+
+This preserves all RGB values and internal alpha blending for sky/mountains/glass, but overwrites the framebuffer's alpha channel to 1.0 so the compositor sees an opaque surface.
+
+### Key Insight
+
+The fragment shader MUST output `col.a` (not `1.0`) to preserve internal scene transparency. The compositor bleed-through is fixed by clearing alpha AFTER rendering, not during.
