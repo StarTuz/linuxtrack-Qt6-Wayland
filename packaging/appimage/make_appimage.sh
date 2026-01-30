@@ -93,7 +93,8 @@ fi
 # --plugin qt: use Qt plugin to bundle Qt libs and plugins
 # --output appimage: create the actual file
 # Note: we use LD_LIBRARY_PATH to help linuxdeploy find our internal libraries
-export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib:$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
+# We only include our specific subdirectory to avoid confusing linuxdeploy-plugin-qt
+export LD_LIBRARY_PATH="$(pwd)/$APP_DIR/usr/lib/linuxtrack:$LD_LIBRARY_PATH"
 
 # We must set ARCH because we bundle both 32-bit and 64-bit libraries
 export ARCH=x86_64
@@ -101,7 +102,13 @@ export ARCH=x86_64
 # Set Qt environment for proper plugin discovery
 export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines"
 
-# NOTE: No library exclusions for now - accept larger bundle for stability
+# Exclude optional plugins that have problematic dependencies on Arch
+# libqsqlibase.so requires libfbclient.so.2 (Firebird)
+# libqsqloci.so requires Oracle client libraries
+# kimg_jxr.so may require libjxrglue.so.0 on some systems
+export QT_INSTALL_SQLDRIVERS="/usr/lib/qt6/plugins/sqldrivers/libqsqlite.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlpsql.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlodbc.so:/usr/lib/qt6/plugins/sqldrivers/libqsqlmysql.so"
+
+# Note: No library exclusions for now - accept larger bundle for stability
 # Once GUI is stable, exclusions can be re-added incrementally
 
 "$LINUXDEPLOY" --appdir "$APP_DIR" \

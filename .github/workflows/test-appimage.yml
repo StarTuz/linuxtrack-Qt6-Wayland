@@ -1,0 +1,105 @@
+name: Test AppImage
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  test-ubuntu-22:
+    name: Test on Ubuntu 22.04
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2 libxcb1 libxcb-cursor0
+      
+      - name: Download AppImage from release
+        if: github.event_name == 'release'
+        run: |
+          wget -q "${{ github.event.release.assets[0].browser_download_url }}" -O Linuxtrack.AppImage
+          chmod +x Linuxtrack.AppImage
+      
+      - name: Build AppImage (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # For manual triggers, we need to build first
+          sudo apt-get install -y build-essential cmake ninja-build \
+            libmxml-dev libusb-1.0-0-dev zlib1g-dev \
+            libv4l-dev liblo-dev libopencv-dev \
+            qt6-base-dev qt6-tools-dev libqt6opengl6-dev \
+            nlohmann-json3-dev libonnxruntime-dev
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          make -j$(nproc)
+          cd ..
+          export BUILD_DIR=build
+          bash packaging/appimage/make_appimage.sh || echo "AppImage build may have warnings"
+          mv *.AppImage Linuxtrack.AppImage || true
+      
+      - name: Validate AppImage
+        run: |
+          chmod +x scripts/validate_appimage.sh
+          ./scripts/validate_appimage.sh Linuxtrack.AppImage
+
+  test-arch:
+    name: Test on Arch Linux
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm fuse2 libxcb xcb-util-cursor file
+      
+      - name: Download AppImage from release
+        if: github.event_name == 'release'
+        run: |
+          pacman -S --noconfirm wget
+          wget -q "${{ github.event.release.assets[0].browser_download_url }}" -O Linuxtrack.AppImage
+          chmod +x Linuxtrack.AppImage
+      
+      - name: Use existing AppImage (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "For manual triggers, please upload an AppImage artifact first"
+          echo "Or run the full build workflow"
+          exit 0
+      
+      - name: Validate AppImage
+        if: github.event_name == 'release'
+        run: |
+          chmod +x scripts/validate_appimage.sh
+          ./scripts/validate_appimage.sh Linuxtrack.AppImage
+
+  test-fedora:
+    name: Test on Fedora
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          dnf install -y fuse fuse-libs libxcb file findutils
+      
+      - name: Download AppImage from release
+        if: github.event_name == 'release'
+        run: |
+          dnf install -y wget
+          wget -q "${{ github.event.release.assets[0].browser_download_url }}" -O Linuxtrack.AppImage
+          chmod +x Linuxtrack.AppImage
+      
+      - name: Validate AppImage
+        if: github.event_name == 'release'
+        run: |
+          chmod +x scripts/validate_appimage.sh
+          ./scripts/validate_appimage.sh Linuxtrack.AppImage
