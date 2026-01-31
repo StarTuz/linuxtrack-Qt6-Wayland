@@ -180,12 +180,13 @@ jobs:
             lib32-zlib lib32-libusb lib32-libx11 lib32-mesa \
             lib32-libxml2 lib32-gnutls lib32-glu \
             lib32-freetype2 lib32-fontconfig lib32-attr \
+            lib32-glibc lib32-gcc-libs \
             mingw-w64-gcc
 
       - name: Build
         run: |
           mkdir build && cd build
-          export LIBRARY_PATH=/usr/lib32/wine/i386-unix:/usr/lib/wine/i386-unix:$LIBRARY_PATH
+          export LIBRARY_PATH=/usr/lib/wine/i386-windows:/usr/lib/wine/x86_64-unix:$LIBRARY_PATH
           cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
           make -j$(nproc)
 
