@@ -117,7 +117,6 @@ GLWidget::GLWidget(QWidget *parent)
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   trolltechPurple = QColor::fromRgbF(0.1, 0.1, 0.15); // Dark blue-gray
-  setAttribute(Qt::WA_NativeWindow);
   setAttribute(Qt::WA_OpaquePaintEvent);
   setMinimumSize(320, 240);
 #else
@@ -257,6 +256,10 @@ void GLWidget::resizeGL(int width, int height) {
 void GLWidget::paintGL() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  if (!isValid()) {
+    return;
+  }
 
   if (!program || !program->isLinked()) {
     return;
