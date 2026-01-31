@@ -1,6 +1,14 @@
 #ifndef LTR_MODEL__H
 #define LTR_MODEL__H
 
+#include <QObject>
+#include <QString>
+#include <QtGlobal>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QRegularExpressionValidator>
+#else
+#include <QRegExpValidator>
+#endif
 #include "ui_cap_edit.h"
 #include "ui_cap_tweaking.h"
 #include "ui_clip_edit.h"
@@ -8,10 +16,6 @@
 #include "ui_model_creation.h"
 #include "ui_model_edit.h"
 #include "ui_single_edit.h"
-#include <QObject>
-#include <QRegularExpressionValidator>
-#include <QString>
-#include <QtGlobal>
 
 typedef enum {
   MDL_1PT,
@@ -44,7 +48,11 @@ private:
   void removeEditor();
   void activateEditor(QWidget *editor);
   Ui::ModelCreation ui;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   QRegularExpressionValidator *validator;
+#else
+  QRegExpValidator *validator;
+#endif
   QWidget *modelEditor;
 };
 

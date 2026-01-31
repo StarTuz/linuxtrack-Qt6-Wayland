@@ -436,32 +436,6 @@ QString PrefProxy::getDataPath(QString file) {
                                             appPath.toUtf8().constData());
   QString res = QString::fromUtf8(path);
   free(path);
-
-  // Fallback for development/build directory or unusual AppImage layouts
-  if (!QFile::exists(res)) {
-    QStringList candidates;
-    candidates << appPath + QString::fromUtf8("/../") + file
-               << appPath + QString::fromUtf8("/../share/linuxtrack/") + file
-               << appPath + QString::fromUtf8("/../../src/") + file
-               << appPath + QString::fromUtf8("/../../src/qt_gui/") + file
-               << appPath + QString::fromUtf8("/../../../src/") + file
-               << appPath + QString::fromUtf8("/../../../src/qt_gui/") + file;
-
-    if (!appDirEnv.isEmpty()) {
-      candidates << appDirEnv + QString::fromUtf8("/usr/share/linuxtrack/") +
-                        file;
-    }
-
-    foreach (const QString &candidate, candidates) {
-      std::cerr << "read_obj: Checking candidate path: "
-                << candidate.toStdString() << " ... ";
-      if (QFile::exists(candidate)) {
-        std::cerr << "FOUND!\n";
-        return candidate;
-      }
-      std::cerr << "not found.\n";
-    }
-  }
   return res;
   /*
     QString appPath = QApplication::applicationDirPath();

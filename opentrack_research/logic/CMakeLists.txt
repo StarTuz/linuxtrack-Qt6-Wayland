@@ -1,0 +1,6 @@
+otr_module(logic BIN)
+target_link_libraries(${self} PRIVATE opentrack-spline)
+if(WIN32)
+    target_link_libraries(${self} PRIVATE winmm)
+endif()
+target_link_libraries(${self} PRIVATE opentrack-input)

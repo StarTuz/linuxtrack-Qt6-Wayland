@@ -11,7 +11,6 @@
 #include <iostream>
 #include <ltlib.h>
 #include <unistd.h>
-#include <utils.h>
 
 Tracker *Tracker::trr = nullptr;
 char *com_fname = nullptr;
@@ -113,48 +112,28 @@ void Tracker::signalNewPose(linuxtrack_full_pose_t *full_pose) {
 }
 
 void Tracker::signalNewSlave(const char *name) {
-  QString slaveName = QString::fromUtf8(name);
-  QString targetProfile = currentProfile;
-
-  ltr_int_log_message(
-      "GUI: New slave connected: '%s' (current GUI profile: '%s')\n", name,
-      targetProfile.toUtf8().constData());
-
-  // If slave registered with a different name than current profile, switch it!
-  if (slaveName != targetProfile) {
-    ltr_int_log_message("GUI: Re-routing slave '%s' -> '%s'\n",
-                        slaveName.toUtf8().constData(),
-                        targetProfile.toUtf8().constData());
-    ltr_int_change_profile(slaveName.toUtf8().constData(),
-                           targetProfile.toUtf8().constData());
-  }
-
-  // Sync the *current* active settings to the slave
-  // We use this->axes because it contains live changes not yet saved to disk
-  QByteArray profileNameArray = targetProfile.toUtf8();
-  const char *pName = profileNameArray.constData();
-
+  ltr_axes_t tmp_axes = LTR_AXES_T_INITIALIZER;
+  ltr_int_init_axes(&tmp_axes, name);
   for (int i = PITCH; i <= TZ; ++i) {
-    ltr_int_change(pName, i, AXIS_ENABLED,
-                   ltr_int_get_axis_bool_param(axes, (axis_t)i, AXIS_ENABLED)
-                       ? 1.0f
-                       : 0.0f);
-    ltr_int_change(pName, i, AXIS_INVERTED,
-                   ltr_int_get_axis_bool_param(axes, (axis_t)i, AXIS_INVERTED)
-                       ? 1.0f
-                       : 0.0f);
+    ltr_int_change(
+        name, i, AXIS_ENABLED,
+        ltr_int_get_axis_bool_param(tmp_axes, (axis_t)i, AXIS_ENABLED) ? 1.0
+                                                                       : 0.0);
+    ltr_int_change(
+        name, i, AXIS_INVERTED,
+        ltr_int_get_axis_bool_param(tmp_axes, (axis_t)i, AXIS_INVERTED) ? 1.0
+                                                                        : 0.0);
     for (int j = AXIS_DEADZONE; j <= AXIS_FILTER; ++j) {
-      ltr_int_change(pName, i, j,
-                     ltr_int_get_axis_param(axes, (axis_t)i, (axis_param_t)j));
+      ltr_int_change(
+          name, i, j,
+          ltr_int_get_axis_param(tmp_axes, (axis_t)i, (axis_param_t)j));
     }
   }
-  ltr_int_change(nullptr, MISC, MISC_LEGR, ltr_int_use_oldrot() ? 1.0f : 0.0f);
-  ltr_int_change(nullptr, MISC, MISC_ALTER, ltr_int_use_alter() ? 1.0f : 0.0f);
-  ltr_int_change(nullptr, MISC, MISC_ALIGN,
-                 ltr_int_do_tr_align() ? 1.0f : 0.0f);
+  ltr_int_change(nullptr, MISC, MISC_LEGR, ltr_int_use_oldrot() ? 1.0 : 0.0);
+  ltr_int_change(nullptr, MISC, MISC_ALTER, ltr_int_use_alter() ? 1.0 : 0.0);
+  ltr_int_change(nullptr, MISC, MISC_ALIGN, ltr_int_do_tr_align() ? 1.0 : 0.0);
   ltr_int_change(nullptr, MISC, MISC_FOCAL_LENGTH, ltr_int_get_focal_length());
-
-  ltr_int_log_message("GUI: Sync to slave '%s' complete.\n", pName);
+  ltr_int_close_axes(&tmp_axes);
 }
 
 void Tracker::setProfile(QString p) {

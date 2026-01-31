@@ -1,0 +1,5 @@
+otr_module(options NO-COMPAT BIN)
+if(NOT WIN32 AND NOT APPLE)
+    target_link_libraries(opentrack-options PRIVATE rt)
+endif()
+target_link_libraries(opentrack-options PRIVATE opentrack-compat)

@@ -29,7 +29,7 @@
 
 #include <libv4l2.h>
 
-#define NUM_OF_BUFFERS 4
+#define NUM_OF_BUFFERS 8
 typedef struct {
   void *start;
   size_t length;
@@ -59,7 +59,6 @@ static webcam_info wc_info;
 
 int ltr_int_tracker_wakeup();
 int ltr_int_tracker_suspend();
-int ltr_int_tracker_pause();
 
 static char *get_webcam_id(int fd) {
   struct v4l2_capability capability;
@@ -464,44 +463,6 @@ static bool set_stream_params() {
   return true;
 }
 
-static bool set_exposure_params() {
-  struct v4l2_control ctrl;
-  
-  bool auto_exp = ltr_int_wc_get_auto_exposure();
-  
-  // Set Auto-Exposure Mode
-  ctrl.id = V4L2_CID_EXPOSURE_AUTO;
-  // V4L2_EXPOSURE_AUTO = 0, V4L2_EXPOSURE_MANUAL = 1
-  // Some webcams use V4L2_EXPOSURE_APERTURE_PRIORITY (3) for standard auto. 
-  // We'll try Manual (1) or Auto (3 - Aperture Priority is common for UVC).
-  // Standard V4L2: 0=Auto, 1=Manual, 2=Shutter Prio, 3=Aperture Prio.
-  // Many UVC cams map Auto to 3. Let's try 3 for Auto, 1 for Manual.
-  ctrl.value = auto_exp ? V4L2_EXPOSURE_APERTURE_PRIORITY : V4L2_EXPOSURE_MANUAL;
-  
-  if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_S_CTRL, &ctrl)) {
-      // Fallback: Try V4L2_EXPOSURE_AUTO (0) if 3 fails
-      ctrl.value = auto_exp ? V4L2_EXPOSURE_AUTO : V4L2_EXPOSURE_MANUAL;
-      if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_S_CTRL, &ctrl)) {
-         ltr_int_log_message("Could not set Auto Exposure mode to %d\n", ctrl.value);
-         // Don't fail hard, some cams might be weird.
-      }
-  }
-  
-  // If Manual, set the absolute exposure value
-  if (!auto_exp) {
-      int exp_val = ltr_int_wc_get_exposure();
-      ctrl.id = V4L2_CID_EXPOSURE_ABSOLUTE;
-      ctrl.value = exp_val;
-      if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_S_CTRL, &ctrl)) {
-          ltr_int_log_message("Could not set Exposure Absolute to %d\n", exp_val);
-      } else {
-          ltr_int_log_message("Exposure set to %d\n", exp_val);
-      }
-  }
-  
-  return true;
-}
-
 /*
  * Sends request to driver for mmap-able buffers
  * Uses constant NUM_OF_BUFFERS
@@ -634,7 +595,6 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
     v4l2_close(fd);
     return -1;
   }
-  set_exposure_params(); // Apply exposure settings
   if (setup_streaming_buffers() != true) {
     ltr_int_log_message("Couldn't initialize mmap!\n");
     v4l2_close(fd);
@@ -664,7 +624,6 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
 
 int ltr_int_tracker_close() {
   ltr_int_log_message("Webcam shutting down!\n");
-  ltr_int_tracker_pause();
   release_buffers();
   free(wc_info.bw_frame);
   v4l2_close(wc_info.fd);
@@ -764,14 +723,6 @@ static void get_bw_image(unsigned char *source_buf, unsigned char *dest_buf,
         dest_buf[cntr1] = 0;
       }
     }
-  } else if (wc_info.fourcc == *(__u32 *)"MJPG") {
-#ifdef OPENCV
-    ltr_int_mjpg_to_gray(source_buf, bytes_used, dest_buf, wc_info.w, wc_info.h);
-#else
-    for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
-      dest_buf[cntr] = 0;
-    }
-#endif
   } else {
     for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
       dest_buf[cntr] = 0;

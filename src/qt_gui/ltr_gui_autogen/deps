@@ -94,10 +94,6 @@ ltr_gui_autogen/timestamp: \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/tir_prefs.h \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/tracker.cpp \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/tracker.h \
-	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/udp_bridge.cpp \
-	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/udp_bridge.h \
-	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/udp_settings.cpp \
-	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/udp_settings.h \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/webcam_ft_prefs.cpp \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/webcam_ft_prefs.h \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/webcam_info.cpp \
@@ -732,13 +728,11 @@ ltr_gui_autogen/timestamp: \
 	/usr/include/qt6/QtGui/qvector4d.h \
 	/usr/include/qt6/QtGui/qvectornd.h \
 	/usr/include/qt6/QtGui/qwindowdefs.h \
-	/usr/include/qt6/QtNetwork/QHostAddress \
 	/usr/include/qt6/QtNetwork/QNetworkAccessManager \
 	/usr/include/qt6/QtNetwork/QNetworkReply \
 	/usr/include/qt6/QtNetwork/QNetworkRequest \
 	/usr/include/qt6/QtNetwork/QSslConfiguration \
 	/usr/include/qt6/QtNetwork/QSslPreSharedKeyAuthenticator \
-	/usr/include/qt6/QtNetwork/QUdpSocket \
 	/usr/include/qt6/QtNetwork/qabstractsocket.h \
 	/usr/include/qt6/QtNetwork/qhostaddress.h \
 	/usr/include/qt6/QtNetwork/qhttpheaders.h \
@@ -755,7 +749,6 @@ ltr_gui_autogen/timestamp: \
 	/usr/include/qt6/QtNetwork/qtnetwork-config.h \
 	/usr/include/qt6/QtNetwork/qtnetworkexports.h \
 	/usr/include/qt6/QtNetwork/qtnetworkglobal.h \
-	/usr/include/qt6/QtNetwork/qudpsocket.h \
 	/usr/include/qt6/QtOpenGL/QOpenGLBuffer \
 	/usr/include/qt6/QtOpenGL/QOpenGLShaderProgram \
 	/usr/include/qt6/QtOpenGL/QOpenGLTexture \
@@ -905,7 +898,6 @@ ltr_gui_autogen/timestamp: \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/scurve.ui \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/single_edit.ui \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/tir_setup.ui \
-	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/udp_settings.ui \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/wii_setup.ui \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/wine_warn.ui \
 	/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/xplugin.ui \

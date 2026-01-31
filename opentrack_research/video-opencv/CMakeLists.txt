@@ -1,0 +1,13 @@
+include(opentrack-opencv)
+find_package(OpenCV QUIET)
+
+if(OpenCV_FOUND)
+    foreach(k core videoio imgcodecs imgproc)
+        otr_install_lib("opencv_${k}" "${opentrack-libexec}")
+    endforeach()
+    otr_module(video-opencv)
+    target_link_libraries(${self} PRIVATE opencv_core opencv_imgcodecs opencv_videoio opentrack-video)
+    if(WIN32)
+        target_link_libraries(${self} PRIVATE strmiids)
+    endif()
+endif()

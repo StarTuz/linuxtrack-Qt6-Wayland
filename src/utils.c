@@ -36,14 +36,6 @@ static char error_buf[2048];
 
 char *ltr_int_my_strdup(const char *s);
 
-// Internal helpers
-static char *ltr_int_get_lib_path_impl(const char *libname);
-static char *ltr_int_get_binary_path(void);
-
-#ifndef LIB_PATH
-#define LIB_PATH "/usr/lib/linuxtrack/"
-#endif
-
 static void ltr_int_atexit(void) {
   if (logfile_name != NULL) {
     free(logfile_name);
@@ -183,18 +175,8 @@ void ltr_int_valog_message(const char *format, va_list va) {
 
   fprintf(output_stream, "[%s] ", buf);
   // fprintf(output_stream, "[%s %lld] ", buf, (long long)tv.tv_usec);
-
-  va_list va2;
-  va_copy(va2, va);
   vfprintf(output_stream, format, va);
   fflush(output_stream);
-
-  // Duplicating to stderr so user sees it in terminal
-  if (output_stream != stderr) {
-    fprintf(stderr, "[LTR-DBG][%s] ", buf);
-    vfprintf(stderr, format, va2);
-  }
-  va_end(va2);
 }
 
 void ltr_int_log_message(const char *format, ...) {
@@ -262,7 +244,7 @@ char *ltr_int_get_default_file_name(const char *fname) {
 char *ltr_int_get_ipc_path(const char *fname) {
   char *runtime_dir = getenv("XDG_RUNTIME_DIR");
   char *ipc_path = NULL;
-
+  
   // Strategy 1: XDG_RUNTIME_DIR/linuxtrack (Best for IPC, usually mapped)
   if (runtime_dir != NULL) {
     struct stat st;
@@ -285,14 +267,14 @@ char *ltr_int_get_ipc_path(const char *fname) {
     struct stat st;
     char *dir_path = NULL;
     if (asprintf(&dir_path, "%s/.config/linuxtrack/run", home) != -1) {
-      if (stat(dir_path, &st) == -1) {
-        mkdir(dir_path, 0700);
-      }
-      if (asprintf(&ipc_path, "%s/%s", dir_path, fname) != -1) {
-        free(dir_path);
-        return ipc_path;
-      }
-      free(dir_path);
+       if (stat(dir_path, &st) == -1) {
+         mkdir(dir_path, 0700);
+       }
+       if (asprintf(&ipc_path, "%s/%s", dir_path, fname) != -1) {
+         free(dir_path);
+         return ipc_path;
+       }
+       free(dir_path);
     }
   }
 
@@ -368,56 +350,6 @@ char *ltr_int_get_data_path_prefix(const char *data, const char *prefix) {
 }
 
 char *ltr_int_get_lib_path(const char *libname) {
-  char *lib_path = ltr_int_get_lib_path_impl(libname);
-  if (access(lib_path, F_OK) != 0) {
-    char *bin_path = ltr_int_get_binary_path();
-    if (bin_path) {
-      // Fallback 1: Try bin/../lib/linuxtrack/ (AppImage/standard install)
-      char *fallback_appimage = ltr_int_my_strcat(bin_path, "/../lib/linuxtrack/");
-      char *lib_path_appimage1 = ltr_int_my_strcat(fallback_appimage, libname);
-      char *lib_path_appimage = ltr_int_my_strcat(lib_path_appimage1, LIB_SUFFIX);
-      free(fallback_appimage);
-      free(lib_path_appimage1);
-      if (access(lib_path_appimage, F_OK) == 0) {
-        free(lib_path);
-        lib_path = lib_path_appimage;
-      } else {
-        free(lib_path_appimage);
-        // Fallback 2: Try adjacent to binary (build/src/)
-        char *fallback = ltr_int_my_strcat(bin_path, "/");
-        char *lib_path_fallback1 = ltr_int_my_strcat(fallback, libname);
-        char *lib_path_fallback =
-            ltr_int_my_strcat(lib_path_fallback1, LIB_SUFFIX);
-        free(fallback);
-        free(lib_path_fallback1);
-        if (access(lib_path_fallback, F_OK) == 0) {
-          free(lib_path);
-          lib_path = lib_path_fallback;
-        } else {
-          free(lib_path_fallback);
-          // Fallback 3: Try parent of binary (if bin is in build/src/qt_gui)
-          char *fallback_p = ltr_int_my_strcat(bin_path, "/../");
-          char *lib_path_fallback_p1 = ltr_int_my_strcat(fallback_p, libname);
-          char *lib_path_fallback_p =
-              ltr_int_my_strcat(lib_path_fallback_p1, LIB_SUFFIX);
-          free(fallback_p);
-          free(lib_path_fallback_p1);
-          if (access(lib_path_fallback_p, F_OK) == 0) {
-            free(lib_path);
-            lib_path = lib_path_fallback_p;
-          } else {
-            free(lib_path_fallback_p);
-          }
-        }
-      }
-      free(bin_path);
-    }
-  }
-  return lib_path;
-}
-
-// Internal helper for lib path
-static char *ltr_int_get_lib_path_impl(const char *libname) {
 #ifdef DARWIN
   char *app_path = ltr_int_get_app_path(LIB_PATH);
   if (app_path == NULL) {
@@ -436,21 +368,6 @@ static char *ltr_int_get_lib_path_impl(const char *libname) {
   free(app_path);
   free(lib_path1);
   return lib_path;
-}
-
-// Get directory containing the current executable
-static char *ltr_int_get_binary_path() {
-  char path[1024];
-  ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
-  if (len != -1) {
-    path[len] = '\0';
-    char *last_slash = strrchr(path, '/');
-    if (last_slash) {
-      *last_slash = '\0';
-      return ltr_int_my_strdup(path);
-    }
-  }
-  return NULL;
 }
 
 char *ltr_int_get_resource_path(const char *section, const char *rsrc) {

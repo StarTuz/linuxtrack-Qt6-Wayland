@@ -20,8 +20,7 @@ static dev_interface iface = {
   .device_run = NULL,
   .device_shutdown = NULL,
   .device_suspend = NULL,
-  .device_wakeup = NULL,
-  .device_usb_reset = NULL
+  .device_wakeup = NULL
 };
 
 static lib_fun_def_t functions[] = {
@@ -29,7 +28,6 @@ static lib_fun_def_t functions[] = {
   {"ltr_int_rl_shutdown", (void*) &iface.device_shutdown},
   {"ltr_int_rl_suspend", (void*) &iface.device_suspend},
   {"ltr_int_rl_wakeup", (void*) &iface.device_wakeup},
-  {"ltr_int_rl_usb_reset", (void*) &iface.device_usb_reset},
   {NULL, NULL}
 };
 
@@ -129,16 +127,6 @@ int ltr_int_cal_wakeup()
   }
   ltr_int_log_message("Waking!\n");
   return (iface.device_wakeup)();
-}
-
-int ltr_int_cal_usb_reset()
-{
-  if(iface.device_usb_reset == NULL){
-    ltr_int_log_message("USB reset not supported by this device!\n");
-    return -1;
-  }
-  ltr_int_log_message("USB reset (nuclear option)!\n");
-  return (iface.device_usb_reset)();
 }
 
 linuxtrack_state_type ltr_int_cal_get_state()

@@ -4,6 +4,17 @@
 #include "config.h"
 #endif
 
+#include <QMessageBox>
+#include <QMutex>
+#include <QTimer>
+#include <QtGlobal>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QGuiApplication>
+#include <QScreen>
+#else
+#include <QApplication>
+#include <QDesktopWidget>
+#endif
 #include "hotkey.h"
 #include "linuxtrack.h"
 #include "math_utils.h"
@@ -13,19 +24,17 @@
 #include "transform.h"
 #include <QApplication>
 #include <QCursor>
-#include <QGuiApplication>
-#include <QMessageBox>
-#include <QMutex>
-#include <QScreen>
-#include <QTimer>
-#include <QtGlobal>
 #include <iostream>
 
 // Time to wait after the tracking commences to perform a recentering [ms]
 const int settleTime = 2000; // 2 seconds
 
 void RestrainWidgetToScreen(QWidget *w) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
+#else
+  QRect screenRect = QApplication::desktop()->availableGeometry(w);
+#endif
   QRect wRect = w->frameGeometry();
   /*
     std::cout<<"fg left: "<<w->frameGeometry().left();
@@ -266,8 +275,13 @@ void MickeyThread::run() {
 }
 
 Mickey::Mickey()
-    : updateTimer(this), btnThread(this), state(STANDBY), calDlg(), aplDlg(),
-      recenterFlag(true), primaryScreen(nullptr) {
+    : updateTimer(this), btnThread(this), state(STANDBY),
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+      calDlg(), aplDlg(), recenterFlag(true), primaryScreen(nullptr)
+#else
+      calDlg(), aplDlg(), recenterFlag(true), dw(nullptr)
+#endif
+{
   trans = new MickeyTransform();
   // QObject::connect(onOffSwitch, SIGNAL(activated()), this,
   // SLOT(onOffSwitch_activated())); QObject::connect(&lbtnSwitch,
@@ -291,9 +305,15 @@ Mickey::Mickey()
   if (!mouse.init()) {
     exit(1);
   }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   primaryScreen = QGuiApplication::primaryScreen();
   screenBBox = QRect(0, 0, primaryScreen->size().width(),
                      primaryScreen->size().height());
+#else
+  dw = QApplication::desktop();
+  //  screenBBox = dw->screenGeometry();
+  screenBBox = QRect(0, 0, dw->width(), dw->height());
+#endif
   screenCenter = screenBBox.center();
   updateTimer.setSingleShot(false);
   updateTimer.setInterval(8);
@@ -315,8 +335,13 @@ Mickey::~Mickey() {
 
 void Mickey::screenResized(int screen) {
   (void)screen;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   screenBBox = QRect(0, 0, primaryScreen->size().width(),
                      primaryScreen->size().height());
+#else
+  //  screenBBox = dw->screenGeometry(screen);
+  screenBBox = QRect(0, 0, dw->width(), dw->height());
+#endif
   screenCenter = screenBBox.center();
 }
 

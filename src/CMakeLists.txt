@@ -48,17 +48,9 @@ endif()
 set(DRIVER_LDFLAGS "-Wl,-rpath,$ORIGIN/../lib")
 
 # libwc (Webcam Driver)
-option(USE_OPENCV_CAMERA "Use OpenCV VideoCapture for webcam driver" ON)
 if(HAS_V4L2 AND LTR_LIBV4L2)
-    if(USE_OPENCV_CAMERA AND OPENCV_FOUND)
-        message(STATUS "Using OpenCV based webcam driver")
-        add_library(wc MODULE webcam_cv.cpp webcam_driver.h runloop.c runloop.h)
-        target_include_directories(wc PRIVATE ${OPENCV_INCLUDE_DIRS})
-        target_link_libraries(wc PRIVATE ltr ${LTR_LIBV4L2} ${OPENCV_LIBRARIES})
-    else()
-        add_library(wc MODULE webcam_driver.c webcam_driver.h runloop.c runloop.h)
-        target_link_libraries(wc PRIVATE ltr ${LTR_LIBV4L2})
-    endif()
+    add_library(wc MODULE webcam_driver.c webcam_driver.h runloop.c runloop.h)
+    target_link_libraries(wc PRIVATE ltr ${LTR_LIBV4L2})
     set_target_properties(wc PROPERTIES PREFIX "lib" LINK_FLAGS ${DRIVER_LDFLAGS})
 endif()
 
@@ -79,32 +71,10 @@ endif()
 
 # libft (Facetracker Plugin)
 if(OPENCV_FOUND AND HAS_V4L2 AND LTR_LIBV4L2)
-    set(FT_SOURCES runloop.c runloop.h facetrack.cpp facetrack.h)
-    
-    # Add neural net tracker if ONNXRuntime available
-    if(HAVE_ONNXRUNTIME)
-        list(APPEND FT_SOURCES neuralnet_tracker.cpp neuralnet_tracker.h)
-    endif()
-    
-    if(USE_OPENCV_CAMERA)
-        list(PREPEND FT_SOURCES webcam_cv.cpp webcam_driver.h)
-    else()
-        list(PREPEND FT_SOURCES webcam_driver.c webcam_driver.h)
-    endif()
-    
-    add_library(ft MODULE ${FT_SOURCES})
+    add_library(ft MODULE webcam_driver.c webcam_driver.h runloop.c runloop.h facetrack.cpp facetrack.h)
     target_compile_definitions(ft PRIVATE OPENCV)
     target_include_directories(ft PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCV_INCLUDE_DIRS})
     target_link_libraries(ft PRIVATE ltr ${LTR_LIBV4L2} ${LTR_LIBPTHREAD} ${OPENCV_LIBRARIES})
-    
-    if(HAVE_ONNXRUNTIME)
-        target_compile_definitions(ft PRIVATE HAVE_ONNXRUNTIME)
-        target_link_libraries(ft PRIVATE onnxruntime::onnxruntime)
-        if(OpenMP_FOUND)
-            target_link_libraries(ft PRIVATE OpenMP::OpenMP_CXX)
-        endif()
-    endif()
-    
     set_target_properties(ft PROPERTIES PREFIX "lib" LINK_FLAGS ${DRIVER_LDFLAGS})
 endif()
 
@@ -127,6 +97,20 @@ if(EXISTS "/usr/include/xplane_sdk/XPLM")
         PREFIX ""
         OUTPUT_NAME "xlinuxtrack9"
     )
+
+    # 32-bit X-Plane Plugin
+    if(HAS_LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+        add_library(xlinuxtrack9_32 SHARED xlinuxtrack9.c linuxtrack.c)
+        target_include_directories(xlinuxtrack9_32 PRIVATE ${XPL_INCLUDE_DIRS} ..)
+        target_compile_definitions(xlinuxtrack9_32 PRIVATE XPLM200 LINUX)
+        set_target_properties(xlinuxtrack9_32 PROPERTIES 
+            COMPILE_FLAGS "-m32"
+            LINK_FLAGS "-m32"
+            PREFIX ""
+            OUTPUT_NAME "xlinuxtrack9_32"
+        )
+        target_link_libraries(xlinuxtrack9_32 PRIVATE ${LTR_LIBM} ${LTR_LIBDL})
+    endif()
 endif()
 
 # --- Executables ---
@@ -192,7 +176,7 @@ add_subdirectory(ltr_hotkey_gui)
 install(TARGETS ltr linuxtrack DESTINATION lib/linuxtrack)
 
 # 2. Drivers (Plugins)
-foreach(DRV wc tir joy ft ltusb1 xlinuxtrack9)
+foreach(DRV wc tir joy ft ltusb1 xlinuxtrack9 xlinuxtrack9_32)
     if(TARGET ${DRV})
         install(TARGETS ${DRV} DESTINATION lib/linuxtrack)
     endif()
@@ -212,7 +196,7 @@ install(TARGETS ${BIN_TARGETS} DESTINATION bin)
 install(FILES linuxtrack1.conf linuxtrack.c linuxtrack_hello_world.c linuxtrack_hello_world_adv.c 
         DESTINATION share/linuxtrack)
 install(FILES 99-TIR.rules 99-Mickey.rules DESTINATION share/linuxtrack)
-if(OPENCV_FOUND)
+if(HAS_OPENCV)
     install(FILES haarcascade_frontalface_alt2.xml DESTINATION share/linuxtrack)
 endif()
 

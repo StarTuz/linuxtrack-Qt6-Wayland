@@ -21,64 +21,36 @@ sudo cmake --install .
 ./build/src/ltr_gui
 ```
 
-### Validation & Testing
-
-```bash
-# Run unit tests
-cd build && ctest --output-on-failure
-
-# Validate AppImage (after building)
-./scripts/validate_appimage.sh Linuxtrack-x86_64.AppImage
-
-# Multi-distro smoke test (requires Docker)
-./scripts/smoke_test.sh
-
-# Check RPATH on binaries
-readelf -d build/src/ltr_server1 | grep -E "(RPATH|RUNPATH)"
-```
-
 ### Wine Bridge (32-bit + 64-bit)
 
-The Wine bridge requires both 32-bit and 64-bit components. CMake handles this automatically if Wine is available:
+The Wine bridge requires a two-pass build for both architectures. The CI workflow handles this automatically, but for manual builds:
 
 ```bash
-# CMake auto-detects Wine and builds both architectures
-cmake --build build -j$(nproc)
+# Pass 1: 32-bit Wine components
+cd src/wine_bridge && make WINEARCH=win32
 
-# If 32-bit libs are missing (common on Arch), only 64-bit builds
-# Install lib32-glibc lib32-gcc-libs for 32-bit support
+# Pass 2: 64-bit Wine components
+cd src/wine_bridge && make WINEARCH=win64
 ```
 
 ### Dependencies (Arch Linux)
 
-```bash
-# Core
-sudo pacman -S base-devel cmake ninja pkg-config mxml libusb zlib nlohmann-json
-
-# Qt6
-sudo pacman -S qt6-base qt6-tools qt6-5compat qt6-help
-
-# Video/Tracking
-sudo pacman -S v4l-utils opencv
-
-# Wine (for Windows game bridge)
-sudo pacman -S wine wine-mono wine-gecko
-
-# Optional
-sudo pacman -S liblo      # OSC support
-sudo pacman -S libcwiid   # Wiimote (AUR)
-```
+Core: `base-devel cmake ninja pkg-config mxml libusb zlib`
+Qt6: `qt6-base qt6-tools qt6-5compat qt6-help`
+Video: `v4l-utils opencv`
+Wine: `wine wine-mono wine-gecko`
+Optional: `liblo` (OSC), `libcwiid` (Wiimote)
 
 ## Architecture
 
 ```
 Applications (X-Plane, Wine games, OSC clients)
                     ↓
-          liblinuxtrack.so (Client API - src/ltlib.c)
+          liblinuxtrack.so (Client API)
                     ↓
-           ltr_server1 (Daemon - src/ltr_server1.c)
+           ltr_server1 (Daemon)
                     ↓
-             libltr.so (Core Engine - src/tracking.c, axis.c, pose.c)
+             libltr.so (Core Engine)
                     ↓
     Driver Plugins: libtir.so (TrackIR), libwc.so (Webcam), libft.so (Face)
                     ↓
@@ -93,38 +65,21 @@ Applications (X-Plane, Wine games, OSC clients)
 | `ltr_server1` | `src/ltr_server1.c` | Background tracking daemon |
 | `liblinuxtrack.so` | `src/ltlib.c` | Client library API |
 | `libltr.so` | `src/tracking.c`, `axis.c`, `pose.c` | Core tracking engine |
-| `xlinuxtrack9.so` | `src/xlinuxtrack9.c` | X-Plane 9+ plugin (64-bit only) |
+| `xlinuxtrack9.so` | `src/xlinuxtrack9.c` | X-Plane 9+ plugin |
 | Wine bridge | `src/wine_bridge/` | NPClient.dll, FreeTrack emulation |
-| `ltr_udp` | `src/` | OpenTrack UDP bridge (port 4242) |
-| `ltr_hotkeyd` | `src/` | Native Linux global hotkey daemon |
+| `ltr_udp` | `src/` | OpenTrack UDP bridge for native games |
 
 ### IPC
 
-- **Shared memory**: Primary client-server communication
-- **Pipes**: Alternative interface (`ltr_pipe`)
-- **UDP bridge**: Port 4242 (OpenTrack protocol), Port 4243 (hotkey commands)
+- Shared memory for client-server communication
+- Pipes as alternative interface
+- UDP bridge (port 4242) for OpenTrack protocol
 
 ### Preferences
 
 Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxtrack/`.
 
-## Critical Rules
-
-### X-Plane Plugin (`xlinuxtrack9.c`)
-
-> **CAUTION:** v1.1.6-v1.1.9 had regressions from untested plugin changes.
-
-- Changes MUST be tested with actual X-Plane before merge
-- Test external view switching (Shift-4) with TrackIR active
-- **FORBIDDEN:** IPC calls (`linuxtrack_suspend`, `linuxtrack_wakeup`, `linuxtrack_get_tracking_state`) in flight loop callback without careful review
-- Keep simple early-return pattern for non-cockpit views
-
-### Wine Bridge
-
-- Test both 32-bit AND 64-bit DLLs when modifying
-- Never hardcode `WINEARCH` - let prefix determine architecture
-- Surgical injection copies DLLs directly, no NSIS installer needed
-- IDE lint errors are false positives (winegcc include paths not recognized)
+## Project-Specific Rules
 
 ### Protected Paths (Never Modify Without Explicit Request)
 
@@ -132,20 +87,34 @@ Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxt
 - `~/.config/linuxtrack/tir_firmware/` - TrackIR firmware files
 - Wine prefixes during surgical injection
 
+### X-Plane Plugin Changes
+
+**CAUTION:** v1.1.6-v1.1.9 had regressions from untested plugin changes.
+
+- Changes to `xlinuxtrack9.c` MUST be tested with actual X-Plane
+- Test external view switching (Shift-4) with TrackIR active
+- Avoid IPC calls in the flight loop callback without careful review
+- Keep simple early-return pattern for non-cockpit views
+
 ### Build System
 
 - Use CMake (not Autotools) for all changes
 - Maintain Qt6 compatibility
 - Uses `$ORIGIN` RPATH for relocatable binaries
-- C++17 required (`std::filesystem` in preference system)
+
+### Wine Bridge
+
+- Test both 32-bit AND 64-bit DLLs when modifying
+- Never hardcode `WINEARCH` - let prefix determine architecture
+- Surgical injection copies DLLs directly, no NSIS installer needed
 
 ## Key Documentation
 
-- `HANDOFF.md` - Detailed technical notes, version history, and post-mortems
+- `HANDOFF.md` - Detailed technical implementation notes and version history
 - `GUARDRAILS.md` - Non-negotiable requirements for code changes
-- `README.md` - User-facing setup and troubleshooting
-- `MODERNIZATION_ROADMAP.md` - Completed and planned improvements
+- `README.md` - User-facing setup and troubleshooting guide
+- `MODERNIZATION_ROADMAP.md` - Future improvements
 
 ## Current Version
 
-v1.3.1 - Qt6/Wayland compatible, OpenGL ES 3.0 shaders, One Euro filter, UDP bridge, 32-bit auto-detection
+v1.1.12 - Qt6/Wayland compatible, OpenGL ES 3.0 shaders, One Euro filter, UDP bridge

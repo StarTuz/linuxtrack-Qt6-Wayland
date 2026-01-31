@@ -55,7 +55,6 @@ static ltr_gp_t ltr_shutdown_fun = NULL;
 static ltr_gp_t ltr_suspend_fun = NULL;
 static ltr_gp_t ltr_wakeup_fun = NULL;
 static ltr_gp_t ltr_recenter_fun = NULL;
-static ltr_gp_t ltr_usb_reset_fun = NULL;
 static ltr_get_pose_t ltr_get_pose_fun = NULL;
 static ltr_get_pose_full_t ltr_get_pose_full_fun = NULL;
 static ltr_get_tracking_state_t ltr_get_tracking_state_fun = NULL;
@@ -81,7 +80,6 @@ static struct func_defs_t functions[] = {
     {(char *)"ltr_suspend", (void *)&ltr_suspend_fun, 1},
     {(char *)"ltr_wakeup", (void *)&ltr_wakeup_fun, 1},
     {(char *)"ltr_recenter", (void *)&ltr_recenter_fun, 1},
-    {(char *)"ltr_usb_reset", (void *)&ltr_usb_reset_fun, 0},
     {(char *)"ltr_get_pose", (void *)&ltr_get_pose_fun, 1},
     {(char *)"ltr_get_pose_full", (void *)&ltr_get_pose_full_fun, 1},
     {(char *)"ltr_get_tracking_state", (void *)&ltr_get_tracking_state_fun, 1},
@@ -149,7 +147,6 @@ linuxtrack_state_type linuxtrack_shutdown(void) {
     ltr_suspend_fun = NULL;
     ltr_wakeup_fun = NULL;
     ltr_recenter_fun = NULL;
-    ltr_usb_reset_fun = NULL;
     ltr_get_pose_fun = NULL;
     ltr_get_pose_full_fun = NULL;
     ltr_get_tracking_state_fun = NULL;
@@ -178,13 +175,6 @@ linuxtrack_state_type linuxtrack_recenter(void) {
     return err_NOT_INITIALIZED;
   }
   return ltr_recenter_fun();
-}
-
-linuxtrack_state_type linuxtrack_usb_reset(void) {
-  if (ltr_usb_reset_fun == NULL) {
-    return err_NOT_INITIALIZED;
-  }
-  return ltr_usb_reset_fun();
 }
 
 // RetVal 0 means no new data

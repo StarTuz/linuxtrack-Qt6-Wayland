@@ -283,6 +283,33 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/linuxtrack/xlinuxtrack9_32.so" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/linuxtrack/xlinuxtrack9_32.so")
+    file(RPATH_CHECK
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/linuxtrack/xlinuxtrack9_32.so"
+         RPATH "/opt/linuxtrack/lib/linuxtrack:/opt/linuxtrack/lib:\$ORIGIN/../lib/linuxtrack:\$ORIGIN/../lib")
+  endif()
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/linuxtrack" TYPE SHARED_LIBRARY FILES "/home/startux/Code/linuxtrackfixed/linuxtrack/src/xlinuxtrack9_32.so")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/linuxtrack/xlinuxtrack9_32.so" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/linuxtrack/xlinuxtrack9_32.so")
+    file(RPATH_CHANGE
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/linuxtrack/xlinuxtrack9_32.so"
+         OLD_RPATH ":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::"
+         NEW_RPATH "/opt/linuxtrack/lib/linuxtrack:/opt/linuxtrack/lib:\$ORIGIN/../lib/linuxtrack:\$ORIGIN/../lib")
+    if(CMAKE_INSTALL_DO_STRIP)
+      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/linuxtrack/xlinuxtrack9_32.so")
+    endif()
+  endif()
+endif()
+
+if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
+endif()
+
+if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
+  include("/home/startux/Code/linuxtrackfixed/linuxtrack/src/CMakeFiles/xlinuxtrack9_32.dir/install-cxx-module-bmi-noconfig.cmake" OPTIONAL)
+endif()
+
+if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/ltr_server1" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/ltr_server1")
     file(RPATH_CHECK
@@ -463,13 +490,6 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/linuxtrack" TYPE FILE FILES
     "/home/startux/Code/linuxtrackfixed/linuxtrack/src/99-TIR.rules"
     "/home/startux/Code/linuxtrackfixed/linuxtrack/src/99-Mickey.rules"
-    )
-endif()
-
-if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/linuxtrack" TYPE FILE FILES
-    "/home/startux/Code/linuxtrackfixed/linuxtrack/src/haarcascade_frontalface_alt2.xml"
-    "/home/startux/Code/linuxtrackfixed/linuxtrack/src/face_detection_yunet.onnx"
     )
 endif()
 

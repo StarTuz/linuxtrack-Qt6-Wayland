@@ -53,7 +53,6 @@ linuxtrack_state_type linuxtrack_shutdown(void);
 linuxtrack_state_type linuxtrack_suspend(void);
 linuxtrack_state_type linuxtrack_wakeup(void);
 linuxtrack_state_type linuxtrack_recenter(void);
-linuxtrack_state_type linuxtrack_usb_reset(void);  /* Nuclear USB reset for desync recovery */
 const char *linuxtrack_explain(linuxtrack_state_type err);
 linuxtrack_state_type linuxtrack_get_tracking_state(void);
 

@@ -1,13 +1,12 @@
 #include "ltr_srv_master.h"
-#include "axis.h"
-#include "cal.h"
-#include "ipc_utils.h"
 #include "linuxtrack.h"
 #include "ltr_srv_comm.h"
-#include "pref.h"
-#include "utils.h"
+#include "axis.h"
+#include "cal.h"
 #include <errno.h>
+#include "ipc_utils.h"
 #include <poll.h>
+#include "pref.h"
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -18,6 +17,7 @@
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
+#include "utils.h"
 
 #include <map>
 #include <mutex>
@@ -81,20 +81,11 @@ void ltr_int_change(const char *profile, int axis, int elem, float val) {
   if (profile != nullptr) {
     // Finds all slaves belonging to the specific profile
     range = slaves.equal_range(profile);
-    bool found = false;
     for (i = range.first; i != range.second; ++i) {
       ltr_int_send_param_update(i->second, axis, elem, val);
-      found = true;
-    }
-    if (!found) {
-      // ltr_int_log_message("MASTER: No slaves found with profile '%s' for
-      // param change.\n", profile);
     }
   } else {
     // Broadcast to all slaves
-    ltr_int_log_message(
-        "MASTER: Broadcasting MISC param to all %zu slaves: 0:%d -> %f\n",
-        slaves.size(), elem, val);
     for (i = slaves.begin(); i != slaves.end(); ++i) {
       ltr_int_send_param_update(i->second, axis, elem, val);
     }
@@ -107,31 +98,20 @@ void ltr_int_change_profile(const char *old_profile, const char *new_profile) {
             std::multimap<std::string, int>::iterator>
       range;
   std::multimap<std::string, int>::iterator i;
-
+  
   if (old_profile == nullptr || new_profile == nullptr) {
     ltr_int_log_message("ltr_int_change_profile called with NULL profile!\n");
     return;
   }
-
-  ltr_int_log_message("MASTER: Changing profile '%s' -> '%s'\n", old_profile,
-                      new_profile);
-
+  
   // Find all slaves using the old profile and notify them
   range = slaves.equal_range(old_profile);
-  bool found = false;
   for (i = range.first; i != range.second; ++i) {
-    ltr_int_send_message_w_str(i->second, CMD_PROFILE_CHANGE, 0,
-                               (char *)new_profile);
-    ltr_int_log_message(
-        "MASTER: Sent profile change to slave @socket %d: '%s' -> '%s'\n",
-        i->second, old_profile, new_profile);
-    found = true;
+    ltr_int_send_message_w_str(i->second, CMD_PROFILE_CHANGE, 0, (char*)new_profile);
+    ltr_int_log_message("Sent profile change to slave @socket %d: '%s' -> '%s'\n",
+                        i->second, old_profile, new_profile);
   }
-  if (!found) {
-    ltr_int_log_message(
-        "MASTER: No slaves found with profile '%s' to notify.\n", old_profile);
-  }
-
+  
   // Update the slave's key in the multimap
   // We need to re-key the entries from old_profile to new_profile
   range = slaves.equal_range(old_profile);
@@ -144,8 +124,6 @@ void ltr_int_change_profile(const char *old_profile, const char *new_profile) {
   for (int socket : sockets_to_rekey) {
     slaves.insert(std::pair<std::string, int>(new_profile, socket));
   }
-  ltr_int_log_message("MASTER: Profile re-keying complete. '%s': %zu slaves\n",
-                      new_profile, slaves.count(new_profile));
 }
 
 // When slave is started, in GUI its axes might have changed (so better send
@@ -245,8 +223,6 @@ void ltr_int_suspend_cmd() { ltr_int_suspend(); }
 void ltr_int_wakeup_cmd() { ltr_int_wakeup(); }
 
 void ltr_int_recenter_cmd() { ltr_int_recenter(); }
-
-void ltr_int_usb_reset_cmd() { ltr_int_usb_reset(); }
 
 static bool gui_shutdown_request = false;
 
@@ -418,9 +394,6 @@ int ltr_int_master_main_loop(int socket) {
                 break;
               case CMD_RECENTER:
                 ltr_int_recenter_cmd();
-                break;
-              case CMD_USB_RESET:
-                ltr_int_usb_reset_cmd();
                 break;
               case CMD_NEW_SOCKET:
                 // ltr_int_log_message("Cmd to register new slave...\n");

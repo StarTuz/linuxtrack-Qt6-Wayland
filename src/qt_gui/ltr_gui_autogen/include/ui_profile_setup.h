@@ -78,19 +78,6 @@ public:
     QHBoxLayout *horizontalLayout_8;
     QSpacerItem *horizontalSpacer_2;
     QPushButton *DetailedAxisSetup;
-    QFrame *oneEuroFrame;
-    QVBoxLayout *oneEuroLayout;
-    QCheckBox *OneEuroEnabled;
-    QHBoxLayout *oneEuroMinCutoffLayout;
-    QLabel *oneEuroMinCutoffLabel;
-    QLabel *oneEuroMinCutoffLow;
-    QSlider *OneEuroMinCutoff;
-    QLabel *oneEuroMinCutoffHigh;
-    QHBoxLayout *oneEuroBetaLayout;
-    QLabel *oneEuroBetaLabel;
-    QLabel *oneEuroBetaLow;
-    QSlider *OneEuroBeta;
-    QLabel *oneEuroBetaHigh;
 
     void setupUi(QWidget *ProfileSetupForm)
     {
@@ -374,82 +361,6 @@ public:
 
         verticalLayout->addLayout(horizontalLayout_8);
 
-        oneEuroFrame = new QFrame(ProfileSetupForm);
-        oneEuroFrame->setObjectName("oneEuroFrame");
-        oneEuroFrame->setFrameShape(QFrame::StyledPanel);
-        oneEuroFrame->setFrameShadow(QFrame::Raised);
-        oneEuroLayout = new QVBoxLayout(oneEuroFrame);
-        oneEuroLayout->setObjectName("oneEuroLayout");
-        OneEuroEnabled = new QCheckBox(oneEuroFrame);
-        OneEuroEnabled->setObjectName("OneEuroEnabled");
-
-        oneEuroLayout->addWidget(OneEuroEnabled);
-
-        oneEuroMinCutoffLayout = new QHBoxLayout();
-        oneEuroMinCutoffLayout->setObjectName("oneEuroMinCutoffLayout");
-        oneEuroMinCutoffLabel = new QLabel(oneEuroFrame);
-        oneEuroMinCutoffLabel->setObjectName("oneEuroMinCutoffLabel");
-
-        oneEuroMinCutoffLayout->addWidget(oneEuroMinCutoffLabel);
-
-        oneEuroMinCutoffLow = new QLabel(oneEuroFrame);
-        oneEuroMinCutoffLow->setObjectName("oneEuroMinCutoffLow");
-
-        oneEuroMinCutoffLayout->addWidget(oneEuroMinCutoffLow);
-
-        OneEuroMinCutoff = new QSlider(oneEuroFrame);
-        OneEuroMinCutoff->setObjectName("OneEuroMinCutoff");
-        OneEuroMinCutoff->setMinimum(1);
-        OneEuroMinCutoff->setMaximum(50);
-        OneEuroMinCutoff->setValue(10);
-        OneEuroMinCutoff->setOrientation(Qt::Horizontal);
-        OneEuroMinCutoff->setTickPosition(QSlider::TicksBelow);
-        OneEuroMinCutoff->setTickInterval(10);
-
-        oneEuroMinCutoffLayout->addWidget(OneEuroMinCutoff);
-
-        oneEuroMinCutoffHigh = new QLabel(oneEuroFrame);
-        oneEuroMinCutoffHigh->setObjectName("oneEuroMinCutoffHigh");
-
-        oneEuroMinCutoffLayout->addWidget(oneEuroMinCutoffHigh);
-
-
-        oneEuroLayout->addLayout(oneEuroMinCutoffLayout);
-
-        oneEuroBetaLayout = new QHBoxLayout();
-        oneEuroBetaLayout->setObjectName("oneEuroBetaLayout");
-        oneEuroBetaLabel = new QLabel(oneEuroFrame);
-        oneEuroBetaLabel->setObjectName("oneEuroBetaLabel");
-
-        oneEuroBetaLayout->addWidget(oneEuroBetaLabel);
-
-        oneEuroBetaLow = new QLabel(oneEuroFrame);
-        oneEuroBetaLow->setObjectName("oneEuroBetaLow");
-
-        oneEuroBetaLayout->addWidget(oneEuroBetaLow);
-
-        OneEuroBeta = new QSlider(oneEuroFrame);
-        OneEuroBeta->setObjectName("OneEuroBeta");
-        OneEuroBeta->setMinimum(0);
-        OneEuroBeta->setMaximum(100);
-        OneEuroBeta->setValue(7);
-        OneEuroBeta->setOrientation(Qt::Horizontal);
-        OneEuroBeta->setTickPosition(QSlider::TicksBelow);
-        OneEuroBeta->setTickInterval(20);
-
-        oneEuroBetaLayout->addWidget(OneEuroBeta);
-
-        oneEuroBetaHigh = new QLabel(oneEuroFrame);
-        oneEuroBetaHigh->setObjectName("oneEuroBetaHigh");
-
-        oneEuroBetaLayout->addWidget(oneEuroBetaHigh);
-
-
-        oneEuroLayout->addLayout(oneEuroBetaLayout);
-
-
-        verticalLayout->addWidget(oneEuroFrame);
-
         QWidget::setTabOrder(PitchEnable, PitchSens);
         QWidget::setTabOrder(PitchSens, YawEnable);
         QWidget::setTabOrder(YawEnable, YawSens);
@@ -521,16 +432,6 @@ public:
         label_15->setText(QCoreApplication::translate("ProfileSetupForm", "None", nullptr));
         label_16->setText(QCoreApplication::translate("ProfileSetupForm", "Max", nullptr));
         DetailedAxisSetup->setText(QCoreApplication::translate("ProfileSetupForm", "Detailed Axes Setup", nullptr));
-#if QT_CONFIG(tooltip)
-        OneEuroEnabled->setToolTip(QCoreApplication::translate("ProfileSetupForm", "Enable adaptive One Euro filter for reduced jitter (recommended for TrackIR)", nullptr));
-#endif // QT_CONFIG(tooltip)
-        OneEuroEnabled->setText(QCoreApplication::translate("ProfileSetupForm", "One Euro Filter (Adaptive Smoothing)", nullptr));
-        oneEuroMinCutoffLabel->setText(QCoreApplication::translate("ProfileSetupForm", "Smoothness:", nullptr));
-        oneEuroMinCutoffLow->setText(QCoreApplication::translate("ProfileSetupForm", "Jittery", nullptr));
-        oneEuroMinCutoffHigh->setText(QCoreApplication::translate("ProfileSetupForm", "Smooth", nullptr));
-        oneEuroBetaLabel->setText(QCoreApplication::translate("ProfileSetupForm", "Responsiveness:", nullptr));
-        oneEuroBetaLow->setText(QCoreApplication::translate("ProfileSetupForm", "Laggy", nullptr));
-        oneEuroBetaHigh->setText(QCoreApplication::translate("ProfileSetupForm", "Responsive", nullptr));
     } // retranslateUi
 
 };

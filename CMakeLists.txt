@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(LinuxTrack VERSION 1.3.1 LANGUAGES C CXX)
+project(LinuxTrack VERSION 1.1.9 LANGUAGES C CXX)
 
 # Default installation prefix
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -37,33 +37,6 @@ find_library(LTR_LIBDL dl)
 find_library(LTR_LIBPTHREAD pthread)
 find_library(LTR_LIBV4L2 v4l2)
 
-# Custom CMake modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-
-# ONNXRuntime for neural network face tracking (optional)
-option(BUILD_NEURALNET_TRACKER "Build neural network face tracker (requires ONNXRuntime)" ON)
-if(BUILD_NEURALNET_TRACKER)
-    find_package(ONNXRuntime QUIET)
-    if(ONNXRuntime_FOUND)
-        message(STATUS "ONNXRuntime found - neural net face tracking enabled")
-        set(HAVE_ONNXRUNTIME TRUE)
-    else()
-        message(STATUS "ONNXRuntime not found - neural net face tracking disabled")
-        message(STATUS "  Install ONNXRuntime or set ONNXRuntime_DIR to enable")
-        set(HAVE_ONNXRUNTIME FALSE)
-    endif()
-else()
-    set(HAVE_ONNXRUNTIME FALSE)
-endif()
-
-# OpenMP for neural net threading (optional, used with ONNXRuntime)
-if(HAVE_ONNXRUNTIME)
-    find_package(OpenMP QUIET)
-    if(OpenMP_FOUND)
-        message(STATUS "OpenMP found - neural net threading enabled")
-    endif()
-endif()
-
 # Qt Dependencies for GUI and Mickey
 if(BUILD_GUI OR BUILD_MICKEY)
     find_package(Qt6 COMPONENTS Widgets Gui Network Help OpenGL OpenGLWidgets REQUIRED)
@@ -78,39 +51,6 @@ endif()
 if(BUILD_GUI)
     find_package(OpenGL REQUIRED)
     find_library(GLU_LIBRARY GLU)
-endif()
-
-# Wine Bridge 32-bit support auto-detection
-if(BUILD_WINE_BRIDGE)
-    find_program(WINEGCC winegcc)
-    if(WINEGCC)
-        # Try to actually link a tiny wine library to ensure 32-bit libs are present
-        file(WRITE "${CMAKE_BINARY_DIR}/wine32_test.c" "void wine32_test(){}\n")
-        execute_process(
-            COMMAND ${WINEGCC} -m32 -shared -o "${CMAKE_BINARY_DIR}/wine32_test.so" "${CMAKE_BINARY_DIR}/wine32_test.c"
-            OUTPUT_QUIET ERROR_QUIET 
-            RESULT_VARIABLE WINE32_RESULT
-        )
-        if(WINE32_RESULT EQUAL 0)
-            set(CAN_BUILD_WINE32 ON)
-            file(REMOVE "${CMAKE_BINARY_DIR}/wine32_test.so")
-        else()
-            set(CAN_BUILD_WINE32 OFF)
-        endif()
-        file(REMOVE "${CMAKE_BINARY_DIR}/wine32_test.c")
-    else()
-        set(CAN_BUILD_WINE32 OFF)
-    endif()
-    
-    option(ENABLE_WINE32 "Build 32-bit Wine bridge" ${CAN_BUILD_WINE32})
-    if(ENABLE_WINE32)
-       if(NOT CAN_BUILD_WINE32)
-           message(FATAL_ERROR "32-bit Wine build requested but winegcc -m32 failed. Enable multilib or disable ENABLE_WINE32.")
-       endif()
-       message(STATUS "32-bit Wine bridge build enabled")
-    else()
-       message(STATUS "32-bit Wine bridge build disabled (missing winegcc -m32 or multilib)")
-    endif()
 endif()
 
 find_package(ZLIB REQUIRED)
@@ -217,14 +157,3 @@ install(FILES src/linuxtrack.desktop src/linuxtrack-wii.desktop DESTINATION shar
 install(FILES src/linuxtrack.svg src/linuxtrack.png src/linuxtrack.xpm 
               src/linuxtrack-wii.svg src/linuxtrack-wii.png src/linuxtrack-wii.xpm
         DESTINATION share/pixmaps)
-
-# Install neural net models if ONNXRuntime is enabled
-if(HAVE_ONNXRUNTIME)
-    install(FILES 
-        models/head-localizer.onnx
-        models/head-pose-0.4-big-int8.onnx
-        models/head-pose-0.4-small-f32.onnx
-        DESTINATION share/linuxtrack/models
-    )
-endif()
-

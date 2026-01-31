@@ -39,10 +39,8 @@ template <> constexpr inline auto ProfileSelector::qt_create_metaobjectdata<qt_m
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "ProfileSelector",
-        "profileChanged",
-        "",
-        "profileName",
         "close",
+        "",
         "profilesIndexChanged",
         "index",
         "on_CopyFromDefault_pressed",
@@ -52,24 +50,20 @@ template <> constexpr inline auto ProfileSelector::qt_create_metaobjectdata<qt_m
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Signal 'profileChanged'
-        QtMocHelpers::SignalData<void(const QString &)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { QMetaType::QString, 3 },
-        }}),
         // Slot 'close'
-        QtMocHelpers::SlotData<bool()>(4, 2, QMC::AccessPublic, QMetaType::Bool),
+        QtMocHelpers::SlotData<bool()>(1, 2, QMC::AccessPublic, QMetaType::Bool),
         // Slot 'profilesIndexChanged'
-        QtMocHelpers::SlotData<void(int)>(5, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 6 },
+        QtMocHelpers::SlotData<void(int)>(3, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 4 },
         }}),
         // Slot 'on_CopyFromDefault_pressed'
-        QtMocHelpers::SlotData<void()>(7, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_ImportProfile_pressed'
-        QtMocHelpers::SlotData<void()>(8, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_ExportProfile_pressed'
-        QtMocHelpers::SlotData<void()>(9, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(7, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_NewProfile_pressed'
-        QtMocHelpers::SlotData<void()>(10, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(8, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -93,20 +87,15 @@ void ProfileSelector::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int 
     auto *_t = static_cast<ProfileSelector *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->profileChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
-        case 1: { bool _r = _t->close();
+        case 0: { bool _r = _t->close();
             if (_a[0]) *reinterpret_cast<bool*>(_a[0]) = std::move(_r); }  break;
-        case 2: _t->profilesIndexChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
-        case 3: _t->on_CopyFromDefault_pressed(); break;
-        case 4: _t->on_ImportProfile_pressed(); break;
-        case 5: _t->on_ExportProfile_pressed(); break;
-        case 6: _t->on_NewProfile_pressed(); break;
+        case 1: _t->profilesIndexChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 2: _t->on_CopyFromDefault_pressed(); break;
+        case 3: _t->on_ImportProfile_pressed(); break;
+        case 4: _t->on_ExportProfile_pressed(); break;
+        case 5: _t->on_NewProfile_pressed(); break;
         default: ;
         }
-    }
-    if (_c == QMetaObject::IndexOfMethod) {
-        if (QtMocHelpers::indexOfMethod<void (ProfileSelector::*)(const QString & )>(_a, &ProfileSelector::profileChanged, 0))
-            return;
     }
 }
 
@@ -129,21 +118,15 @@ int ProfileSelector::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 7)
+        if (_id < 6)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 7;
+        _id -= 6;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 7)
+        if (_id < 6)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 7;
+        _id -= 6;
     }
     return _id;
-}
-
-// SIGNAL 0
-void ProfileSelector::profileChanged(const QString & _t1)
-{
-    QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1);
 }
 QT_WARNING_POP

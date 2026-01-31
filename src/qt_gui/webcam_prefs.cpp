@@ -67,8 +67,11 @@ bool WebcamPrefs::Activate(const QString &ID, bool init)
   QString sec;
   initializing = init;
   if(PREF.getFirstDeviceSection(QString::fromUtf8("Webcam"), ID, sec)){
-    // Always activate the device when selected
-    PREF.activateDevice(sec);
+    QString currentDev, currentSection;
+    deviceType_t devType;
+    if(!PREF.getActiveDevice(devType, currentDev, currentSection) || (sec !=currentSection)){
+      PREF.activateDevice(sec);
+    }
   }else{
     sec = QString::fromUtf8("Webcam");
     initializing = false;

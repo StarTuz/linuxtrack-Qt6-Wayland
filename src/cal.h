@@ -79,7 +79,6 @@ typedef int (*device_run_fun)(struct camera_control_block *ccb,
 typedef int (*device_shutdown_fun)();
 typedef int (*device_suspend_fun)();
 typedef int (*device_wakeup_fun)();
-typedef int (*device_usb_reset_fun)();
 
 
 typedef struct {
@@ -87,7 +86,6 @@ typedef struct {
   device_shutdown_fun device_shutdown;
   device_suspend_fun device_suspend;
   device_wakeup_fun device_wakeup;
-  device_usb_reset_fun device_usb_reset;
 } dev_interface;
 
 
@@ -112,11 +110,6 @@ int ltr_int_cal_suspend();
  * camera device.
  * a return value < 0 indicates error */
 int ltr_int_cal_wakeup();
-
-/* perform USB device reset (nuclear option for desync recovery)
- * Only supported by TrackIR devices
- * a return value < 0 indicates error or not supported */
-int ltr_int_cal_usb_reset();
 
 linuxtrack_state_type ltr_int_cal_get_state();
 void ltr_int_cal_set_state(linuxtrack_state_type new_state);

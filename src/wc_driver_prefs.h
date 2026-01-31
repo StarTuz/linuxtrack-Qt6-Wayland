@@ -33,21 +33,14 @@ bool ltr_int_wc_set_fps(int num, int den);
 bool ltr_int_wc_get_flip();
 bool ltr_int_wc_set_flip(bool new_flip);
 
-bool ltr_int_wc_get_auto_exposure();
-bool ltr_int_wc_set_auto_exposure(bool auto_exp);
-int ltr_int_wc_get_exposure();
-bool ltr_int_wc_set_exposure(int val);
-
-
+const char *ltr_int_wc_get_cascade();
+bool ltr_int_wc_set_cascade(const char *new_cascade);
 
 float ltr_int_wc_get_eff();
 bool ltr_int_wc_set_eff(float new_eff);
 
 int ltr_int_wc_get_optim_level();
 bool ltr_int_wc_set_optim_level(int opt);
-
-float ltr_int_wc_get_confidence_threshold();
-bool ltr_int_wc_set_confidence_threshold(float val);
 
 #ifdef __cplusplus
 }

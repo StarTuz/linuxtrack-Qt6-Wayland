@@ -68,8 +68,11 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
   QString sec;
   initializing = init;
   if(PREF.getFirstDeviceSection(QString::fromUtf8("Webcam-face"), ID, sec)){
-    // Always activate the device when selected
-    PREF.activateDevice(sec);
+    QString currentDev, currentSection;
+    deviceType_t devType;
+    if(!PREF.getActiveDevice(devType, currentDev, currentSection) || (sec !=currentSection)){
+      PREF.activateDevice(sec);
+    }
   }else{
     sec = QString::fromUtf8("Webcam-face");
     initializing = false;
@@ -79,7 +82,9 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       PREF.addKeyVal(sec, QString::fromUtf8("Pixel-format"), QString::fromUtf8(""));
       PREF.addKeyVal(sec, QString::fromUtf8("Resolution"), QString::fromUtf8(""));
       PREF.addKeyVal(sec, QString::fromUtf8("Fps"), QString::fromUtf8(""));
-
+      QString cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
+      QFileInfo finf = QFileInfo(cascadePath);
+      PREF.addKeyVal(sec, QString::fromUtf8("Cascade"), finf.canonicalFilePath());
       PREF.activateDevice(sec);
     }else{
       return false;
@@ -109,18 +114,19 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       ui.WebcamFtFormats->setCurrentIndex(fmt_index);
     }
     on_WebcamFtFormats_activated(fmt_index);
-
-    int beta_val = (int)(ltr_int_wc_get_eff() * 1000.0f);
-    ui.ExpFilterFactor->setValue(beta_val);
-    on_ExpFilterFactor_valueChanged(beta_val);
-    int thresh_val = (int)(ltr_int_wc_get_confidence_threshold() * 100.0f);
-    ui.ConfidenceThreshold->setValue(thresh_val);
-    
-    // Init Exposure UI
-    bool auto_exp = ltr_int_wc_get_auto_exposure();
-    ui.AutoExposure->setChecked(auto_exp);
-    ui.ExposureSlider->setEnabled(!auto_exp);
-    ui.ExposureSlider->setValue(ltr_int_wc_get_exposure());
+    const char *cascade = ltr_int_wc_get_cascade();
+    QString cascadePath;
+    if((cascade == nullptr) || (!QFile::exists(QString::fromUtf8(cascade)))){
+      cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
+      ltr_int_wc_set_cascade(cascadePath.toUtf8().constData());
+    }else{
+      cascadePath = QString::fromUtf8(cascade);
+    }
+    ui.CascadePath->setText(cascadePath);
+    int n = (2.0 / ltr_int_wc_get_eff()) - 2;
+    ui.ExpFilterFactor->setValue(n);
+    on_ExpFilterFactor_valueChanged(n);
+    ui.OptimLevel->setValue(ltr_int_wc_get_optim_level());
   }
   initializing = false;
   return res;
@@ -155,36 +161,41 @@ bool WebcamFtPrefs::AddAvailableDevices(QComboBox &combo)
 
 
 
+void WebcamFtPrefs::on_FindCascade_pressed()
+{
+  QString path = ui.CascadePath->text();
+  if(path.isEmpty()){
+    path = QString::fromUtf8("/");
+  }else{
+    QDir tmp(path);
+    path = tmp.filePath(path);
+  }
+  QString fileName = QFileDialog::getOpenFileName(nullptr,
+     QString::fromUtf8("Find Harr/LBP cascade"), path, QString::fromUtf8("xml Files (*.xml)"));
+  ui.CascadePath->setText(fileName);
+  on_CascadePath_editingFinished();
+}
 
+void WebcamFtPrefs::on_CascadePath_editingFinished()
+{
+  if(!initializing){
+    ltr_int_wc_set_cascade(ui.CascadePath->text().toUtf8().constData());
+  }
+}
 
 void WebcamFtPrefs::on_ExpFilterFactor_valueChanged(int value)
 {
-  float beta = value / 1000.0f; // Map 0-100 to 0.0 - 0.1
+  float a = 2 / (value + 2.0); //EWMA window size
+//  ui.ExpFiltFactorVal->setText(QString("%1").arg(a, 0, 'g', 2));
   if(!initializing){
-    ltr_int_wc_set_eff(beta);
+    ltr_int_wc_set_eff(a);
   }
 }
 
-void WebcamFtPrefs::on_ConfidenceThreshold_valueChanged(int value)
+void WebcamFtPrefs::on_OptimLevel_valueChanged(int value)
 {
   if(!initializing){
-    ltr_int_wc_set_confidence_threshold(value / 100.0f);
-  }
-}
-
-void WebcamFtPrefs::on_AutoExposure_stateChanged(int state)
-{
-  bool is_auto = (state == Qt::Checked);
-  ui.ExposureSlider->setEnabled(!is_auto);
-  if(!initializing){
-    ltr_int_wc_set_auto_exposure(is_auto);
-  }
-}
-
-void WebcamFtPrefs::on_ExposureSlider_valueChanged(int value)
-{
-  if(!initializing){
-    ltr_int_wc_set_exposure(value);
+    ltr_int_wc_set_optim_level(value);
   }
 }
 

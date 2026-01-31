@@ -22,6 +22,8 @@ set(__QT_DEPLOY_TARGET_joy_FILE /home/startux/Code/linuxtrackfixed/linuxtrack/sr
 set(__QT_DEPLOY_TARGET_joy_TYPE MODULE_LIBRARY)
 set(__QT_DEPLOY_TARGET_xlinuxtrack9_FILE /home/startux/Code/linuxtrackfixed/linuxtrack/src/xlinuxtrack9.so)
 set(__QT_DEPLOY_TARGET_xlinuxtrack9_TYPE SHARED_LIBRARY)
+set(__QT_DEPLOY_TARGET_xlinuxtrack9_32_FILE /home/startux/Code/linuxtrackfixed/linuxtrack/src/xlinuxtrack9_32.so)
+set(__QT_DEPLOY_TARGET_xlinuxtrack9_32_TYPE SHARED_LIBRARY)
 set(__QT_DEPLOY_TARGET_ltr_server1_FILE /home/startux/Code/linuxtrackfixed/linuxtrack/src/ltr_server1)
 set(__QT_DEPLOY_TARGET_ltr_server1_TYPE EXECUTABLE)
 set(__QT_DEPLOY_TARGET_ltr_recenter_FILE /home/startux/Code/linuxtrackfixed/linuxtrack/src/ltr_recenter)

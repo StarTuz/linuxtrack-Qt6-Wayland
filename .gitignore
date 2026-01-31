@@ -13,10 +13,9 @@
 .deps/
 build/
 build32/
-build_*/
+build_local/
+dist32/
 AppDir/
-AppDir_v2/
-models_test/
 squashfs-root/
 *.AppImage
 Makefile
@@ -26,4 +25,3 @@ CMakeFiles/
 src/qt_gui/ltr_gui.gch/
 install_manifest.txt
 cmake_install.cmake
-opentrack_research/

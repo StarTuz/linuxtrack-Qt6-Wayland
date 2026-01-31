@@ -1,6 +1,6 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-01-14
+**Last Updated:** 2026-01-08
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
@@ -105,7 +105,7 @@ The project now compiles successfully on modern Linux with:
 
 - **Native Games Support:** ltr_udp bridge for X4: Foundations and other OpenTrack-compatible games
 - **Global Hotkeys:** ltr_hotkeyd daemon for recenter/pause without alt-tabbing
-- **CI Modernization**: Fully automated AppImage build via GitHub Actions, including 32-bit Wine support and a dedicated [release.yml](file:///home/startux/Code/linuxtrackfixed/linuxtrack/.github/workflows/release.yml) that creates GitHub Releases and uploads AppImage assets automatically upon pushing a version tag (`v*`).
+- **CI Modernization:** Fully automated AppImage build via GitHub Actions, including 32-bit Wine support (multi-pass build).
 - **Codebase Cleanup:** Fixed relative includes for robust out-of-tree compilation.  
 - **Hotkey GUI:** ltr_hotkey_gui for configuring hotkeys (similar to Controller.exe for Wine)
 - **Profile Management:** "New Profile" button in ltr_gui for creating custom profiles
@@ -200,32 +200,6 @@ The project now compiles successfully on modern Linux with:
 - **One Euro Filter dt Fix:** Fixed bug where the One Euro filter was not receiving the correct delta time (`dt`) from the tracking loop. The filter now uses the actual frame-to-frame timing instead of a hardcoded value.
 - **TrackIR Thread Freeze Fix:** Solved a freeze issue in the TrackIR driver by adding a yield in the read loop.
 - **Version Bump:** Project version advanced to `1.1.11`.
-
-**Recent Additions (2026-01-14) [v1.1.15]:**
-
-- **Version Synchronization:** Synchronized version strings across the codebase to match git tag `v1.1.15`.
-- **AppImage Build Status:** Verified AppImage build process and identified face tracking decoding gaps.
-- **Version Bump:** Project version advanced to `1.1.15`.
-
-**Recent Additions (2026-01-29) [v1.3.0]:**
-
-- **EndeavourOS / Arch Modernization:**
-  - **Udev Rules:** Enhanced `99-TIR.rules` with `TAG+="uaccess"` for modern systemd-based permission handling.
-  - **Dependency Fix:** Added robust `nlohmann-json` detection to CMake, fixing compilation on systems where the header location differs.
-  - **Error Localization:** Improved libusb error reporting to distinguish between "permission denied" and other hardware errors, providing clearer troubleshooting in the GUI.
-- **AppImage Path Resolution Fix:**
-  - Resolved critical bug where `Prefix` pointing to `~/.local` caused broken library path resolution math (looking in `~/lib/` instead of `~/.local/lib/`).
-  - **Stable Installation:** `ltr_gui` now copies **all** drivers and data files (firmware manifests) to `~/.local` during X-Plane plugin installation, ensuring a complete and functional portable environment.
-- **Version Bump:** Project version advanced to `1.3.0`.
-
-**Recent Additions (2026-01-29) [v1.3.1]:**
-
-- **32-bit Wine Auto-detection**: The build system now automatically detects if `winegcc -m32` can link 32-bit libraries. If missing (common on clean Arch/EndeavourOS installs), it gracefully disables 32-bit components while still building the 64-bit bridge, preventing build failures.
-- **Strengthened Test Harness**:
-  - Combined CI workflow now builds and validates AppImages on every push across Ubuntu, Arch, and Fedora.
-  - Added `scripts/smoke_test.sh` for local multi-distro verification using Docker.
-  - Improved `scripts/validate_appimage.sh` with explicit checks for Wine bridge binaries.
-- **Version Bump:** Project version advanced to `1.3.1`.
 
 **Recent Additions (2026-01-08) [v1.1.12]:**
 
@@ -675,6 +649,20 @@ libcwiid                 # Wiimote support
    - Cause: IDE doesn't understand `winegcc` include paths
    - These files compile correctly with the Wine toolchain
 
+5. **X-Plane External View Conflict** ⚠️ UNDER INVESTIGATION
+   - **Symptom:** Cannot switch to external view (Shift-4) while TrackIR is active
+   - **Visual:** Horizon lights/textures flash rapidly, as if view is being pulled back to cockpit
+   - **Workaround:** Pause tracking before switching views, or use `linuxtrack/ltr_pause` command
+   - **Root Cause:** Plugin applies cockpit coordinates every frame, overriding X-Plane's view change
+   - **Investigation Notes:** See `.agent/TEAM_FEEDBACK.md` post-mortem section
+   - **Reference:** fwfa123/linuxtrackx-ir fork reportedly handles this correctly
+   - **Status:** Requires proper side-by-side diff with fwfa fork to isolate fix
+   - **Next Steps (Team Recommendations):**
+     1. Check if `pv_present` is incorrectly true (bypasses view_changed guard)
+     2. Add debug logging with `XPLMDebugString()` to trace view_type during Shift-4
+     3. Line-by-line comparison of fwfa callback's early-return logic
+     4. Test if view_type oscillates between values during X-Plane view transition
+
 ### Historical Note
 
 This codebase was last actively maintained around 2015-2018. The original author is "uglyDwarf" (GitHub). The fixes in this session address API changes in:
@@ -844,56 +832,3 @@ If editing `ltr_hotkeys.ini` manually, use these decimal codes:
 | **PageUp** | 33 | **PageDn** | 34 |
 
 *End of Handoff Document*
-
-## 10. Post-Mortem: 3D Cockpit Transparency (2026-01-30)
-
-### Status: ✅ FIXED
-
-The 3D cockpit view was showing desktop background bleeding through due to the OpenGL framebuffer's alpha channel being composited with the desktop by the window manager.
-
-### Failed Approaches (Do NOT Retry)
-
-1. **Force Alpha 1.0 in Fragment Shader** (`fragColor.a = 1.0`)
-   - **Result:** Broke sky/mountain rendering - these rely on internal alpha blending.
-2. **Texture format conversion (RGBA -> RGB)**
-   - **Result:** Broke texture loading, caused missing geometry.
-3. **`setAlphaBufferSize(0)` alone**
-   - **Result:** Ineffective - compositors can ignore this hint.
-
-### Working Solution (Commit 1b0e62a)
-
-The fix applies multiple layers of defense while preserving internal alpha blending:
-
-1. **Widget attributes** in `GLWidget` constructor:
-
-   ```cpp
-   setAttribute(Qt::WA_OpaquePaintEvent, true);
-   setAttribute(Qt::WA_NoSystemBackground, true);
-   ```
-
-2. **Surface format** in `main.cpp`:
-
-   ```cpp
-   format.setAlphaBufferSize(0);
-   ```
-
-3. **Force clear alpha** in `initializeGL()`:
-
-   ```cpp
-   glClearColor(c.redF(), c.greenF(), c.blueF(), 1.0f);
-   ```
-
-4. **Post-render alpha clear** at end of `paintGL()` (the key fix):
-
-   ```cpp
-   glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);  // Only write alpha
-   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-   glClear(GL_COLOR_BUFFER_BIT);
-   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);     // Restore
-   ```
-
-This preserves all RGB values and internal alpha blending for sky/mountains/glass, but overwrites the framebuffer's alpha channel to 1.0 so the compositor sees an opaque surface.
-
-### Key Insight
-
-The fragment shader MUST output `col.a` (not `1.0`) to preserve internal scene transparency. The compositor bleed-through is fixed by clearing alpha AFTER rendering, not during.

@@ -69,8 +69,12 @@ bool TirPrefs::Activate(const QString &ID, bool init) {
   initializing = init;
   QString sec;
   if (PREF.getFirstDeviceSection(QString::fromUtf8("Tir"), sec)) {
-    // Always activate the device when selected
-    PREF.activateDevice(sec);
+    QString currentDev, currentSection;
+    deviceType_t devType;
+    if (!PREF.getActiveDevice(devType, currentDev, currentSection) ||
+        (sec != currentSection)) {
+      PREF.activateDevice(sec);
+    }
   } else {
     sec = QString::fromUtf8("TrackIR");
     initializing = false;
@@ -174,15 +178,10 @@ bool TirPrefs::AddAvailableDevices(QComboBox &combo) {
     QMessageBox::warning(
         nullptr, QString::fromUtf8("TrackIR permissions problem"),
         QString::fromUtf8(
-            "TrackIR device was found, but libusb cannot access it.\n\n"
-            "If udev rules are already installed, try:\n"
-            "1. Unplug and replug the device\n"
-            "2. Run: sudo udevadm control --reload-rules && sudo udevadm "
-            "trigger\n"
-            "3. Log out and back in (or reboot)\n\n"
-            "If rules are NOT installed, copy 99-TIR.rules to "
-            "/etc/udev/rules.d/\n"
-            "(requires administrator privileges)"));
+            "TrackIR device was found, but you don't have permissions to access it.\n \
+Please install the file 99-TIR.rules to the udev rules directory\n\
+(consult help and your distro documentation for details).\n\
+You are going to need administrator privileges to do that."));
     return false;
   }
   if (tirType == 0) {

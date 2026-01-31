@@ -139,19 +139,25 @@ protontricks <appid> mfc42
 
 This installs the Microsoft Foundation Classes runtime. Note: Tracking usually works fine even without this fix.
 
+### 3D Tracking View Not Working (NVIDIA)
+
+If the 3D tracking view in `ltr_gui` shows a blank/black screen:
+
+> [!NOTE]
+> This may be an NVIDIA driver issue (reported on RTX 4080 Super). The 3D view uses OpenGL ES 3.0 shaders.
+
+**Workarounds to try:**
+
+1. Ensure you have the latest NVIDIA drivers installed
+2. Try running with `__GLX_VENDOR_LIBRARY_NAME=nvidia ltr_gui`
+3. Check if other OpenGL apps work (e.g., `glxgears`)
+4. Tracking still works — the 3D view is purely for visualization
+
 ## 🛠️ Installation
 
 ### 1. Build from Source (CMake)
 
-**Prerequisites:** Qt6, OpenGL drivers, libusb-1.0, libmxml, liblo, nlohmann-json.
-
-```bash
-# Arch/EndeavourOS:
-sudo pacman -S qt6-base qt6-tools libusb mxml liblo nlohmann-json
-
-# Debian/Ubuntu:
-sudo apt install qt6-base-dev libusb-1.0-0-dev libmxml-dev liblo-dev nlohmann-json3-dev
-```
+**Prerequisites:** Qt6 (likely 6.10+ recommended), OpenGLES/OpenGL drivers, libusb-1.0, libmxml, liblo.
 
 ```bash
 git clone https://github.com/StarTuz/linuxtrack.git

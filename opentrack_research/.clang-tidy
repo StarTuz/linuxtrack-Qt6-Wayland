@@ -1,0 +1,134 @@
+Checks: '
+*,
+-altera-*,
+-android-*,
+-clang-analyzer-osx.*,
+-fuchsia-*,
+-google-*,
+-llvm-*,
+-llvmlibc-*,
+-objc-*,
+-bugprone-assignment-in-if-condition,
+-bugprone-easily-swappable-parameters,
+bugprone-exception-escape,
+-bugprone-implicit-widening-of-multiplication-result,
+-bugprone-narrowing-conversions,
+-cert-*,
+llvm-namespace-comment,
+clang-analyzer-core.CallAndMessage,
+clang-analyzer-deadcode.DeadStores,
+-clang-diagnostic-nonportable-include-path,
+-cppcoreguidelines-avoid-c-arrays,
+-cppcoreguidelines-avoid-capture-default-when-capturing-this,
+-cppcoreguidelines-avoid-do-while,
+-cppcoreguidelines-avoid-goto,
+-cppcoreguidelines-avoid-magic-numbers,
+-cppcoreguidelines-c-copy-assignment-signature,
+-cppcoreguidelines-init-variables,
+-cppcoreguidelines-macro-usage,
+-cppcoreguidelines-narrowing-conversions,
+-cppcoreguidelines-non-private-member-variables-in-classes,
+-cppcoreguidelines-owning-memory,
+-cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+-cppcoreguidelines-pro-bounds-constant-array-index,
+-cppcoreguidelines-pro-bounds-pointer-arithmetic,
+-cppcoreguidelines-pro-type-const-cast,
+-cppcoreguidelines-pro-type-cstyle-cast,
+-cppcoreguidelines-pro-type-reinterpret-cast,
+-cppcoreguidelines-pro-type-static-cast-downcast,
+-cppcoreguidelines-pro-type-union-access,
+-cppcoreguidelines-pro-type-vararg,
+-cppcoreguidelines-special-member-functions,
+-google-readability-braces-around-statements,
+-google-readability-casting,
+-hicpp-avoid-c-arrays,
+-hicpp-avoid-goto,
+-hicpp-braces-around-statements,
+-hicpp-exception-baseclass,
+-hicpp-explicit-conversions,
+-hicpp-function-size,
+-hicpp-invalid-access-moved,
+-hicpp-member-init,
+-hicpp-move-const-arg,
+-hicpp-named-parameter,
+-hicpp-new-delete-operators,
+-hicpp-no-array-decay,
+-hicpp-signed-bitwise,
+-hicpp-special-member-functions,
+-hicpp-uppercase-literal-suffix,
+-hicpp-use-auto,
+-hicpp-use-equals-default,
+-hicpp-use-equals-delete,
+-hicpp-use-override,
+-hicpp-vararg,
+-misc-non-private-member-variables-in-classes,
+-misc-use-anonymous-namespace,
+-modernize-avoid-c-arrays,
+-modernize-loop-convert,
+-modernize-pass-by-value,
+-modernize-raw-string-literal,
+-modernize-redundant-void-arg,
+-modernize-return-braced-init-list,
+-modernize-use-auto,
+modernize-use-equals-default,
+-modernize-use-nodiscard,
+-modernize-use-trailing-return-type,
+-modernize-use-using,
+-performance-no-int-to-ptr,
+-readability-braces-around-statements,
+-readability-else-after-return,
+readability-function-cognitive-complexity,
+-readability-function-size,
+-readability-identifier-length,
+-readability-implicit-bool-conversion,
+-readability-inconsistent-declaration-parameter-name,
+-readability-isolate-declaration,
+-readability-magic-numbers,
+readability-make-member-function-const,
+-readability-named-parameter,
+-readability-redundant-access-specifiers,
+-readability-simplify-boolean-expr,
+-readability-static-accessed-through-instance,
+-readability-uppercase-literal-suffix,
+-readability-use-anyofallof,
+-*-avoid-unconditional-preprocessor-if,
+-*-braces-around-statements,
+-*-incorrect-roundings,
+-*-uppercase-literal-suffix,
+-*-use-emplace,
+-*-use-std-print,
+-*-use-trailing-return-type,
+-*-vararg,
+'
+
+AnalyzeTemporaryDtors: true
+
+CheckOptions:
+  - key:      cert-dcl59-cpp.HeaderFileExtensions
+    value:    ',h,hpp'
+  - key:      cppcoreguidelines-pro-type-member-init.IgnoreArrays
+    value:    '1'
+  - key:      readability-simplify-boolean-expr.ChainedConditionalAssignment
+    value:    '1'
+  - key:      readability-simplify-boolean-expr.ChainedConditionalReturn
+    value:    '1'
+  - key:      readability-function-size.BranchThreshold
+    value:    '15'
+  - key:      readability-function-size.LineThreshold
+    value:    '120'
+  - key:      readability-function-size.NestingThreshold
+    value:    '6'
+  - key:      readability-function-size.ParameterThreshold
+    value:    '8'
+  - key:      readability-function-size.StatementThreshold
+    value:    '90'
+  - key:      readability-function-size.VariableThreshold
+    value:    '10'
+  - key:      readability-function-cognitive-complexity.IgnoreMacros
+    value:    '1'
+  - key:      readability-function-cognitive-complexity.DescribeBasicIncrements
+    value:    '1'
+  - key:      misc-const-correctness.AnalyzeValues
+    value:    '0'
+
+# vim: ft=yaml

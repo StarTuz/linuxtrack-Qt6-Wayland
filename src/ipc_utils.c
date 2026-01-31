@@ -243,7 +243,7 @@ char *ltr_int_get_com_file_name()
 
 static const char *mmapped_file_name()
 {
-  static const char name[] = "/tmp/ltr_mmap";
+  static const char name[] = "/tmp/ltr_mmapXXXXXX";
   return name;
 }
 
@@ -299,18 +299,20 @@ bool ltr_int_mmap_file(const char *fname, size_t tmp_size, struct mmap_s *m)
 bool ltr_int_mmap_file_exclusive(size_t tmp_size, struct mmap_s *m)
 {
   umask(S_IWGRP | S_IWOTH);
-  const char *file_name = mmapped_file_name();
-  int fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0600);
+
+  char *file_name = ltr_int_my_strdup(mmapped_file_name());
+  int fd = ltr_int_open_tmp_file(file_name);
   if(fd < 0){
-    ltr_int_my_perror("open mmap");
+    ltr_int_my_perror("mkstemp");
     return false;
   }
 
   if(!ltr_int_mmap(fd, tmp_size, m)){
-    close(fd);
+    ltr_int_close_tmp_file(file_name, fd);
+    free(file_name);
     return false;
   }
-  m->fname = ltr_int_my_strdup(file_name);
+  m->fname = file_name;
   m->size = tmp_size;
   m->sem = ltr_int_semaphoreFromFd(fd);
   m->lock_sem = NULL;

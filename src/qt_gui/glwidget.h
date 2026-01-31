@@ -4,6 +4,7 @@
 #include <QtGlobal>
 #include <memory>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 // Qt6: Use modern OpenGL with shaders (required for Wayland/EGL)
 #include <QMatrix4x4>
 #include <QMutex>
@@ -15,6 +16,11 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 #define GLWIDGET_BASE QOpenGLWidget
+#else
+// Qt5: Use legacy fixed-function OpenGL
+#include <QGLWidget>
+#define GLWIDGET_BASE QGLWidget
+#endif
 
 #include <QThread>
 
@@ -29,7 +35,12 @@ signals:
 private:
 };
 
-class GLWidget : public GLWIDGET_BASE, protected QOpenGLFunctions {
+class GLWidget : public GLWIDGET_BASE
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    ,
+                 protected QOpenGLFunctions
+#endif
+{
   Q_OBJECT
 
 public:
@@ -58,6 +69,7 @@ private:
   bool makeObjects();
   void normalizeAngle(int *angle);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   // Modern OpenGL Resources (Qt6)
   QOpenGLVertexArrayObject vao;
   QOpenGLBuffer vbo;
@@ -81,6 +93,10 @@ private:
   // Synchronization flags for thread/GL race condition
   bool objectsLoaded;
   bool glInitialized;
+#else
+  // Legacy OpenGL Resources (Qt5)
+  std::vector<GLuint> objects;
+#endif
 
   float xRot;
   float yRot;

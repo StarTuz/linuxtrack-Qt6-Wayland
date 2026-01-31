@@ -63,8 +63,8 @@ static void draw_stripe(image_t *img, int x, int y, int x_end,
 
 void ltr_int_draw_square(image_t *img, int x, int y, int size) {
   assert(img != NULL);
-  // assert(x >= 0);
-  // assert(y >= 0);
+  assert(x >= 0);
+  assert(y >= 0);
   int x1 = (int)(x / img->ratio) - size;
   int x2 = (int)(x / img->ratio) + size;
   int y1 = y - size;
@@ -84,11 +84,10 @@ void ltr_int_draw_square(image_t *img, int x, int y, int size) {
 
 void ltr_int_draw_empty_square(image_t *img, int x1, int y1, int x2, int y2) {
   assert(img != NULL);
-  // Allow negative coordinates, they will be clipped.
-  // assert(x1 >= 0);
-  // assert(y1 >= 0);
-  // assert(x2 >= x1);
-  // assert(y2 >= y1);
+  assert(x1 >= 0);
+  assert(y1 >= 0);
+  assert(x2 >= x1);
+  assert(y2 >= y1);
   x1 = x1 / img->ratio;
   x2 = x2 / img->ratio;
 

@@ -1,0 +1,11 @@
+/build*/
+/build
+/build-*
+.DS_Store
+/sdk-paths-*.cmake
+/.idea/
+/.vs/
+/CMakeSettings.json
+.gtm/
+.vscode
+.history

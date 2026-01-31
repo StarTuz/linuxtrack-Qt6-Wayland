@@ -53,7 +53,6 @@ public:
     QLabel *Threshold_label;
     QLabel *TirUseGrayscaleLabel;
     QLabel *label_7;
-    QLabel *VideoOnDelayLabel;
     QGridLayout *gridLayout_3;
     QCheckBox *TirUseGrayscale;
     QHBoxLayout *horizontalLayout;
@@ -66,10 +65,6 @@ public:
     QLabel *TirThresholdMin;
     QSlider *TirThreshold;
     QLabel *TirThresholdMax;
-    QHBoxLayout *horizontalLayout_4;
-    QSpinBox *TirVideoOnDelay;
-    QLabel *label_video_delay_unit;
-    QSpacerItem *horizontalSpacer_4;
     QSpacerItem *verticalSpacer;
 
     void setupUi(QWidget *TirSetupForm)
@@ -219,11 +214,6 @@ public:
 
         verticalLayout_3->addWidget(label_7);
 
-        VideoOnDelayLabel = new QLabel(frame_2);
-        VideoOnDelayLabel->setObjectName("VideoOnDelayLabel");
-
-        verticalLayout_3->addWidget(VideoOnDelayLabel);
-
 
         horizontalLayout_3->addLayout(verticalLayout_3);
 
@@ -313,32 +303,6 @@ public:
 
         gridLayout_3->addLayout(horizontalLayout_2, 2, 2, 1, 1);
 
-        horizontalLayout_4 = new QHBoxLayout();
-        horizontalLayout_4->setObjectName("horizontalLayout_4");
-        TirVideoOnDelay = new QSpinBox(frame_2);
-        TirVideoOnDelay->setObjectName("TirVideoOnDelay");
-        sizePolicy2.setHeightForWidth(TirVideoOnDelay->sizePolicy().hasHeightForWidth());
-        TirVideoOnDelay->setSizePolicy(sizePolicy2);
-        TirVideoOnDelay->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
-        TirVideoOnDelay->setMinimum(0);
-        TirVideoOnDelay->setMaximum(500000);
-        TirVideoOnDelay->setSingleStep(10000);
-        TirVideoOnDelay->setValue(0);
-
-        horizontalLayout_4->addWidget(TirVideoOnDelay);
-
-        label_video_delay_unit = new QLabel(frame_2);
-        label_video_delay_unit->setObjectName("label_video_delay_unit");
-
-        horizontalLayout_4->addWidget(label_video_delay_unit);
-
-        horizontalSpacer_4 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_4->addItem(horizontalSpacer_4);
-
-
-        gridLayout_3->addLayout(horizontalLayout_4, 5, 2, 1, 1);
-
 
         horizontalLayout_3->addLayout(gridLayout_3);
 
@@ -377,19 +341,11 @@ public:
         Threshold_label->setText(QCoreApplication::translate("TirSetupForm", "Threshold:", nullptr));
         TirUseGrayscaleLabel->setText(QCoreApplication::translate("TirSetupForm", "Grayscale mode:", nullptr));
         label_7->setText(QCoreApplication::translate("TirSetupForm", "Valid Blob Size:", nullptr));
-        VideoOnDelayLabel->setText(QCoreApplication::translate("TirSetupForm", "Video On Delay (\302\265s):", nullptr));
-#if QT_CONFIG(tooltip)
-        VideoOnDelayLabel->setToolTip(QCoreApplication::translate("TirSetupForm", "Delay after enabling video before turning on IR LEDs. Try 120000 if IR LEDs turn off immediately.", nullptr));
-#endif // QT_CONFIG(tooltip)
         TirUseGrayscale->setText(QString());
         label_43->setText(QCoreApplication::translate("TirSetupForm", "to", nullptr));
         label_44->setText(QCoreApplication::translate("TirSetupForm", "pixels", nullptr));
         TirThresholdMin->setText(QCoreApplication::translate("TirSetupForm", "30", nullptr));
         TirThresholdMax->setText(QCoreApplication::translate("TirSetupForm", "253", nullptr));
-#if QT_CONFIG(tooltip)
-        TirVideoOnDelay->setToolTip(QCoreApplication::translate("TirSetupForm", "Delay in microseconds. Try 120000 (120ms) if IR LEDs turn off immediately after starting.", nullptr));
-#endif // QT_CONFIG(tooltip)
-        label_video_delay_unit->setText(QCoreApplication::translate("TirSetupForm", "\302\265s", nullptr));
     } // retranslateUi
 
 };

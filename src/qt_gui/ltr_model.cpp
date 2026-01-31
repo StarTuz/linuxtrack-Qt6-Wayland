@@ -2,18 +2,28 @@
 #include "guardian.h"
 #include "help_view.h"
 #include "ltr_gui_prefs.h"
-#include <QMessageBox>
+#include <QtGlobal>
+#include <iostream>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
-#include <QtGlobal>
+#else
+#include <QRegExp>
+#include <QRegExpValidator>
+#endif
+#include <QMessageBox>
 #include <cmath>
-#include <iostream>
 
 ModelCreate::ModelCreate(QWidget *parent)
     : QDialog(parent), validator(nullptr), modelEditor(nullptr) {
   ui.setupUi(this);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
   validator = new QRegularExpressionValidator(
       QRegularExpression(QString::fromUtf8("^[^\\[\\]]*$")), this);
+#else
+  validator =
+      new QRegExpValidator(QRegExp(QString::fromUtf8("^[^\\[\\]]*$")), this);
+#endif
   ui.ModelName->setValidator(validator);
 }
 
