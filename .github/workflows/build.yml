@@ -177,6 +177,8 @@ jobs:
             qt6-base qt6-tools nlohmann-json \
             mxml wine wget file onnxruntime \
             glu libx11 mesa lib32-glibc lib32-gcc-libs \
+            lib32-zlib lib32-libusb lib32-libx11 lib32-mesa \
+            lib32-libxml2 lib32-gnutls lib32-glu \
             mingw-w64-gcc
 
       - name: Build
