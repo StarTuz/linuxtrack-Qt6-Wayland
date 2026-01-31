@@ -179,7 +179,10 @@ int main(int argc, char *argv[]) {
         packet.y = (double)pose.ty / 10.0;
         packet.z = (double)pose.tz / 10.0;
 
-        packet.yaw = (double)pose.yaw;
+        // OpenTrack convention: positive yaw = look right
+        // Linuxtrack convention: positive yaw = look left (from face tracking geometry)
+        // Invert yaw to match OpenTrack expectations
+        packet.yaw = -(double)pose.yaw;
         packet.pitch = (double)pose.pitch;
         packet.roll = (double)pose.roll;
 
@@ -190,7 +193,8 @@ int main(int argc, char *argv[]) {
         packet.data_id = 2; // ID?
         packet.cam_width = 0;
         packet.cam_height = 0;
-        packet.yaw = (float)pose.yaw;
+        // FreeTrack convention: same as OpenTrack (positive yaw = look right)
+        packet.yaw = -(float)pose.yaw;
         packet.pitch = (float)pose.pitch;
         packet.roll = (float)pose.roll;
         packet.x =
