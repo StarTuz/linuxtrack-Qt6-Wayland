@@ -209,6 +209,7 @@ static bool ltr_int_process_message(int l_master_uplink) {
     ltr_int_close_axes(&axes);
     free(profile_name);
     profile_name = ltr_int_my_strdup(msg.str);
+    ltr_int_read_prefs(NULL, true);
     ltr_int_init_axes(&axes, profile_name);
     break;
   default:

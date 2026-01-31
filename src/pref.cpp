@@ -88,7 +88,7 @@ bool ltr_int_read_prefs(const char *file, bool force_read) {
     char *pfile = ltr_int_get_default_file_name(nullptr);
     if (!pfile)
       return false;
-    bool res = modern_prefs_read(pfile, false);
+    bool res = modern_prefs_read(pfile, force_read);
     free(pfile);
     return res;
   }

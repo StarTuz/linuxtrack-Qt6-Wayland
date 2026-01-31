@@ -36,6 +36,7 @@ int modern_prefs_read(const char *filename, bool create_if_missing) {
   if (!filename || !g_ini)
     return 0;
 
+  g_ini->clear();
   g_current_filename = filename;
 
   // Check if file exists
