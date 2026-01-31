@@ -1,1 +1,3 @@
-SUBSYSTEM=="usb", ATTRS{idVendor}=="131d", MODE="0666"
+# TrackIR / SmartNav USB device permissions
+SUBSYSTEM=="usb", ATTR{idVendor}=="131d", MODE="0666", GROUP="users", TAG+="uaccess"
+SUBSYSTEM=="usb_device", ATTRS{idVendor}=="131d", MODE="0666", GROUP="users", TAG+="uaccess"
