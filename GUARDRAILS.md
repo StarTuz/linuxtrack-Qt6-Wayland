@@ -77,3 +77,9 @@
 - **FORBIDDEN:** IPC calls (`linuxtrack_suspend`, `linuxtrack_wakeup`, `linuxtrack_get_tracking_state`) in flight loop callback without Carmack review.
 - **KEEP:** Simple early-return pattern for non-cockpit views.
 - Maintain reconnection/retry logic for server disconnects (but rate-limit if in hot path).
+
+### 3D Rendering & Transparency
+
+- **FORBIDDEN:** Removing the alpha-mask reset block at the end of `GLWidget::paintGL`.
+- **REQUIRED:** `QSurfaceFormat` in `main.cpp` must keep `AlphaBufferSize(0)` to prevent compositor bleed-through.
+- **REQUIRED:** Maintain `Qt::WA_NoSystemBackground` on `GLWidget` to ensure proper opaque compositing.

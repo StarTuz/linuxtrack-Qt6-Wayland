@@ -116,8 +116,10 @@ GLWidget::GLWidget(QWidget *parent)
   zTrans = 0;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-  trolltechPurple = QColor::fromRgbF(0.1, 0.1, 0.15); // Dark blue-gray
+  trolltechPurple =
+      QColor::fromRgbF(0.1, 0.1, 0.15, 1.0); // Dark blue-gray, fully opaque
   setAttribute(Qt::WA_OpaquePaintEvent);
+  setAttribute(Qt::WA_NoSystemBackground);
   setMinimumSize(320, 240);
 #else
   trolltechPurple = QColor::fromCmykF(0.0, 0.0, 0.0, 0.0);
@@ -210,7 +212,7 @@ void GLWidget::initializeGL() {
   }
 
   QColor c = trolltechPurple;
-  glClearColor(c.redF(), c.greenF(), c.blueF(), c.alphaF());
+  glClearColor(c.redF(), c.greenF(), c.blueF(), 1.0f); // Force alpha to 1.0
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
@@ -312,6 +314,14 @@ void GLWidget::paintGL() {
 
   vao.release();
   program->release();
+
+  // Force framebuffer alpha to 1.0 to prevent compositor transparency
+  // bleed-through This preserves internal alpha blending for glass but makes
+  // the final surface opaque
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE); // Only write to alpha
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); // Restore full color writes
 #else
   // Legacy Qt5 rendering
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

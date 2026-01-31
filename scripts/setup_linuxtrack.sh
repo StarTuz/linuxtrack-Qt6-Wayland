@@ -12,11 +12,69 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}Linuxtrack Environment Setup & Health Check${NC}"
 echo "============================================"
 
+# Argument parsing
+FULL_MODE=false
+WITH_MICKEY=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --full)
+            FULL_MODE=true
+            shift
+            ;;
+        --mickey)
+            WITH_MICKEY=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--full] [--mickey]"
+            echo "  --full: Non-interactive build and installation to /opt/linuxtrack"
+            echo "  --mickey: Install Mickey (mouse emulation) rules (used with --full)"
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+if [ "$FULL_MODE" = true ]; then
+    echo -e "${YELLOW}Running in FULL mode: Automated Build & Install${NC}"
+fi
+
 # OS Detection
 IS_ARCH=false
 if [ -f /etc/arch-release ]; then
     IS_ARCH=true
     echo "Distro: Arch/EndeavourOS detected."
+fi
+
+# Dependency check
+check_dependencies() {
+    local DEPS=("cmake" "qt6-base" "libusb" "mxml")
+    local MISSING_DEPS=()
+    for dep in "${DEPS[@]}"; do
+        if ! pacman -Qs "$dep" > /dev/null; then
+            MISSING_DEPS+=("$dep")
+        fi
+    done
+
+    if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  Missing build dependencies: ${MISSING_DEPS[*]}${NC}"
+        if [ "$FULL_MODE" = true ]; then
+            echo "Installing missing dependencies..."
+            sudo pacman -S --noconfirm "${MISSING_DEPS[@]}"
+        else
+            read -p "Do you want to install them now? [y/N] " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                sudo pacman -S "${MISSING_DEPS[@]}"
+            fi
+        fi
+    fi
+}
+
+if [ "$IS_ARCH" = true ]; then
+    check_dependencies
 fi
 
 # 1. Path Discovery
@@ -204,13 +262,17 @@ perform_install() {
     fi
     
     if [ -z "$BUILD_DIR" ]; then
-        echo -e "${YELLOW}No compiled binaries found.${NC}"
-        read -p "Do you want to BUILD Linuxtrack from source now? [y/N] " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            if ! perform_build; then return 1; fi
+        if [ "$FULL_MODE" = true ]; then
+             if ! perform_build; then return 1; fi
         else
-            return 1
+            echo -e "${YELLOW}No compiled binaries found.${NC}"
+            read -p "Do you want to BUILD Linuxtrack from source now? [y/N] " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                if ! perform_build; then return 1; fi
+            else
+                return 1
+            fi
         fi
     fi
     
@@ -233,6 +295,13 @@ perform_install() {
         echo -e "${RED}❌ Installation failed.${NC}"
     fi
 }
+
+if [ "$FULL_MODE" = true ]; then
+    perform_install "/opt/linuxtrack"
+    setup_integration
+    echo -e "\n${GREEN}🚀 Full installation complete!${NC}"
+    exit 0
+fi
 
 echo -e "\n🚀 Build & Upgrade Options:"
 if [ ${#FOUND_INSTALLS[@]} -gt 0 ]; then
@@ -271,14 +340,43 @@ setup_integration() {
     if [ ! -f "$UDEV_SRC" ]; then UDEV_SRC="src/99-TIR.rules"; fi 
     
     if [ -f "$UDEV_SRC" ]; then
-        echo -e "  (requires sudo) Installing udev rules..."
+        echo -e "  (requires sudo) Installing TrackIR udev rules..."
         sudo cp "$UDEV_SRC" /etc/udev/rules.d/
+        echo -e "  ✅ TrackIR rules installed."
+        
+        # 99-Mickey.rules (Optional)
         MICKEY_UDEV="${UDEV_SRC/TIR/Mickey}"
-        if [ -f "$MICKEY_UDEV" ]; then sudo cp "$MICKEY_UDEV" /etc/udev/rules.d/; fi
+        if [ -f "$MICKEY_UDEV" ]; then
+            echo -e "\n  ℹ️  Mickey Rules Explanation:"
+            echo "     Mickey is the component that allows Linuxtrack to emulate a mouse or joystick."
+            echo "     This is useful for games that don't natively support head tracking."
+            echo "     The Mickey rules allow this emulation to work without root privileges."
+            
+            INSTALL_MICKEY=false
+            if [ "$FULL_MODE" = true ]; then
+                if [ "$WITH_MICKEY" = true ]; then
+                    INSTALL_MICKEY=true
+                else
+                    echo "     (Skip: Mickey rules not requested in --full mode)"
+                fi
+            else
+                read -p "     Do you want to install Mickey (mouse emulation) rules? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    INSTALL_MICKEY=true
+                fi
+            fi
+
+            if [ "$INSTALL_MICKEY" = true ]; then
+                echo "     Installing Mickey udev rules..."
+                sudo cp "$MICKEY_UDEV" /etc/udev/rules.d/
+                echo -e "     ✅ Mickey rules installed."
+            fi
+        fi
         
         sudo udevadm control --reload-rules
         sudo udevadm trigger
-        echo -e "  ✅ Rules installed and reloaded."
+        echo -e "  ✅ udev rules reloaded."
     else
         echo -e "  ${YELLOW}⚠️  Udev rules source not found (99-TIR.rules).${NC}"
     fi

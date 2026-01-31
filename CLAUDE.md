@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Linuxtrack is a head-tracking solution for Linux that enables applications (primarily flight simulators and games) to respond to head movement. It supports TrackIR USB devices, webcams, and OpenCV face tracking. Windows games are supported through a Wine/Proton bridge.
 
+**Current Version:** 1.3.3
+
 ## Build Commands
 
 ```bash
@@ -18,20 +20,27 @@ cmake --build . -j$(nproc)
 sudo cmake --install .
 
 # Run from build directory (no install needed)
-./build/src/ltr_gui
+./build/src/qt_gui/ltr_gui
 ```
 
-### Wine Bridge (32-bit + 64-bit)
-
-The Wine bridge requires a two-pass build for both architectures. The CI workflow handles this automatically, but for manual builds:
+### Build Individual Components
 
 ```bash
-# Pass 1: 32-bit Wine components
-cd src/wine_bridge && make WINEARCH=win32
+# GUI only (faster iteration)
+cmake --build build --target ltr_gui
 
-# Pass 2: 64-bit Wine components
-cd src/wine_bridge && make WINEARCH=win64
+# Core library only
+cmake --build build --target ltr
+
+# Run unit tests
+./build/src/lal/test_lal
 ```
+
+### Wine Bridge
+
+The Wine bridge builds automatically via CMake when `winegcc` is available. It builds both 32-bit and 64-bit components. CI handles this automatically.
+
+To disable Wine bridge: `cmake .. -DBUILD_WINE_BRIDGE=OFF`
 
 ### Dependencies (Arch Linux)
 
@@ -79,6 +88,14 @@ Applications (X-Plane, Wine games, OSC clients)
 
 Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxtrack/`.
 
+## Git Workflow
+
+**CRITICAL:** This repository contains uncommitted local modifications on top of upstream uglyDwarf/linuxtrack.
+
+- **NEVER** run `git checkout`, `git reset`, `git restore`, or `git revert` without explicit user permission
+- These commands will destroy the local fixes that make this project work on modern systems
+- Always create new commits rather than amending when fixing issues
+
 ## Project-Specific Rules
 
 ### Protected Paths (Never Modify Without Explicit Request)
@@ -102,6 +119,16 @@ Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxt
 - Maintain Qt6 compatibility
 - Uses `$ORIGIN` RPATH for relocatable binaries
 
+### 3D View Transparency (Qt6/GLES)
+
+**CRITICAL:** The 3D view suffers from compositor "bleed-through" on modern Linux desktops (Wayland/X11). This is fixed via a multi-layered defense:
+
+- **Surface Format (`main.cpp`):** `format.setAlphaBufferSize(0)` must be set before `QApplication` creation.
+- **Widget Attributes (`glwidget.cpp`):** `setAttribute(Qt::WA_NoSystemBackground)` in constructor.
+- **Clear Logic (`glwidget.cpp`):**
+  - `glClearColor` must force alpha to `1.0f` in `initializeGL`.
+  - **Alpha-Reset:** At the end of `paintGL`, the alpha channel MUST be explicitly cleared to `1.0f` using `glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE)` then `glClear(GL_COLOR_BUFFER_BIT)`.
+
 ### Wine Bridge
 
 - Test both 32-bit AND 64-bit DLLs when modifying
@@ -115,6 +142,12 @@ Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxt
 - `README.md` - User-facing setup and troubleshooting guide
 - `MODERNIZATION_ROADMAP.md` - Future improvements
 
-## Current Version
+## Related Projects
 
-v1.1.12 - Qt6/Wayland compatible, OpenGL ES 3.0 shaders, One Euro filter, UDP bridge
+There are related projects in the workspace - do NOT access without explicit permission:
+
+| Project | Path | Status |
+|---------|------|--------|
+| linuxtrackfixed | `/home/startux/Code/linuxtrackfixed/` | **THIS PROJECT** - Active |
+| tuxtracksold | `/home/startux/Code/tuxtracksold/` | Archived - Wine bridge never worked |
+| tuxtracks | `/home/startux/Code/tuxtracks/` | New greenfield project (separate rules)
