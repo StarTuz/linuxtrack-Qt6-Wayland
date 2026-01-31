@@ -11,7 +11,29 @@ else()
     set(HAS_WINE64 OFF)
 endif()
 
-option(ENABLE_WINE32 "Build 32-bit Wine bridge" ON)
+
+# Check if 32-bit Wine environment is capable of building ELF bridges
+if(ENABLE_WINE32)
+    set(WINE32_UNIX_FOUND FALSE)
+    # Common locations for Wine 32-bit unix libraries
+    foreach(SEARCH_PATH 
+        "/usr/lib/wine/i386-unix" 
+        "/usr/lib32/wine/i386-unix" 
+        "/usr/lib/i386-linux-gnu/wine/i386-unix"
+        "$ENV{WINE_PREFIX}/lib/wine/i386-unix"
+    )
+        if(IS_DIRECTORY ${SEARCH_PATH})
+            set(WINE32_UNIX_FOUND TRUE)
+            message(STATUS "Found 32-bit Wine unix libraries at: ${SEARCH_PATH}")
+            break()
+        endif()
+    endforeach()
+
+    if(NOT WINE32_UNIX_FOUND)
+        message(WARNING "32-bit Wine unix libraries (i386-unix) not found! Arch Linux and some modern distros prohibit building 32-bit ELF Wine bridges. s32-bit Wine support will be DISABLED.")
+        set(ENABLE_WINE32 OFF)
+    endif()
+endif()
 
 
 # Helper to build a wine dll/exe

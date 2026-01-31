@@ -186,7 +186,6 @@ jobs:
       - name: Build
         run: |
           mkdir build && cd build
-          export LIBRARY_PATH=/usr/lib/wine/i386-windows:/usr/lib/wine/x86_64-unix:$LIBRARY_PATH
           cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
           make -j$(nproc)
 
