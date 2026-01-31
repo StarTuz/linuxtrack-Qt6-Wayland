@@ -57,6 +57,7 @@ private slots:
   void on_UdpBridgeCheck_stateChanged(int state);
   void on_UdpSettingsButton_pressed();
   void on_NativeHotkeysConfigButton_pressed();
+  void updateHotkeyStatus();
 
 private:
   Ui::LinuxtrackMainForm ui;
@@ -80,9 +81,9 @@ private:
   bool guiInit;
   bool showWineWarning;
   UdpBridge *udpBridge;
-  QProcess *hotkeyProcess;  // Owned by main window, not dialog
+  QProcess *hotkeyProcess; // Owned by main window, not dialog
   bool m_autostart;
-  
+
   void startHotkeyDaemon();
   void stopHotkeyDaemon();
 };
