@@ -83,62 +83,80 @@ static bool ensureStableLibraries() {
   }
 
   QString prefix = PREF.getPrefix();
-  bool isVolatile = prefix.contains(QString::fromUtf8("/tmp/")) || 
-                   prefix.contains(QString::fromUtf8(".mount_"));
+  bool isVolatile = prefix.contains(QString::fromUtf8("/tmp/")) ||
+                    prefix.contains(QString::fromUtf8(".mount_"));
 
   if (!isVolatile) {
     return true;
   }
 
   QMessageBox::StandardButton reply;
-  reply = QMessageBox::question(nullptr, QString::fromUtf8("Linuxtrack AppImage"),
-                                QString::fromUtf8("You are running from an AppImage. To make the X-Plane "
-                                                 "plugin work after closing this AppImage, I need to "
-                                                 "install core libraries to a stable location (~/.local).\n\n"
-                                                 "Do you want to proceed?"),
-                                QMessageBox::Yes | QMessageBox::No);
+  reply = QMessageBox::question(
+      nullptr, QString::fromUtf8("Linuxtrack AppImage"),
+      QString::fromUtf8(
+          "You are running from an AppImage. To make the X-Plane "
+          "plugin work after closing this AppImage, I need to "
+          "install core libraries to a stable location (~/.local).\n\n"
+          "Do you want to proceed?"),
+      QMessageBox::Yes | QMessageBox::No);
   if (reply != QMessageBox::Yes) {
     return true;
   }
 
-  QString stableLibDir = QDir::homePath() + QString::fromUtf8("/.local/lib/linuxtrack");
+  QString stableLibDir =
+      QDir::homePath() + QString::fromUtf8("/.local/lib/linuxtrack");
   QDir dir;
   if (!dir.mkpath(stableLibDir)) {
-    warningMessage(QString::fromUtf8("Can't create stable library directory '%1'!").arg(stableLibDir));
+    warningMessage(
+        QString::fromUtf8("Can't create stable library directory '%1'!")
+            .arg(stableLibDir));
     return false;
   }
 
-  // Libraries to copy
+  // Libraries and plugins to copy
   QStringList libs;
-  libs << QString::fromUtf8("liblinuxtrack.so.0") << QString::fromUtf8("libltr.so");
-  
+  libs << QString::fromUtf8("liblinuxtrack.so.0")
+       << QString::fromUtf8("libltr.so") << QString::fromUtf8("xlinuxtrack9.so")
+       << QString::fromUtf8("xlinuxtrack9_32.so");
+
   // Also copy drivers if needed, but let's start with core libs
-  QString appPath = QApplication::applicationDirPath() + QString::fromUtf8("/../lib/linuxtrack/");
-  
-  foreach(const QString &lib, libs) {
+  QString appPath = QApplication::applicationDirPath() +
+                    QString::fromUtf8("/../lib/linuxtrack/");
+
+  foreach (const QString &lib, libs) {
     QString src = appPath + lib;
+    if (!QFile::exists(src)) {
+      src = QApplication::applicationDirPath() + QString::fromUtf8("/../lib/") +
+            lib;
+    }
     QString dst = stableLibDir + QString::fromUtf8("/") + lib;
-    QFile::remove(dst);
-    if (!QFile::copy(src, dst)) {
-       ltr_int_log_message("Failed to copy %s to %s\n", src.toUtf8().constData(), dst.toUtf8().constData());
+    if (QFile::exists(src)) {
+      QFile::remove(dst);
+      if (!QFile::copy(src, dst)) {
+        ltr_int_log_message("Failed to copy %s to %s\n",
+                            src.toUtf8().constData(), dst.toUtf8().constData());
+      }
     }
   }
 
   // Update prefix to ~/.local
-  PREF.setKeyVal(QString::fromUtf8("Global"), QString::fromUtf8("Prefix"), 
-                 QString::fromUtf8("\"") + QDir::homePath() + QString::fromUtf8("/.local\""));
+  PREF.setKeyVal(QString::fromUtf8("Global"), QString::fromUtf8("Prefix"),
+                 QString::fromUtf8("\"") + QDir::homePath() +
+                     QString::fromUtf8("/.local\""));
   PREF.savePrefs();
-  
-  QMessageBox::information(nullptr, QString::fromUtf8("Linuxtrack"),
-                           QString::fromUtf8("Stable libraries installed to ~/.local/lib/linuxtrack.\n"
-                                            "Prefix updated. The X-Plane plugin should now work reliably."));
+
+  QMessageBox::information(
+      nullptr, QString::fromUtf8("Linuxtrack"),
+      QString::fromUtf8(
+          "Stable libraries installed to ~/.local/lib/linuxtrack.\n"
+          "Prefix updated. The X-Plane plugin should now work reliably."));
   return true;
 }
 
 void XPluginInstall::on_BrowseXPlane_pressed() {
   if (!ensureStableLibraries()) {
-     reject();
-     return;
+    reject();
+    return;
   }
 
   QString startDir = QDir::homePath();
@@ -164,11 +182,44 @@ void XPluginInstall::on_BrowseXPlane_pressed() {
   // Use QFileInfo instead of QRegExp for path extraction
   QFileInfo fileInfo(fileName);
   QString destPath = fileInfo.path() + QString::fromUtf8("/Resources/plugins");
-  QString sourceFile = PrefProxy::getLibPath(QString::fromUtf8("xlinuxtrack9"));
-  if (!QFile::exists(destPath)) {
+  if (!QDir(destPath).exists()) {
     warningMessage(
         QString(QString::fromUtf8("Can't install XPlane plugin there:'") +
                 fileName + QString::fromUtf8("'")));
+    reject();
+    return;
+  }
+
+  // Robust search for the source plugin file
+  QString sourceFile;
+  QString pluginBase = QString::fromUtf8("xlinuxtrack9.so");
+  QString appDir = QApplication::applicationDirPath();
+
+  QStringList srcDirs;
+  srcDirs << appDir + QString::fromUtf8("/../lib/linuxtrack")
+          << appDir + QString::fromUtf8("/../lib")
+          << QString::fromUtf8("/opt/linuxtrack/lib/linuxtrack")
+          << QString::fromUtf8("/opt/linuxtrack/lib");
+
+  // Also check source build directories
+  srcDirs << appDir + QString::fromUtf8("/../../src")
+          << appDir + QString::fromUtf8("/../src");
+
+  foreach (const QString &dir, srcDirs) {
+    QString candidate = dir + QString::fromUtf8("/") + pluginBase;
+    if (QFile::exists(candidate)) {
+      sourceFile = candidate;
+      break;
+    }
+  }
+
+  if (sourceFile.isEmpty()) {
+    sourceFile = PrefProxy::getLibPath(QString::fromUtf8("xlinuxtrack9"));
+  }
+
+  if (sourceFile.isEmpty() || !QFile::exists(sourceFile)) {
+    warningMessage(QString::fromUtf8(
+        "Could not find source plugin file 'xlinuxtrack9.so'!"));
     reject();
     return;
   }

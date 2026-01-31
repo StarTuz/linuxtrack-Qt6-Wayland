@@ -21,10 +21,9 @@ ProfileSelector::ProfileSelector(QWidget *parent)
   QStringList profiles;
   ui.Profiles->addItems(Profile::getProfiles().getProfileNames());
   initializing = false;
-  setCurrentProfile(QString::fromUtf8("Default"));
   connect(ui.Profiles, &QComboBox::currentIndexChanged, this,
           &ProfileSelector::profilesIndexChanged);
-  //  on_Profiles_currentIndexChanged("Default");
+  setCurrentProfile(QString::fromUtf8("Default"));
 }
 
 ProfileSelector::~ProfileSelector() {
