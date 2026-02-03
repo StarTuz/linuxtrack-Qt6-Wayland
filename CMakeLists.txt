@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(LinuxTrack VERSION 1.3.3 LANGUAGES C CXX)
+project(LinuxTrack VERSION 1.3.4 LANGUAGES C CXX)
 
 # Default installation prefix
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
