@@ -40,7 +40,7 @@ for DISTRO in "${DISTROS[@]}"; do
     elif [[ "$DISTRO" == ubuntu* ]]; then
         DEP_CMD="apt-get update && apt-get install -y libfuse2 libxcb1 libxcb-cursor0 file libgl1"
     elif [[ "$DISTRO" == fedora* ]]; then
-        DEP_CMD="dnf install -y fuse fuse-libs libxcb file findutils libglvnd-glx libglvnd-opengl"
+        DEP_CMD="dnf install -y fuse fuse-libs libxcb file findutils libglvnd-glx libglvnd-opengl fontconfig"
     fi
 
     # Run docker
