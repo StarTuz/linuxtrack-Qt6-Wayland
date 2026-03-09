@@ -26,6 +26,11 @@ static void warn(const QString baseMsg, const QString explanation) {
       QString::fromUtf8("%1\nSystem says: %2").arg(baseMsg).arg(explanation));
 }
 
+static bool looksLikeWindowsExecutable(const QFileInfo &fileInfo) {
+  return fileInfo.suffix().compare(QString::fromUtf8("exe"),
+                                   Qt::CaseInsensitive) == 0;
+}
+
 static bool removePlugin(const QString targetName) {
   QFile target(targetName);
   if (target.exists()) {
@@ -181,6 +186,17 @@ void XPluginInstall::on_BrowseXPlane_pressed() {
   }
   // Use QFileInfo instead of QRegExp for path extraction
   QFileInfo fileInfo(fileName);
+  if (looksLikeWindowsExecutable(fileInfo)) {
+    warningMessage(QString::fromUtf8(
+        "You selected a Windows X-Plane executable.\n\n"
+        "Linuxtrack installs the Linux plugin only (`lin.xpl`). "
+        "Please select your Linux X-Plane installation instead, "
+        "for example `X-Plane-x86_64`, so the plugin is copied into the "
+        "Linux `Resources/plugins` directory."));
+    reject();
+    return;
+  }
+
   QString destPath = fileInfo.path() + QString::fromUtf8("/Resources/plugins");
   if (!QDir(destPath).exists()) {
     warningMessage(
@@ -219,7 +235,12 @@ void XPluginInstall::on_BrowseXPlane_pressed() {
 
   if (sourceFile.isEmpty() || !QFile::exists(sourceFile)) {
     warningMessage(QString::fromUtf8(
-        "Could not find source plugin file 'xlinuxtrack9.so'!"));
+        "This Linuxtrack build does not include the X-Plane plugin "
+        "(`xlinuxtrack9.so`).\n\n"
+        "That usually means it was built or packaged without the X-Plane SDK "
+        "headers, so there is no plugin binary available to install.\n\n"
+        "Please use a build that includes X-Plane plugin support, or rebuild "
+        "Linuxtrack with the X-Plane SDK installed before packaging."));
     reject();
     return;
   }

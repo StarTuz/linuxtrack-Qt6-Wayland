@@ -76,6 +76,11 @@ If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when u
 3. When prompted, allow the app to install **stable libraries** to `~/.local`.
 4. This copies the necessary `.so` files to a location X-Plane can see after the AppImage is closed.
 
+> [!IMPORTANT]
+> The X-Plane installer copies the Linux plugin only. Select your Linux X-Plane installation, not a Windows `xplane12.exe` from a dual-boot or Wine setup.
+>
+> If the installer says `xlinuxtrack9.so` is missing, that build was packaged without X-Plane plugin support. The plugin is only built when the X-Plane SDK headers are installed during compilation.
+
 ### X-Plane Quick Start
 
 1. **Create a new profile** in `ltr_gui` (e.g., "X-plane")

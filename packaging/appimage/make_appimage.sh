@@ -62,6 +62,13 @@ mkdir -p "$APP_DIR/usr/share/linuxtrack"
 cp -v src/qt_gui/*.obj "$APP_DIR/usr/share/linuxtrack/" || true
 cp -v src/qt_gui/sphere.png src/qt_gui/xm8_detail.png "$APP_DIR/usr/share/linuxtrack/" || true
 
+if [ -f "$APP_DIR/usr/lib/linuxtrack/xlinuxtrack9.so" ] || [ -f "$APP_DIR/usr/lib/xlinuxtrack9.so" ]; then
+    echo "--> X-Plane plugin support detected and will be packaged."
+else
+    echo "WARNING: xlinuxtrack9.so was not built, so this AppImage will not support X-Plane plugin installation."
+    echo "         Install the X-Plane SDK headers before building if you want X-Plane plugin support."
+fi
+
 # 3. Download LinuxDeploy tools (if not present)
 TOOLS_DIR="packaging/tools"
 mkdir -p "$TOOLS_DIR"

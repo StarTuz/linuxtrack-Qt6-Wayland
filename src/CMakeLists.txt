@@ -111,6 +111,8 @@ if(EXISTS "/usr/include/xplane_sdk/XPLM")
         )
         target_link_libraries(xlinuxtrack9_32 PRIVATE ${LTR_LIBM} ${LTR_LIBDL})
     endif()
+else()
+    message(WARNING "X-Plane SDK headers not found at /usr/include/xplane_sdk/XPLM - skipping xlinuxtrack9 plugin build")
 endif()
 
 # --- Executables ---
