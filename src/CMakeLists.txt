@@ -172,6 +172,12 @@ add_subdirectory(lal)
 # Native Hotkey GUI
 add_subdirectory(ltr_hotkey_gui)
 
+# SCS Plugin (ETS2/ATS Native Head Tracking)
+add_subdirectory(scs_plugin)
+
+# Native NPClient (TrackIR emulation for Linux games)
+add_subdirectory(npclient_linux)
+
 # --- Installation ---
 
 # 1. Libraries (Core)
