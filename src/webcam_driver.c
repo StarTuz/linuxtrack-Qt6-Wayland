@@ -28,9 +28,6 @@
 #endif
 
 #include <libv4l2.h>
-#ifdef HAVE_LIBV4LCONVERT
-#include <libv4lconvert.h>
-#endif
 
 #define NUM_OF_BUFFERS 8
 typedef struct {
@@ -53,14 +50,6 @@ typedef struct {
   int max_blob_pixels;
   __u32 fourcc;
   bool flip;
-#ifdef HAVE_LIBV4LCONVERT
-  struct v4lconvert_data *convert;
-  struct v4l2_format src_fmt;
-  struct v4l2_format dst_fmt;
-  unsigned char *converted_frame;
-  size_t converted_frame_size;
-  bool needs_conversion;
-#endif
 } webcam_info;
 
 static webcam_info wc_info;
@@ -85,14 +74,6 @@ static void reset_webcam_state(void) {
   wc_info.max_blob_pixels = 0;
   wc_info.fourcc = 0;
   wc_info.flip = false;
-#ifdef HAVE_LIBV4LCONVERT
-  wc_info.convert = NULL;
-  memset(&wc_info.src_fmt, 0, sizeof(wc_info.src_fmt));
-  memset(&wc_info.dst_fmt, 0, sizeof(wc_info.dst_fmt));
-  wc_info.converted_frame = NULL;
-  wc_info.converted_frame_size = 0;
-  wc_info.needs_conversion = false;
-#endif
 }
 
 static void cleanup_webcam_resources(bool stop_stream) {
@@ -106,25 +87,10 @@ static void cleanup_webcam_resources(bool stop_stream) {
   release_buffers();
   free(wc_info.bw_frame);
   wc_info.bw_frame = NULL;
-#ifdef HAVE_LIBV4LCONVERT
-  free(wc_info.converted_frame);
-  wc_info.converted_frame = NULL;
-  wc_info.converted_frame_size = 0;
-  if (wc_info.convert != NULL) {
-    v4lconvert_destroy(wc_info.convert);
-    wc_info.convert = NULL;
-  }
-#endif
   if (wc_info.fd >= 0) {
     v4l2_close(wc_info.fd);
   }
   reset_webcam_state();
-}
-
-static bool is_directly_supported_fourcc(__u32 fourcc) {
-  return (fourcc == *(__u32 *)"YUYV") || (fourcc == *(__u32 *)"YU12") ||
-         (fourcc == *(__u32 *)"YV12") || (fourcc == *(__u32 *)"RGB3") ||
-         (fourcc == *(__u32 *)"BGR3") || (fourcc == V4L2_PIX_FMT_GREY);
 }
 
 static __u32 get_effective_caps(const struct v4l2_capability *capability) {
@@ -493,54 +459,10 @@ static bool read_pref_format(struct v4l2_format *fmt) {
 }
 
 static bool set_capture_format(struct camera_control_block *ccb) {
-  struct v4l2_format requested_fmt;
-  if (read_pref_format(&requested_fmt) != true) {
+  struct v4l2_format fmt;
+  if (read_pref_format(&fmt) != true) {
     return false;
   }
-  __u32 requested_fourcc = requested_fmt.fmt.pix.pixelformat;
-  struct v4l2_format fmt = requested_fmt;
-#ifdef HAVE_LIBV4LCONVERT
-  if (wc_info.convert != NULL) {
-    int fps_num = 0;
-    int fps_den = 0;
-    struct v4l2_format desired_fmt = requested_fmt;
-    if (ltr_int_wc_get_fps(&fps_num, &fps_den) && fps_den > 0) {
-      int requested_fps = fps_num / fps_den;
-      if (requested_fps > 0) {
-        v4lconvert_set_fps(wc_info.convert, requested_fps);
-      }
-    }
-    if (!is_directly_supported_fourcc(desired_fmt.fmt.pix.pixelformat)) {
-      desired_fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_GREY;
-      desired_fmt.fmt.pix.field = V4L2_FIELD_ANY;
-      v4lconvert_fixup_fmt(&desired_fmt);
-    }
-    memset(&wc_info.src_fmt, 0, sizeof(wc_info.src_fmt));
-    if (v4lconvert_try_format(wc_info.convert, &desired_fmt, &wc_info.src_fmt) ==
-        0) {
-      fmt = wc_info.src_fmt;
-      wc_info.dst_fmt = desired_fmt;
-    } else {
-      if (!is_directly_supported_fourcc(requested_fmt.fmt.pix.pixelformat)) {
-        desired_fmt = requested_fmt;
-        desired_fmt.fmt.pix.pixelformat = *(__u32 *)"YUYV";
-        desired_fmt.fmt.pix.field = V4L2_FIELD_ANY;
-        v4lconvert_fixup_fmt(&desired_fmt);
-        if (v4lconvert_try_format(wc_info.convert, &desired_fmt,
-                                  &wc_info.src_fmt) == 0) {
-          fmt = wc_info.src_fmt;
-          wc_info.dst_fmt = desired_fmt;
-        } else {
-          wc_info.src_fmt = requested_fmt;
-          wc_info.dst_fmt = requested_fmt;
-        }
-      } else {
-        wc_info.src_fmt = requested_fmt;
-        wc_info.dst_fmt = requested_fmt;
-      }
-    }
-  }
-#endif
 
   if (0 != v4l2_ioctl(wc_info.fd, VIDIOC_S_FMT, &fmt)) {
     switch (errno) {
@@ -555,41 +477,7 @@ static bool set_capture_format(struct camera_control_block *ccb) {
   }
   ccb->pixel_width = wc_info.w = fmt.fmt.pix.width;
   ccb->pixel_height = wc_info.h = fmt.fmt.pix.height;
-  wc_info.fourcc = fmt.fmt.pix.pixelformat;
-#ifdef HAVE_LIBV4LCONVERT
-  wc_info.src_fmt = fmt;
-  wc_info.needs_conversion = false;
-  if (wc_info.convert != NULL) {
-    if (wc_info.dst_fmt.type == 0) {
-      wc_info.dst_fmt = fmt;
-    }
-    wc_info.dst_fmt.fmt.pix.width = fmt.fmt.pix.width;
-    wc_info.dst_fmt.fmt.pix.height = fmt.fmt.pix.height;
-    if (v4lconvert_needs_conversion(wc_info.convert, &wc_info.src_fmt,
-                                    &wc_info.dst_fmt) > 0) {
-      wc_info.needs_conversion = true;
-      wc_info.fourcc = wc_info.dst_fmt.fmt.pix.pixelformat;
-      wc_info.w = ccb->pixel_width = wc_info.dst_fmt.fmt.pix.width;
-      wc_info.h = ccb->pixel_height = wc_info.dst_fmt.fmt.pix.height;
-      wc_info.converted_frame_size = wc_info.dst_fmt.fmt.pix.sizeimage;
-      if (wc_info.converted_frame_size == 0) {
-        wc_info.converted_frame_size = wc_info.w * wc_info.h * 2;
-      }
-      wc_info.converted_frame =
-          (unsigned char *)ltr_int_my_malloc(wc_info.converted_frame_size);
-      ltr_int_log_message(
-          "Using libv4lconvert: %.4s -> %.4s at %dx%d.\n",
-          (char *)&wc_info.src_fmt.fmt.pix.pixelformat,
-          (char *)&wc_info.dst_fmt.fmt.pix.pixelformat, wc_info.w, wc_info.h);
-    }
-  }
-#endif
   wc_info.bw_frame = (unsigned char *)ltr_int_my_malloc(wc_info.w * wc_info.h);
-  if (wc_info.fourcc != requested_fourcc) {
-    ltr_int_log_message(
-        "Driver adjusted pixel format from %.4s to %.4s.\n",
-        (char *)&requested_fourcc, (char *)&wc_info.fourcc);
-  }
   ltr_int_log_message("Switch of the format successfull!\n");
   return true;
 }
@@ -624,21 +512,6 @@ static bool set_stream_params() {
                           strerror(errno));
       return false;
     }
-  }
-
-  memset(&sp, 0, sizeof(sp));
-  sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_G_PARM, &sp)) {
-    ltr_int_log_message("Couldn't query active stream parameters. (%s)\n",
-                        strerror(errno));
-  } else if ((sp.parm.capture.timeperframe.numerator > 0) &&
-             (sp.parm.capture.timeperframe.denominator > 0)) {
-    ltr_int_log_message(
-        "Active stream interval: %u/%u s (~%.2f fps).\n",
-        sp.parm.capture.timeperframe.numerator,
-        sp.parm.capture.timeperframe.denominator,
-        (double)sp.parm.capture.timeperframe.denominator /
-            (double)sp.parm.capture.timeperframe.numerator);
   }
   return true;
 }
@@ -765,12 +638,6 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
   }
   wc_info.fd = fd;
   wc_info.expecting_blobs = MAX_BLOBS;
-#ifdef HAVE_LIBV4LCONVERT
-  wc_info.convert = v4lconvert_create(fd);
-  if (wc_info.convert == NULL) {
-    ltr_int_log_message("Couldn't initialize libv4lconvert, continuing without it.\n");
-  }
-#endif
 
   if (set_capture_format(ccb) != true) {
     ltr_int_log_message("Couldn't set capture format!\n");
@@ -908,17 +775,7 @@ static void get_bw_image(unsigned char *source_buf, unsigned char *dest_buf,
         dest_buf[cntr1] = 0;
       }
     }
-  } else if (wc_info.fourcc == V4L2_PIX_FMT_GREY) {
-    for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
-      if (source_buf[cntr] > wc_info.threshold) {
-        dest_buf[cntr] = source_buf[cntr];
-      } else {
-        dest_buf[cntr] = 0;
-      }
-    }
   } else {
-    ltr_int_log_message("Unsupported active pixel format %.4s, frame zeroed.\n",
-                        (char *)&wc_info.fourcc);
     for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
       dest_buf[cntr] = 0;
     }
@@ -979,26 +836,8 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   assert(buf.index < wc_info.buffers);
 
   unsigned char *source_buf = (buffers[buf.index]).start;
-  unsigned int source_size = buf.bytesused;
-#ifdef HAVE_LIBV4LCONVERT
-  if (wc_info.needs_conversion) {
-    int converted = v4lconvert_convert(
-        wc_info.convert, &wc_info.src_fmt, &wc_info.dst_fmt, source_buf,
-        buf.bytesused, wc_info.converted_frame, wc_info.converted_frame_size);
-    if (converted < 0) {
-      ltr_int_log_message("Frame conversion failed: %s\n",
-                          v4lconvert_get_error_message(wc_info.convert));
-      if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_QBUF, &buf)) {
-        ltr_int_log_message("Error queuing buffer after conversion failure!\n");
-      }
-      return -1;
-    }
-    source_buf = wc_info.converted_frame;
-    source_size = (unsigned int)converted;
-  }
-#endif
   unsigned char *dest_buf = (f->bitmap != NULL) ? f->bitmap : wc_info.bw_frame;
-  get_bw_image(source_buf, dest_buf, source_size);
+  get_bw_image(source_buf, dest_buf, buf.bytesused);
   // ltr_int_log_message("%d points found!\n", pts);
 
   if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_QBUF, &buf)) {

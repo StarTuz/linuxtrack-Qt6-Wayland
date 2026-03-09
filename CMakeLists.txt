@@ -36,7 +36,6 @@ find_library(LTR_LIBM m)
 find_library(LTR_LIBDL dl)
 find_library(LTR_LIBPTHREAD pthread)
 find_library(LTR_LIBV4L2 v4l2)
-find_library(LTR_LIBV4LCONVERT v4lconvert)
 
 # Qt Dependencies for GUI and Mickey
 if(BUILD_GUI OR BUILD_MICKEY)
