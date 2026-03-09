@@ -129,17 +129,13 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
     QString fourcc, thres, bmin, bmax, res, fps, flip;
     int fmt_index = 0;
     const char *tmp = ltr_int_wc_get_pixfmt();
-    bool persist_default_mode = false;
     if(tmp != nullptr){
       fourcc = QString::fromUtf8(tmp);
       fmt_index = wc_info->findFourcc(fourcc);
       ui.WebcamFtFormats->setCurrentIndex(fmt_index);
-      persist_default_mode =
-          wc_info->getFourcc(fmt_index) != fourcc;
     }
     on_WebcamFtFormats_activated(fmt_index);
-    if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty()) ||
-        persist_default_mode) {
+    if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty())) {
       persist_selected_webcam_ft_mode(ui, wc_info);
     }
     const char *cascade = ltr_int_wc_get_cascade();

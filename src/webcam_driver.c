@@ -460,9 +460,11 @@ static bool read_pref_format(struct v4l2_format *fmt) {
 
 static bool set_capture_format(struct camera_control_block *ccb) {
   struct v4l2_format fmt;
+  __u32 requested_fourcc;
   if (read_pref_format(&fmt) != true) {
     return false;
   }
+  requested_fourcc = fmt.fmt.pix.pixelformat;
 
   if (0 != v4l2_ioctl(wc_info.fd, VIDIOC_S_FMT, &fmt)) {
     switch (errno) {
@@ -477,7 +479,13 @@ static bool set_capture_format(struct camera_control_block *ccb) {
   }
   ccb->pixel_width = wc_info.w = fmt.fmt.pix.width;
   ccb->pixel_height = wc_info.h = fmt.fmt.pix.height;
+  wc_info.fourcc = fmt.fmt.pix.pixelformat;
   wc_info.bw_frame = (unsigned char *)ltr_int_my_malloc(wc_info.w * wc_info.h);
+  if (wc_info.fourcc != requested_fourcc) {
+    ltr_int_log_message(
+        "Driver adjusted pixel format from %.4s to %.4s.\n",
+        (char *)&requested_fourcc, (char *)&wc_info.fourcc);
+  }
   ltr_int_log_message("Switch of the format successfull!\n");
   return true;
 }

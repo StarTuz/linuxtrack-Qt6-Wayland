@@ -63,11 +63,6 @@ static webcam_format def_fmt1 = {0, *"YUYV", 160, 120, 1, 30};
 static webcam_format def_fmt2 = {0, *"YUYV", 320, 240, 1, 30};
 static webcam_format def_fmt3 = {0, *"YUYV", 352, 288, 1, 30};
 
-static bool is_supported_fourcc(uint32_t fourcc) {
-  return (fourcc == *"YUYV") || (fourcc == *"YU12") || (fourcc == *"YV12") ||
-         (fourcc == *"RGB3") || (fourcc == *"BGR3");
-}
-
 WebcamInfo::WebcamInfo(const QString &id) {
   if (!webcamInfoOk) {
     throw(0);
@@ -92,15 +87,10 @@ WebcamInfo::WebcamInfo(const QString &id) {
     res_list[0].push_back(QString::fromUtf8("320 x 240 @ 30"));
     res_list[0].push_back(QString::fromUtf8("352 x 288 @ 30"));
   } else {
-    int source_index = -1;
     for (j = 0; j < fmts.entries; ++j) {
-      if (!is_supported_fourcc(fmts.formats[j].fourcc)) {
-        continue;
-      }
       index = fmts.formats[j].i;
-      if (source_index != index) {
-        source_index = index;
-        ++fmt_index;
+      if (fmt_index != index) {
+        fmt_index = index;
         format_strings.push_back(QString::fromUtf8(fmts.fmt_strings[index]));
         fmt_descs.push_back(QList<webcam_format *>());
         res_list.push_back(QStringList());
@@ -112,18 +102,6 @@ WebcamInfo::WebcamInfo(const QString &id) {
                             fmts.formats[j].fps_num);
       item = QString::fromUtf8("%1 x %2 @ %3").arg(width, height, fps);
       res_list.back().push_back(item);
-    }
-    if (format_strings.isEmpty()) {
-      format_strings.push_back(QString::fromUtf8("YUYV"));
-      fmt_descs.push_back(QList<webcam_format *>());
-      res_list.push_back(QStringList());
-      fmt_descs[0].push_back(&def_fmt1);
-      fmt_descs[0].push_back(&def_fmt2);
-      fmt_descs[0].push_back(&def_fmt3);
-      res_list[0].push_back(QString::fromUtf8("160 x 120 @ 30"));
-      res_list[0].push_back(QString::fromUtf8("320 x 240 @ 30"));
-      res_list[0].push_back(QString::fromUtf8("352 x 288 @ 30"));
-      fmt_index = 0;
     }
   }
 }
