@@ -24,6 +24,7 @@ PKG_MANAGER=""
 
 FOUND_INSTALLS=()
 ACTIVE_PREFIX=""
+ACTIVE_GUI=""
 
 usage() {
     cat <<EOF
@@ -184,8 +185,53 @@ add_unique_install() {
     FOUND_INSTALLS+=("$path")
 }
 
+normalize_prefix_root() {
+    local raw="$1"
+    raw="${raw%/}"
+    case "$raw" in
+        */bin)
+            printf '%s\n' "${raw%/bin}"
+            ;;
+        *)
+            printf '%s\n' "$raw"
+            ;;
+    esac
+}
+
+read_active_prefix() {
+    ACTIVE_PREFIX=""
+    ACTIVE_GUI=""
+    local config_file="$HOME/.config/linuxtrack/linuxtrack1.conf"
+    if [ ! -f "$config_file" ]; then
+        return 0
+    fi
+
+    local raw_prefix
+    raw_prefix=$(grep -i '^Prefix' "$config_file" | tail -n 1 | cut -d'"' -f2 || true)
+    if [ -z "$raw_prefix" ]; then
+        return 0
+    fi
+
+    ACTIVE_PREFIX="$(normalize_prefix_root "$raw_prefix")"
+    if [ -x "$ACTIVE_PREFIX/bin/ltr_gui" ]; then
+        ACTIVE_GUI="$ACTIVE_PREFIX/bin/ltr_gui"
+    elif [ -x "$raw_prefix/ltr_gui" ]; then
+        ACTIVE_GUI="$raw_prefix/ltr_gui"
+    fi
+}
+
+describe_binary() {
+    local binary="$1"
+    if [ ! -e "$binary" ]; then
+        return 0
+    fi
+    printf '  path: %s\n' "$binary"
+    printf '  modified: %s\n' "$(stat -c '%y' "$binary" 2>/dev/null || stat -f '%Sm' "$binary")"
+}
+
 scan_installations() {
     FOUND_INSTALLS=()
+    read_active_prefix
     local search_paths=("/opt/linuxtrack" "/usr/local" "/usr" "$HOME/.local")
     local path
     for path in "${search_paths[@]}"; do
@@ -193,6 +239,9 @@ scan_installations() {
             add_unique_install "$path"
         fi
     done
+    if [ -n "$ACTIVE_PREFIX" ] && [ -x "$ACTIVE_PREFIX/bin/ltr_gui" ]; then
+        add_unique_install "$ACTIVE_PREFIX"
+    fi
 }
 
 show_health() {
@@ -209,13 +258,16 @@ show_health() {
     fi
 
     local config_file="$HOME/.config/linuxtrack/linuxtrack1.conf"
-    if [ -f "$config_file" ]; then
-        ACTIVE_PREFIX=$(grep -i '^Prefix' "$config_file" | cut -d'"' -f2 || true)
-        if [ -n "$ACTIVE_PREFIX" ]; then
-            log "Config prefix: $ACTIVE_PREFIX"
-        fi
-    else
+    if [ ! -f "$config_file" ]; then
         log "Config file: not created yet ($config_file)"
+    elif [ -n "$ACTIVE_PREFIX" ]; then
+        log "Active config prefix: $ACTIVE_PREFIX"
+        if [ -n "$ACTIVE_GUI" ]; then
+            log "Configured GUI binary:"
+            describe_binary "$ACTIVE_GUI"
+        else
+            log "${YELLOW}Configured prefix does not currently contain bin/ltr_gui.${NC}"
+        fi
     fi
 
     if [ "${#FOUND_INSTALLS[@]}" -gt 0 ]; then
@@ -228,6 +280,18 @@ show_health() {
             log "${RED}Binary linkage issues:${NC}"
             printf '%s\n' "$missing"
         fi
+    fi
+
+    local path_gui
+    path_gui="$(command -v ltr_gui || true)"
+    if [ -n "$path_gui" ]; then
+        log "PATH ltr_gui:"
+        describe_binary "$(readlink -f "$path_gui" 2>/dev/null || printf '%s' "$path_gui")"
+    fi
+
+    if [ -x "$BUILD_DIR/src/qt_gui/ltr_gui" ]; then
+        log "Local build artifact:"
+        describe_binary "$BUILD_DIR/src/qt_gui/ltr_gui"
     fi
 
     local firmware_dir="$HOME/.config/linuxtrack/tir_firmware"
@@ -259,6 +323,10 @@ perform_build() {
 
     log "\n${GREEN}🔨 Building${NC}"
     cmake --build "$BUILD_DIR" -j"$(nproc)"
+    if [ -x "$BUILD_DIR/src/qt_gui/ltr_gui" ]; then
+        log "\n${GREEN}Built GUI artifact:${NC}"
+        describe_binary "$BUILD_DIR/src/qt_gui/ltr_gui"
+    fi
 }
 
 copy_manifest() {
@@ -347,6 +415,11 @@ choose_existing_prefix() {
     scan_installations
     if [ "${#FOUND_INSTALLS[@]}" -eq 0 ]; then
         return 1
+    fi
+    if [ -n "$ACTIVE_PREFIX" ] && [ -x "$ACTIVE_PREFIX/bin/ltr_gui" ]; then
+        PREFIX="$ACTIVE_PREFIX"
+        log "Using active configured prefix: $PREFIX"
+        return 0
     fi
     if [ "${#FOUND_INSTALLS[@]}" -eq 1 ] || [ "$ASSUME_YES" = true ]; then
         PREFIX="${FOUND_INSTALLS[0]}"
