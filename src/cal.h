@@ -42,6 +42,7 @@ struct frame_type {
   unsigned int counter;
   int usec; /* save a precise timestamp at frame capture time for later pose extrapolation */
   unsigned char *bitmap; /* 8bits per pixel, monochrome 0x00 or 0xff */
+  unsigned char *bitmap_processed; /* optional processed diagnostic image */
   char camera_diag[128];
   char camera_diag2[128];
 };

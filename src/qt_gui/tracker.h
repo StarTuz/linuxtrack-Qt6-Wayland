@@ -38,7 +38,7 @@ class Tracker : public QObject{
   bool setCommonFilterFactor(float c_f);
   float getCommonFilterFactor();
   void fromDefault();
-  static buffering *getBuffers();
+  static buffering *getBuffers(bool processed = false);
  private:
   Tracker();
   ~Tracker();
@@ -67,4 +67,3 @@ class Tracker : public QObject{
 };
 
 #endif
-

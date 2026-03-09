@@ -30,6 +30,7 @@
 QWidget *label;
 static bool running = false;
 static bool camViewEnable = true;
+static bool showProcessedView = false;
 static int cnt = 0;
 static int frames = 0;
 static float fps_buffer[8] ={0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
@@ -69,13 +70,13 @@ static QString cameraViewModeText(deviceType_t devType, const QString &modelType
     case MACWEBCAM:
     case MACPS3EYE:
       if(modelType.compare(QString::fromUtf8("Face"), Qt::CaseInsensitive) == 0){
-        return QString::fromUtf8("Camera View shows a grayscale preview frame. This device/model combination is not a native face-tracker path.");
+        return QString::fromUtf8("Camera View can show either the grayscale preview or the processed tracking mask. This device/model combination is not a native face-tracker path.");
       }
-      return QString::fromUtf8("Camera View shows a grayscale preview frame. Blob tracking still uses its own processed mask internally.");
+      return QString::fromUtf8("Camera View can show either the grayscale preview or the processed tracking mask for blob tracking.");
     case WEBCAM_FT:
     case MACWEBCAM_FT:
     case MACPS3EYE_FT:
-      return QString::fromUtf8("Camera View shows a grayscale preview frame used by the face-tracker pipeline.");
+      return QString::fromUtf8("Camera View can show either the grayscale preview or the processed image used by the face-tracker pipeline.");
     case TIR:
       return QString::fromUtf8("Camera View shows the processed sensor frame used for point tracking.");
     case WIIMOTE:
@@ -99,9 +100,15 @@ LtrGuiForm::LtrGuiForm(const Ui::LinuxtrackMainForm &tmp_gui, QSettings &setting
   settings.beginGroup(QString::fromUtf8("TrackingWindow"));
   camViewEnable = ! settings.value(QString::fromUtf8("camera_view"), false).toBool();
   bool check3DV = settings.value(QString::fromUtf8("3D_view"), false).toBool();
+  showProcessedView =
+      settings.value(QString::fromUtf8("preview_mode"), 0).toInt() == 1;
   settings.endGroup();
   main_gui.DisableCamView->setCheckState(camViewEnable ? Qt::Unchecked : Qt::Checked);
   main_gui.Disable3DView->setCheckState(check3DV ? Qt::Checked : Qt::Unchecked);
+  ui.previewMode->setCurrentIndex(showProcessedView ? 1 : 0);
+  connect(ui.previewMode, SIGNAL(currentIndexChanged(int)),
+          this, SLOT(previewModeChanged(int)));
+  cv->setProcessedView(showProcessedView);
   updateCameraDiagnostics();
   glw = new Window(ui.tabWidget, main_gui.Disable3DView);
   ui.ogl_box->addWidget(glw);
@@ -161,6 +168,7 @@ void LtrGuiForm::StorePrefs(QSettings &settings)
   settings.beginGroup(QString::fromUtf8("TrackingWindow"));
   settings.setValue(QString::fromUtf8("camera_view"), camEna);
   settings.setValue(QString::fromUtf8("3D_view"), tdEna);
+  settings.setValue(QString::fromUtf8("preview_mode"), showProcessedView ? 1 : 0);
   settings.endGroup();
 }
 
@@ -222,6 +230,13 @@ void LtrGuiForm::disable3DView_stateChanged(int state)
   }
 }
 
+void LtrGuiForm::previewModeChanged(int index)
+{
+  showProcessedView = (index == 1);
+  cv->setProcessedView(showProcessedView);
+  updateCameraDiagnostics();
+}
+
 void LtrGuiForm::update()
 {
   float fps_mean = 0.0f;
@@ -274,6 +289,7 @@ void LtrGuiForm::updateCameraDiagnostics()
   QString diag = parts.join(QString::fromUtf8(" | "));
   diag += QString::fromUtf8("\n");
   diag += cameraViewModeText(devType, modelType);
+  diag += QString::fromUtf8(" Preview mode: %1.").arg(previewModeText());
   if(!latestCameraDiag.isEmpty()){
     diag += QString::fromUtf8("\n");
     diag += latestCameraDiag;
@@ -286,6 +302,12 @@ void LtrGuiForm::updateCameraDiagnostics()
     diag += QString::fromUtf8(" Camera View is currently disabled.");
   }
   ui.cameraStatus->setText(diag);
+}
+
+QString LtrGuiForm::previewModeText() const
+{
+  return showProcessedView ? QString::fromUtf8("Processed mask")
+                           : QString::fromUtf8("Preview grayscale");
 }
 
 void LtrGuiForm::stateChanged(int current_state)
@@ -363,7 +385,7 @@ void LtrGuiForm::on_tabWidget_currentChanged(int index)
 
 
 CameraView::CameraView(QWidget *parent)
-  : QWidget(parent)
+  : QWidget(parent), processedView(false)
 {
   scene = new QGraphicsScene();
   item = new QGraphicsPixmapItem();
@@ -379,16 +401,25 @@ CameraView::~CameraView()
 {
 }
 
+void CameraView::setProcessedView(bool processed)
+{
+  processedView = processed;
+}
+
 void CameraView::redraw()
 {
   if(!camViewEnable){
     return;
   }
   buffer *b;
-  buffering *buf = TRACKER.getBuffers();
+  buffering *buf = TRACKER.getBuffers(processedView);
+  buffering *fallback = TRACKER.getBuffers(false);
   if(buf->readBuffer(&b)){
     item->setPixmap(QPixmap::fromImage(*(b->getImage())));
     buf->bufferRead();
+  }else if(processedView && fallback->readBuffer(&b)){
+    item->setPixmap(QPixmap::fromImage(*(b->getImage())));
+    fallback->bufferRead();
   }
 }
 

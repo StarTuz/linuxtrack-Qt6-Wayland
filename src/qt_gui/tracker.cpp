@@ -38,6 +38,7 @@ static void ltr_int_state_changed(void *param) {
 }
 
 static buffering buf(3);
+static buffering processedBuf(3);
 static bool initBuffers = true;
 static void ltr_int_new_frame(struct frame_type *frame, void *param) {
   (void)param;
@@ -56,17 +57,27 @@ static void ltr_int_new_frame(struct frame_type *frame, void *param) {
 
   if (initBuffers) {
     buf.resizeBuffers(frame->width, frame->height);
+    processedBuf.resizeBuffers(frame->width, frame->height);
     initBuffers = false;
   }
 
   if (frame->bitmap != nullptr) {
     buf.bufferWritten();
   }
+  if (frame->bitmap_processed != nullptr) {
+    processedBuf.bufferWritten();
+  }
   buffer *b;
+  buffer *processed = nullptr;
   if (buf.writeBuffer(&b)) {
     frame->bitmap = b->getBuffer();
   } else {
     frame->bitmap = nullptr;
+  }
+  if (processedBuf.writeBuffer(&processed)) {
+    frame->bitmap_processed = processed->getBuffer();
+  } else {
+    frame->bitmap_processed = nullptr;
   }
 
   TRACKER.signalNewFrame(&local_frame);
@@ -75,7 +86,9 @@ static void ltr_int_new_frame(struct frame_type *frame, void *param) {
   TRACKER.signalNewPose(&current_pose);
 }
 
-buffering *Tracker::getBuffers() { return &buf; }
+buffering *Tracker::getBuffers(bool processed) {
+  return processed ? &processedBuf : &buf;
+}
 
 Tracker::Tracker()
     : axes(LTR_AXES_T_INITIALIZER), axes_valid(false),
@@ -191,6 +204,7 @@ void Tracker::start(QString &section) {
   }
   initBuffers = true;
   buf.init();
+  processedBuf.init();
   master->start();
 }
 

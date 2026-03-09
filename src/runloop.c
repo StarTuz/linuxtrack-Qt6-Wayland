@@ -37,6 +37,7 @@ int ltr_int_rl_run(struct camera_control_block *ccb, frame_callback_fun cbk)
   }
 
   frame.bitmap = NULL;
+  frame.bitmap_processed = NULL;
   frame.camera_diag[0] = '\0';
   frame.camera_diag2[0] = '\0';
 

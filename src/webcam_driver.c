@@ -935,7 +935,8 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   unsigned char *source_buf = (buffers[buf.index]).start;
   unsigned char *preview_buf =
       (f->bitmap != NULL) ? f->bitmap : wc_info.bw_frame;
-  unsigned char *tracking_buf = wc_info.proc_frame;
+  unsigned char *tracking_buf =
+      (f->bitmap_processed != NULL) ? f->bitmap_processed : wc_info.proc_frame;
   get_gray_image(source_buf, preview_buf, buf.bytesused);
   if (tracking_buf != NULL) {
 #ifdef OPENCV

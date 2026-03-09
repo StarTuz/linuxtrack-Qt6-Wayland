@@ -12,6 +12,7 @@
 #include <QGraphicsPixmapItem>
 #include <QVBoxLayout>
 #include <QElapsedTimer>
+#include <QString>
 
 #include "window.h"
 #include "buffering.h"
@@ -27,11 +28,13 @@ class CameraView : public QWidget
   CameraView(QWidget *parent = 0);
   ~CameraView();
   void redraw();
+  void setProcessedView(bool processed);
  private:
   QGraphicsScene *scene;
   QGraphicsView *view;
   QGraphicsPixmapItem *item;
   QVBoxLayout *layout;
+  bool processedView;
 };
 
 class LtrGuiForm : public QWidget
@@ -55,6 +58,7 @@ class LtrGuiForm : public QWidget
    void on_stopButton_pressed();
    void disableCamView_stateChanged(int state);
    void disable3DView_stateChanged(int state);
+   void previewModeChanged(int index);
    void stateChanged(int current_state);
    void newFrameDelivered(struct frame_type *frame);
    void on_tabWidget_currentChanged(int index);
@@ -75,6 +79,7 @@ class LtrGuiForm : public QWidget
    void trackerStopped();
    void trackerRunning();
    void trackerPaused();
+   QString previewModeText() const;
    QString latestCameraDiag;
    QString latestCameraDiag2;
 };
