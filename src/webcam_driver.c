@@ -511,7 +511,7 @@ static bool set_capture_format(struct camera_control_block *ccb) {
       }
     }
     if (!is_directly_supported_fourcc(desired_fmt.fmt.pix.pixelformat)) {
-      desired_fmt.fmt.pix.pixelformat = *(__u32 *)"YUYV";
+      desired_fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_GREY;
       desired_fmt.fmt.pix.field = V4L2_FIELD_ANY;
       v4lconvert_fixup_fmt(&desired_fmt);
     }
@@ -521,8 +521,23 @@ static bool set_capture_format(struct camera_control_block *ccb) {
       fmt = wc_info.src_fmt;
       wc_info.dst_fmt = desired_fmt;
     } else {
-      wc_info.src_fmt = requested_fmt;
-      wc_info.dst_fmt = requested_fmt;
+      if (!is_directly_supported_fourcc(requested_fmt.fmt.pix.pixelformat)) {
+        desired_fmt = requested_fmt;
+        desired_fmt.fmt.pix.pixelformat = *(__u32 *)"YUYV";
+        desired_fmt.fmt.pix.field = V4L2_FIELD_ANY;
+        v4lconvert_fixup_fmt(&desired_fmt);
+        if (v4lconvert_try_format(wc_info.convert, &desired_fmt,
+                                  &wc_info.src_fmt) == 0) {
+          fmt = wc_info.src_fmt;
+          wc_info.dst_fmt = desired_fmt;
+        } else {
+          wc_info.src_fmt = requested_fmt;
+          wc_info.dst_fmt = requested_fmt;
+        }
+      } else {
+        wc_info.src_fmt = requested_fmt;
+        wc_info.dst_fmt = requested_fmt;
+      }
     }
   }
 #endif
@@ -609,6 +624,21 @@ static bool set_stream_params() {
                           strerror(errno));
       return false;
     }
+  }
+
+  memset(&sp, 0, sizeof(sp));
+  sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_G_PARM, &sp)) {
+    ltr_int_log_message("Couldn't query active stream parameters. (%s)\n",
+                        strerror(errno));
+  } else if ((sp.parm.capture.timeperframe.numerator > 0) &&
+             (sp.parm.capture.timeperframe.denominator > 0)) {
+    ltr_int_log_message(
+        "Active stream interval: %u/%u s (~%.2f fps).\n",
+        sp.parm.capture.timeperframe.numerator,
+        sp.parm.capture.timeperframe.denominator,
+        (double)sp.parm.capture.timeperframe.denominator /
+            (double)sp.parm.capture.timeperframe.numerator);
   }
   return true;
 }
