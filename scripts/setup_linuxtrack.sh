@@ -86,7 +86,7 @@ detect_distro() {
 dependency_list() {
     case "$PKG_MANAGER" in
         pacman)
-            printf '%s\n' cmake qt6-base qt6-tools libusb mxml liblo opencv nlohmann-json wine
+            printf '%s\n' cmake qt6-base qt6-tools libusb mxml liblo opencv nlohmann-json
             ;;
         apt)
             printf '%s\n' \
@@ -94,7 +94,7 @@ dependency_list() {
                 qt6-base-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools \
                 libmxml-dev libusb-1.0-0-dev liblo-dev libopencv-dev \
                 zlib1g-dev libv4l-dev libgl1-mesa-dev libglu1-mesa-dev \
-                libx11-dev libxkbcommon-dev nlohmann-json3-dev wine
+                libx11-dev libxkbcommon-dev nlohmann-json3-dev
             ;;
         dnf)
             printf '%s\n' \
@@ -102,7 +102,7 @@ dependency_list() {
                 qt6-qtbase-devel qt6-qttools-devel \
                 mxml-devel libusb1-devel liblo-devel opencv-devel \
                 zlib-devel libv4l-devel mesa-libGL-devel mesa-libGLU-devel \
-                libX11-devel libxkbcommon-devel nlohmann-json-devel wine
+                libX11-devel libxkbcommon-devel nlohmann-json-devel
             ;;
         zypper)
             printf '%s\n' \
@@ -110,7 +110,18 @@ dependency_list() {
                 libqt6-qtbase-devel libqt6-qttools-devel \
                 mxml-devel libusb-1_0-devel liblo-devel opencv-devel \
                 zlib-devel libv4l-devel Mesa-libGL-devel glu-devel \
-                libX11-devel libxkbcommon-devel nlohmann_json-devel wine
+                libX11-devel libxkbcommon-devel nlohmann_json-devel
+            ;;
+    esac
+}
+
+optional_dependency_note() {
+    case "$PKG_MANAGER" in
+        pacman)
+            printf '%s\n' "wine, wine-stable, or wine-staging for Windows/TrackIR integration"
+            ;;
+        apt|dnf|zypper)
+            printf '%s\n' "wine for Windows/TrackIR integration"
             ;;
     esac
 }
@@ -134,6 +145,12 @@ install_dependencies() {
     log "\n${GREEN}📦 Dependency profile:${NC} $PKG_MANAGER ($DISTRO_ID)"
     log "Recommended packages:"
     printf '  %s\n' "${deps[@]}"
+    local optional_note
+    optional_note="$(optional_dependency_note || true)"
+    if [ -n "$optional_note" ]; then
+        log "Optional runtime packages:"
+        printf '  %s\n' "$optional_note"
+    fi
 
     if [ "$ASSUME_YES" != true ] && ! confirm "Install missing packages automatically?"; then
         return 0
