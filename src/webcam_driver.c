@@ -59,6 +59,39 @@ static webcam_info wc_info;
 
 int ltr_int_tracker_wakeup();
 int ltr_int_tracker_suspend();
+static bool release_buffers(void);
+
+static void reset_webcam_state(void) {
+  wc_info.fd = -1;
+  wc_info.expecting_blobs = 0;
+  wc_info.is_diag = false;
+  wc_info.buffers = 0;
+  wc_info.w = 0;
+  wc_info.h = 0;
+  wc_info.bw_frame = NULL;
+  wc_info.threshold = 0;
+  wc_info.min_blob_pixels = 0;
+  wc_info.max_blob_pixels = 0;
+  wc_info.fourcc = 0;
+  wc_info.flip = false;
+}
+
+static void cleanup_webcam_resources(bool stop_stream) {
+  if (stop_stream && (wc_info.fd >= 0)) {
+    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_STREAMOFF, &type)) {
+      ltr_int_log_message("Streamoff during cleanup failed (%s)\n",
+                          strerror(errno));
+    }
+  }
+  release_buffers();
+  free(wc_info.bw_frame);
+  wc_info.bw_frame = NULL;
+  if (wc_info.fd >= 0) {
+    v4l2_close(wc_info.fd);
+  }
+  reset_webcam_state();
+}
 
 static __u32 get_effective_caps(const struct v4l2_capability *capability) {
   if ((capability->capabilities & V4L2_CAP_DEVICE_CAPS) != 0) {
@@ -597,6 +630,7 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
   assert((ccb->device.category == webcam) ||
          (ccb->device.category == webcam_ft));
   assert(ccb->device.device_id != NULL);
+  reset_webcam_state();
   int fd = search_for_webcam(ccb->device.device_id);
   if (fd == -1) {
     ltr_int_log_message("Couldn't open webcam dev file!\n");
@@ -607,34 +641,34 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
 
   if (set_capture_format(ccb) != true) {
     ltr_int_log_message("Couldn't set capture format!\n");
-    v4l2_close(fd);
+    cleanup_webcam_resources(false);
     return -1;
   }
   if (set_stream_params() != true) {
     ltr_int_log_message("Couldn't set stream parameters!\n");
-    v4l2_close(fd);
+    cleanup_webcam_resources(false);
     return -1;
   }
   if (setup_streaming_buffers() != true) {
     ltr_int_log_message("Couldn't initialize mmap!\n");
-    v4l2_close(fd);
+    cleanup_webcam_resources(false);
     return -1;
   }
   if (read_img_processing_prefs() != true) {
     ltr_int_log_message("Couldn't initialize mmap!\n");
-    v4l2_close(fd);
+    cleanup_webcam_resources(false);
     return -1;
   }
   ltr_int_prepare_for_processing(ccb->pixel_width, ccb->pixel_height);
   if (ltr_int_tracker_resume() != 0) {
     ltr_int_log_message("Couldn't start streaming!\n");
-    v4l2_close(fd);
+    cleanup_webcam_resources(true);
     return -1;
   }
 #ifdef OPENCV
   if (!ltr_int_init_face_detect()) {
     ltr_int_log_message("Couldn't initialize facetracking!\n");
-    v4l2_close(fd);
+    cleanup_webcam_resources(true);
     return -1;
   }
 #endif
@@ -644,23 +678,10 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
 
 int ltr_int_tracker_close() {
   ltr_int_log_message("Webcam shutting down!\n");
-  if (wc_info.fd >= 0) {
-    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_STREAMOFF, &type)) {
-      ltr_int_log_message("Streamoff during shutdown failed (%s)\n",
-                          strerror(errno));
-    } else {
-      ltr_int_log_message("Streaming stopped during shutdown.\n");
-    }
-  }
-  release_buffers();
-  free(wc_info.bw_frame);
-  wc_info.bw_frame = NULL;
-  v4l2_close(wc_info.fd);
-  wc_info.fd = -1;
 #ifdef OPENCV
   ltr_int_stop_face_detect();
 #endif
+  cleanup_webcam_resources(true);
   ltr_int_log_message("Webcam shut down!\n");
   ltr_int_cleanup_after_processing();
   ltr_int_wc_close_prefs();

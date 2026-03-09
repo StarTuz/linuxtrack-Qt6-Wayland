@@ -154,6 +154,7 @@ static enum { READY, PROCESSING, DONE } frame_status = DONE;
 static std::condition_variable frame_cv;
 static std::mutex frame_mx;
 static pthread_t detect_thread_handle;
+static bool detector_thread_started = false;
 
 void *ltr_int_detector_thread(void *) {
   while (run) {
@@ -201,11 +202,16 @@ bool ltr_int_init_face_detect() {
   }
   lastCandidate = cv::Rect(0, 0, 0, 0);
   run = true;
-  return pthread_create(&detect_thread_handle, nullptr, ltr_int_detector_thread,
-                        nullptr) == 0;
+  detector_thread_started =
+      (pthread_create(&detect_thread_handle, nullptr, ltr_int_detector_thread,
+                      nullptr) == 0);
+  return detector_thread_started;
 }
 
 void ltr_int_stop_face_detect() {
+  if (!detector_thread_started) {
+    return;
+  }
   run = false;
   {
     std::lock_guard<std::mutex> lock(frame_mx);
@@ -213,6 +219,7 @@ void ltr_int_stop_face_detect() {
     frame_cv.notify_all();
   }
   pthread_join(detect_thread_handle, nullptr);
+  detector_thread_started = false;
   ltr_int_log_message("Facetracker thread joined!\n");
   init = true;
   frame_status = DONE;
