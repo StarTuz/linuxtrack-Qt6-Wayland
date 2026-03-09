@@ -66,6 +66,8 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
   ps = new ProfileSelector(this);
   QObject::connect(&STATE, SIGNAL(stateChanged(linuxtrack_state_type)), this,
                    SLOT(trackerStateHandler(linuxtrack_state_type)));
+  QObject::connect(&TRACKER, SIGNAL(quitRequest()), this,
+                   SLOT(stopTrackingHelpers()));
   QObject::connect(&zipper, SIGNAL(finished(int, QProcess::ExitStatus)), this,
                    SLOT(logsPackaged(int, QProcess::ExitStatus)));
   ui.ModelEditSite->addWidget(me);
@@ -330,6 +332,7 @@ void LinuxtrackGui::trackerStateHandler(linuxtrack_state_type current_state) {
     }
     break;
   default:
+    stopTrackingHelpers();
     // ui.DeviceSelector->setEnabled(true);
     // ui.CameraOrientation->setEnabled(true);
     // ui.ModelSelector->setEnabled(true);
@@ -340,6 +343,13 @@ void LinuxtrackGui::trackerStateHandler(linuxtrack_state_type current_state) {
     // ui.LegacyRotation->setEnabled(true);
     break;
   }
+}
+
+void LinuxtrackGui::stopTrackingHelpers() {
+  if (udpBridge) {
+    udpBridge->stop();
+  }
+  stopHotkeyDaemon();
 }
 
 void LinuxtrackGui::on_LegacyPose_stateChanged(int state) {

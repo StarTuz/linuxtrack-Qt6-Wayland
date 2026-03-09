@@ -193,6 +193,7 @@ void Tracker::wakeup() { ltr_int_wakeup_cmd(); }
 void Tracker::recenter() { ltr_int_recenter_cmd(); }
 
 void Tracker::stop() {
+  emit quitRequest();
   ltr_int_request_shutdown();
   if (master->isRunning()) {
     ltr_int_request_shutdown();
