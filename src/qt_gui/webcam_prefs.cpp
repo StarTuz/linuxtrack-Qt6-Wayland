@@ -128,13 +128,17 @@ bool WebcamPrefs::Activate(const QString &ID, bool init)
     int fmt_index = 0;
     const char *tmp = ltr_int_wc_get_pixfmt();
     //std::cout<<"4CC: "<<tmp<<"\n";
+    bool persist_default_mode = false;
     if(tmp != nullptr){
       fourcc = QString::fromUtf8(tmp);
       fmt_index = wc_info->findFourcc(fourcc);
       ui.WebcamFormats->setCurrentIndex(fmt_index);
+      persist_default_mode =
+          wc_info->getFourcc(fmt_index) != fourcc;
     }
     on_WebcamFormats_activated(fmt_index);
-    if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty())) {
+    if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty()) ||
+        persist_default_mode) {
       persist_selected_webcam_mode(ui, wc_info);
     }
     
