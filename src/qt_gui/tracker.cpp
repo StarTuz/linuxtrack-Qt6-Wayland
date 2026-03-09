@@ -172,6 +172,15 @@ void Tracker::fromDefault() {
 
 void Tracker::start(QString &section) {
   (void)section;
+  if (ltr_int_need_saving()) {
+    if (!PrefProxy::savePrefs()) {
+      QMessageBox::warning(nullptr, QString::fromUtf8("Linuxtrack"),
+                           QString::fromUtf8("Could not save preferences "
+                                             "before starting tracking."),
+                           QMessageBox::Ok);
+      return;
+    }
+  }
   initBuffers = true;
   buf.init();
   master->start();
