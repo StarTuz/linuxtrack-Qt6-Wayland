@@ -221,7 +221,7 @@ int WebcamInfo::findRes(const int &res_x, const int &res_y, const int &fps_num,
        ++i, ++counter) {
     tested = *i;
     if ((tested->w == fmt.w) && (tested->h == fmt.h) &&
-        (tested->fps_num == fmt.fps_den) && (tested->fps_den == fmt.fps_num)) {
+        (tested->fps_num == fmt.fps_num) && (tested->fps_den == fmt.fps_den)) {
       if (U32_2_String(tested->fourcc) == fourcc) {
         return counter;
       }
