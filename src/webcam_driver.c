@@ -60,26 +60,34 @@ static webcam_info wc_info;
 int ltr_int_tracker_wakeup();
 int ltr_int_tracker_suspend();
 
+static __u32 get_effective_caps(const struct v4l2_capability *capability) {
+  if ((capability->capabilities & V4L2_CAP_DEVICE_CAPS) != 0) {
+    return capability->device_caps;
+  }
+  return capability->capabilities;
+}
+
 static char *get_webcam_id(int fd) {
   struct v4l2_capability capability;
 
   // Query device capabilities
   int ioctl_res = v4l2_ioctl(fd, VIDIOC_QUERYCAP, &capability);
   if (ioctl_res == 0) {
-    __u32 cap = capability.capabilities;
-    __u32 dev_cap = capability.device_caps;
+    __u32 cap = get_effective_caps(&capability);
+    bool has_capture = ((cap & V4L2_CAP_VIDEO_CAPTURE) != 0) ||
+                       ((cap & V4L2_CAP_VIDEO_CAPTURE_MPLANE) != 0);
+    bool has_streaming = (cap & V4L2_CAP_STREAMING) != 0;
     ltr_int_log_message("  Found V4L2 webcam: '%s'\n", capability.card);
     // Look for capabilities we need
-    if ((cap & V4L2_CAP_VIDEO_CAPTURE) && (cap & V4L2_CAP_STREAMING) &&
-        (dev_cap & V4L2_CAP_VIDEO_CAPTURE)) {
+    if (has_capture && has_streaming) {
       ////for leading space infested name verification
       //  char *spaced_name = NULL;
       //  asprintf(&spaced_name, " %s",(char *)capability.card);
       //  return spaced_name;
       return ltr_int_my_strdup((char *)capability.card);
     } else {
-      ltr_int_log_message(
-          "  Found V4L2 webcam but it doesn't support streaming:-(\n");
+      ltr_int_log_message("  Rejecting V4L2 device '%s' (caps=0x%08X).\n",
+                          capability.card, cap);
     }
   }
   return NULL;
@@ -128,7 +136,7 @@ int ltr_int_enum_webcams(char **ids[]) {
         continue;
       }
 
-      int fd = v4l2_open(fname, O_RDWR | O_NONBLOCK);
+      int fd = v4l2_open(fname, O_RDONLY | O_NONBLOCK);
       if (fd == -1) {
         ltr_int_log_message("Can't open file '%s'!\n", fname);
         free(fname);
