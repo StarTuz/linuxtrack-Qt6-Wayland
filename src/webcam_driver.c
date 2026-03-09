@@ -44,12 +44,19 @@ typedef struct {
   unsigned int buffers;
   int w;
   int h;
+  int requested_w;
+  int requested_h;
   unsigned char *proc_frame;
   unsigned char *bw_frame;
   unsigned int threshold;
   int min_blob_pixels;
   int max_blob_pixels;
   __u32 fourcc;
+  __u32 requested_fourcc;
+  int requested_fps_num;
+  int requested_fps_den;
+  int active_fps_num;
+  int active_fps_den;
   bool flip;
 } webcam_info;
 
@@ -69,13 +76,69 @@ static void reset_webcam_state(void) {
   wc_info.buffers = 0;
   wc_info.w = 0;
   wc_info.h = 0;
+  wc_info.requested_w = 0;
+  wc_info.requested_h = 0;
   wc_info.proc_frame = NULL;
   wc_info.bw_frame = NULL;
   wc_info.threshold = 0;
   wc_info.min_blob_pixels = 0;
   wc_info.max_blob_pixels = 0;
   wc_info.fourcc = 0;
+  wc_info.requested_fourcc = 0;
+  wc_info.requested_fps_num = 0;
+  wc_info.requested_fps_den = 0;
+  wc_info.active_fps_num = 0;
+  wc_info.active_fps_den = 0;
   wc_info.flip = false;
+}
+
+static void fourcc_to_string(__u32 fourcc, char out[5]) {
+  out[0] = (char)(fourcc & 0xFF);
+  out[1] = (char)((fourcc >> 8) & 0xFF);
+  out[2] = (char)((fourcc >> 16) & 0xFF);
+  out[3] = (char)((fourcc >> 24) & 0xFF);
+  out[4] = '\0';
+}
+
+static void clear_frame_diagnostics(struct frame_type *f) {
+  if (f == NULL) {
+    return;
+  }
+  f->camera_diag[0] = '\0';
+  f->camera_diag2[0] = '\0';
+}
+
+static void update_frame_diagnostics(struct frame_type *f) {
+  char requested_fourcc[5];
+  char active_fourcc[5];
+
+  if (f == NULL) {
+    return;
+  }
+
+  clear_frame_diagnostics(f);
+  fourcc_to_string(wc_info.requested_fourcc, requested_fourcc);
+  fourcc_to_string(wc_info.fourcc, active_fourcc);
+
+  if (wc_info.requested_fourcc != 0) {
+    snprintf(f->camera_diag, sizeof(f->camera_diag),
+             "Requested %s %dx%d @ %.1f fps", requested_fourcc,
+             wc_info.requested_w, wc_info.requested_h,
+             (wc_info.requested_fps_num > 0)
+                 ? ((float)wc_info.requested_fps_den /
+                    (float)wc_info.requested_fps_num)
+                 : 0.0f);
+  }
+
+  if (wc_info.active_fps_num > 0 && wc_info.active_fps_den > 0) {
+    snprintf(f->camera_diag2, sizeof(f->camera_diag2),
+             "Active %s %dx%d | Driver %.1f fps", active_fourcc, wc_info.w,
+             wc_info.h,
+             (float)wc_info.active_fps_den / (float)wc_info.active_fps_num);
+  } else if (wc_info.fourcc != 0) {
+    snprintf(f->camera_diag2, sizeof(f->camera_diag2), "Active %s %dx%d",
+             active_fourcc, wc_info.w, wc_info.h);
+  }
 }
 
 static void cleanup_webcam_resources(bool stop_stream) {
@@ -458,15 +521,19 @@ static bool read_pref_format(struct v4l2_format *fmt) {
   fmt->fmt.pix.pixelformat = *(__u32 *)pix;
   fmt->fmt.pix.field = V4L2_FIELD_ANY;
 
-  wc_info.fourcc = *(__u32 *)pix;
+  wc_info.requested_w = x;
+  wc_info.requested_h = y;
+  wc_info.requested_fourcc = *(__u32 *)pix;
   return true;
 }
 
 static bool set_capture_format(struct camera_control_block *ccb) {
   struct v4l2_format fmt;
+  __u32 requested_fourcc;
   if (read_pref_format(&fmt) != true) {
     return false;
   }
+  requested_fourcc = fmt.fmt.pix.pixelformat;
 
   if (0 != v4l2_ioctl(wc_info.fd, VIDIOC_S_FMT, &fmt)) {
     switch (errno) {
@@ -481,8 +548,17 @@ static bool set_capture_format(struct camera_control_block *ccb) {
   }
   ccb->pixel_width = wc_info.w = fmt.fmt.pix.width;
   ccb->pixel_height = wc_info.h = fmt.fmt.pix.height;
+  wc_info.fourcc = fmt.fmt.pix.pixelformat;
   wc_info.proc_frame = (unsigned char *)ltr_int_my_malloc(wc_info.w * wc_info.h);
   wc_info.bw_frame = (unsigned char *)ltr_int_my_malloc(wc_info.w * wc_info.h);
+  if (wc_info.fourcc != requested_fourcc) {
+    char requested_str[5];
+    char active_str[5];
+    fourcc_to_string(requested_fourcc, requested_str);
+    fourcc_to_string(wc_info.fourcc, active_str);
+    ltr_int_log_message("Driver adjusted pixel format from %s to %s.\n",
+                        requested_str, active_str);
+  }
   ltr_int_log_message("Switch of the format successfull!\n");
   return true;
 }
@@ -492,8 +568,12 @@ static bool set_stream_params() {
   if (!ltr_int_wc_get_fps(&num, &den)) {
     ltr_int_log_message(
         "No explicit fps specification found, using driver defaults.\n");
+    wc_info.requested_fps_num = 0;
+    wc_info.requested_fps_den = 0;
     return true;
   }
+  wc_info.requested_fps_num = num;
+  wc_info.requested_fps_den = den;
 
   struct v4l2_streamparm sp;
   memset(&sp, 0, sizeof(sp));
@@ -516,6 +596,21 @@ static bool set_stream_params() {
       ltr_int_log_message("Stream parameters setup failed! (%s)\n",
                           strerror(errno));
       return false;
+    }
+  }
+  memset(&sp, 0, sizeof(sp));
+  sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_G_PARM, &sp)) {
+    wc_info.active_fps_num = 0;
+    wc_info.active_fps_den = 0;
+  } else {
+    wc_info.active_fps_num = sp.parm.capture.timeperframe.numerator;
+    wc_info.active_fps_den = sp.parm.capture.timeperframe.denominator;
+    if (wc_info.active_fps_num > 0 && wc_info.active_fps_den > 0) {
+      ltr_int_log_message("Active stream interval: %d/%d (~%.1f fps)\n",
+                          wc_info.active_fps_num, wc_info.active_fps_den,
+                          (float)wc_info.active_fps_den /
+                              (float)wc_info.active_fps_num);
     }
   }
   return true;
@@ -787,6 +882,7 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
                               struct frame_type *f, bool *frame_acquired) {
   (void)ccb;
   read_img_processing_prefs();
+  clear_frame_diagnostics(f);
   f->bloblist.num_blobs = wc_info.expecting_blobs;
   f->width = wc_info.w;
   f->height = wc_info.h;
@@ -887,6 +983,7 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
 #else
   ltr_int_face_detect(&img, &(f->bloblist));
 #endif
+  update_frame_diagnostics(f);
   *frame_acquired = true;
   return 0;
 }

@@ -37,6 +37,8 @@ int ltr_int_rl_run(struct camera_control_block *ccb, frame_callback_fun cbk)
   }
 
   frame.bitmap = NULL;
+  frame.camera_diag[0] = '\0';
+  frame.camera_diag2[0] = '\0';
 
   ltr_int_cal_set_state(RUNNING);
   while(1){
@@ -148,4 +150,3 @@ int ltr_int_rl_usb_reset()
 {
   return ltr_int_tracker_usb_reset();
 }
-

@@ -42,6 +42,8 @@ struct frame_type {
   unsigned int counter;
   int usec; /* save a precise timestamp at frame capture time for later pose extrapolation */
   unsigned char *bitmap; /* 8bits per pixel, monochrome 0x00 or 0xff */
+  char camera_diag[128];
+  char camera_diag2[128];
 };
 
 typedef enum cal_device_category_type {

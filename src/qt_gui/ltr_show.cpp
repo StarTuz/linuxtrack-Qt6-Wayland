@@ -127,12 +127,12 @@ LtrGuiForm::LtrGuiForm(const Ui::LinuxtrackMainForm &tmp_gui, QSettings &setting
 //Assuming that frame dimensions can't change while running!!!
 void LtrGuiForm::newFrameDelivered(struct frame_type *frame)
 {
-  (void) frame;
   if(cnt == 0){
     TRACKER.recenter();
   }
   ++cnt;
   ++frames;
+  updateCameraDiagnostics(frame);
 }
 
 
@@ -234,6 +234,15 @@ void LtrGuiForm::update()
   cv->redraw();  
 }
 
+void LtrGuiForm::updateCameraDiagnostics(const struct frame_type *frame)
+{
+  if(frame != nullptr){
+    latestCameraDiag = QString::fromUtf8(frame->camera_diag);
+    latestCameraDiag2 = QString::fromUtf8(frame->camera_diag2);
+  }
+  updateCameraDiagnostics();
+}
+
 void LtrGuiForm::updateCameraDiagnostics()
 {
   deviceType_t devType = NONE;
@@ -265,6 +274,14 @@ void LtrGuiForm::updateCameraDiagnostics()
   QString diag = parts.join(QString::fromUtf8(" | "));
   diag += QString::fromUtf8("\n");
   diag += cameraViewModeText(devType, modelType);
+  if(!latestCameraDiag.isEmpty()){
+    diag += QString::fromUtf8("\n");
+    diag += latestCameraDiag;
+    if(!latestCameraDiag2.isEmpty()){
+      diag += QString::fromUtf8(" | ");
+      diag += latestCameraDiag2;
+    }
+  }
   if(!camViewEnable){
     diag += QString::fromUtf8(" Camera View is currently disabled.");
   }

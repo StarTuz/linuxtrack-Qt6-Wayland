@@ -71,9 +71,12 @@ class LtrGuiForm : public QWidget
    float fps;
    const Ui::LinuxtrackMainForm &main_gui;
    void updateCameraDiagnostics();
+   void updateCameraDiagnostics(const struct frame_type *frame);
    void trackerStopped();
    void trackerRunning();
    void trackerPaused();
+   QString latestCameraDiag;
+   QString latestCameraDiag2;
 };
 
 #endif

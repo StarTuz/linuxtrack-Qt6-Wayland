@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <cstdio>
 #include <iostream>
+#include <cstring>
 #include <ltlib.h>
 #include <unistd.h>
 
@@ -45,6 +46,13 @@ static void ltr_int_new_frame(struct frame_type *frame, void *param) {
   local_frame.width = frame->width;
   local_frame.height = frame->height;
   local_frame.counter = frame->counter;
+  local_frame.usec = frame->usec;
+  std::strncpy(local_frame.camera_diag, frame->camera_diag,
+               sizeof(local_frame.camera_diag) - 1);
+  local_frame.camera_diag[sizeof(local_frame.camera_diag) - 1] = '\0';
+  std::strncpy(local_frame.camera_diag2, frame->camera_diag2,
+               sizeof(local_frame.camera_diag2) - 1);
+  local_frame.camera_diag2[sizeof(local_frame.camera_diag2) - 1] = '\0';
 
   if (initBuffers) {
     buf.resizeBuffers(frame->width, frame->height);
