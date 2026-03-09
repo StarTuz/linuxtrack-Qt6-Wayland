@@ -23,6 +23,27 @@ WebcamPrefs::~WebcamPrefs()
 
 static WebcamInfo *wc_info = nullptr;
 
+static void persist_selected_webcam_mode(Ui::WebcamSetupForm &ui,
+                                         WebcamInfo *info) {
+  if ((info == nullptr) || (ui.WebcamFormats->currentIndex() < 0)) {
+    return;
+  }
+  QString res, fps, fmt;
+  if (!info->findFmtSpecs(ui.WebcamFormats->currentIndex(),
+                          ui.WebcamResolutions->currentIndex(), res, fps,
+                          fmt)) {
+    return;
+  }
+
+  int x, y, num, den;
+  if (!WebcamInfo::decodeRes(res, x, y) || !WebcamInfo::decodeFps(fps, num, den)) {
+    return;
+  }
+  ltr_int_wc_set_pixfmt(fmt.toUtf8().constData());
+  ltr_int_wc_set_resolution(x, y);
+  ltr_int_wc_set_fps(num, den);
+}
+
 void WebcamPrefs::on_WebcamFormats_activated(int index)
 {
   ui.WebcamResolutions->clear();
@@ -113,6 +134,9 @@ bool WebcamPrefs::Activate(const QString &ID, bool init)
       ui.WebcamFormats->setCurrentIndex(fmt_index);
     }
     on_WebcamFormats_activated(fmt_index);
+    if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty())) {
+      persist_selected_webcam_mode(ui, wc_info);
+    }
     
     ui.WebcamThreshold->setValue(ltr_int_wc_get_threshold());
     ui.WebcamMaxBlob->setValue(ltr_int_wc_get_max_blob());
@@ -165,4 +189,3 @@ bool WebcamPrefs::AddAvailableDevices(QComboBox &combo)
 }
 
 #include "moc_webcam_prefs.cpp"
-

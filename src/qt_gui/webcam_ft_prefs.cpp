@@ -23,6 +23,27 @@ WebcamFtPrefs::~WebcamFtPrefs()
 
 static WebcamInfo *wc_info = nullptr;
 
+static void persist_selected_webcam_ft_mode(Ui::WebcamFtSetupForm &ui,
+                                            WebcamInfo *info) {
+  if ((info == nullptr) || (ui.WebcamFtFormats->currentIndex() < 0)) {
+    return;
+  }
+  QString res, fps, fmt;
+  if (!info->findFmtSpecs(ui.WebcamFtFormats->currentIndex(),
+                          ui.WebcamFtResolutions->currentIndex(), res, fps,
+                          fmt)) {
+    return;
+  }
+
+  int x, y, num, den;
+  if (!WebcamInfo::decodeRes(res, x, y) || !WebcamInfo::decodeFps(fps, num, den)) {
+    return;
+  }
+  ltr_int_wc_set_pixfmt(fmt.toUtf8().constData());
+  ltr_int_wc_set_resolution(x, y);
+  ltr_int_wc_set_fps(num, den);
+}
+
 void WebcamFtPrefs::on_WebcamFtFormats_activated(int index)
 {
   ui.WebcamFtResolutions->clear();
@@ -114,6 +135,9 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       ui.WebcamFtFormats->setCurrentIndex(fmt_index);
     }
     on_WebcamFtFormats_activated(fmt_index);
+    if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty())) {
+      persist_selected_webcam_ft_mode(ui, wc_info);
+    }
     const char *cascade = ltr_int_wc_get_cascade();
     QString cascadePath;
     if((cascade == nullptr) || (!QFile::exists(QString::fromUtf8(cascade)))){
@@ -201,4 +225,3 @@ void WebcamFtPrefs::on_OptimLevel_valueChanged(int value)
 
 
 #include "moc_webcam_ft_prefs.cpp"
-
