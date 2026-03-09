@@ -36,6 +36,57 @@ static float fps_buffer[8] ={0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 static int fps_ptr = 0;
 //!!!TBD multithread sync!!!
 
+static QString deviceTypeText(deviceType_t devType)
+{
+  switch(devType){
+    case WEBCAM:
+      return QString::fromUtf8("Webcam");
+    case WEBCAM_FT:
+      return QString::fromUtf8("Webcam Face Tracker");
+    case TIR:
+      return QString::fromUtf8("TrackIR");
+    case WIIMOTE:
+      return QString::fromUtf8("Wiimote");
+    case JOYSTICK:
+      return QString::fromUtf8("Joystick");
+    case MACWEBCAM:
+      return QString::fromUtf8("Mac Webcam");
+    case MACWEBCAM_FT:
+      return QString::fromUtf8("Mac Webcam Face Tracker");
+    case MACPS3EYE:
+      return QString::fromUtf8("PS3Eye");
+    case MACPS3EYE_FT:
+      return QString::fromUtf8("PS3Eye Face Tracker");
+    default:
+      return QString::fromUtf8("Unknown device");
+  }
+}
+
+static QString cameraViewModeText(deviceType_t devType, const QString &modelType)
+{
+  switch(devType){
+    case WEBCAM:
+    case MACWEBCAM:
+    case MACPS3EYE:
+      if(modelType.compare(QString::fromUtf8("Face"), Qt::CaseInsensitive) == 0){
+        return QString::fromUtf8("Camera View shows a processed diagnostic frame. This device/model combination is not a native face-tracker path.");
+      }
+      return QString::fromUtf8("Camera View shows the processed tracking mask, not a raw webcam preview.");
+    case WEBCAM_FT:
+    case MACWEBCAM_FT:
+    case MACPS3EYE_FT:
+      return QString::fromUtf8("Camera View shows the processed grayscale frame used for face detection, not a raw webcam preview.");
+    case TIR:
+      return QString::fromUtf8("Camera View shows the processed sensor frame used for point tracking.");
+    case WIIMOTE:
+      return QString::fromUtf8("Camera View is diagnostic tracking output from the selected device path.");
+    case JOYSTICK:
+      return QString::fromUtf8("Joystick tracking does not provide a meaningful camera preview.");
+    default:
+      return QString::fromUtf8("Camera View is a diagnostic tracking view.");
+  }
+}
+
 
 
 LtrGuiForm::LtrGuiForm(const Ui::LinuxtrackMainForm &tmp_gui, QSettings &settings)
@@ -51,6 +102,7 @@ LtrGuiForm::LtrGuiForm(const Ui::LinuxtrackMainForm &tmp_gui, QSettings &setting
   settings.endGroup();
   main_gui.DisableCamView->setCheckState(camViewEnable ? Qt::Unchecked : Qt::Checked);
   main_gui.Disable3DView->setCheckState(check3DV ? Qt::Checked : Qt::Unchecked);
+  updateCameraDiagnostics();
   glw = new Window(ui.tabWidget, main_gui.Disable3DView);
   ui.ogl_box->addWidget(glw);
   timer = new QTimer(this);
@@ -158,6 +210,7 @@ void LtrGuiForm::disableCamView_stateChanged(int state)
   }else{
     camViewEnable = true;
   }
+  updateCameraDiagnostics();
 }
 
 void LtrGuiForm::disable3DView_stateChanged(int state)
@@ -181,8 +234,46 @@ void LtrGuiForm::update()
   cv->redraw();  
 }
 
+void LtrGuiForm::updateCameraDiagnostics()
+{
+  deviceType_t devType = NONE;
+  QString deviceId;
+  QString deviceSection;
+  QString modelSection;
+  QString modelType = QString::fromUtf8("Unknown");
+  QString modelLabel = QString::fromUtf8("Unknown");
+  QStringList parts;
+
+  if(PREF.getActiveDevice(devType, deviceId, deviceSection)){
+    parts << QString::fromUtf8("Device: %1").arg(deviceTypeText(devType));
+    if(!deviceId.isEmpty()){
+      parts << QString::fromUtf8("ID: %1").arg(deviceId);
+    }
+  }else{
+    parts << QString::fromUtf8("Device: Unknown");
+  }
+
+  if(PREF.getActiveModel(modelSection)){
+    modelLabel = modelSection;
+    QString tmp;
+    if(PREF.getKeyVal(modelSection, QString::fromUtf8("Model-type"), tmp)){
+      modelType = tmp;
+    }
+  }
+  parts << QString::fromUtf8("Model: %1").arg(modelLabel);
+
+  QString diag = parts.join(QString::fromUtf8(" | "));
+  diag += QString::fromUtf8("\n");
+  diag += cameraViewModeText(devType, modelType);
+  if(!camViewEnable){
+    diag += QString::fromUtf8(" Camera View is currently disabled.");
+  }
+  ui.cameraStatus->setText(diag);
+}
+
 void LtrGuiForm::stateChanged(int current_state)
 {
+  updateCameraDiagnostics();
   switch(current_state){
     case INITIALIZING:
     case RUNNING:
@@ -285,4 +376,3 @@ void CameraView::redraw()
 }
 
 #include "moc_ltr_show.cpp"
-

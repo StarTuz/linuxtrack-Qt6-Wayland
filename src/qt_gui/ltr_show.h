@@ -15,6 +15,7 @@
 
 #include "window.h"
 #include "buffering.h"
+#include "prefs_link.h"
 
 class LtrGuiForm;
 class QSettings;
@@ -69,6 +70,7 @@ class LtrGuiForm : public QWidget
    bool allowClose;
    float fps;
    const Ui::LinuxtrackMainForm &main_gui;
+   void updateCameraDiagnostics();
    void trackerStopped();
    void trackerRunning();
    void trackerPaused();
