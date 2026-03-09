@@ -51,12 +51,14 @@ Running state (in this state you are going to spend most of the time after all).
 <h1><A name="Web-cam">Web-cam Setup</A></h1>
 <img src="Webcam.png" alt="Webcam setup.">
 <p>To configure a web-cam, first of all you have to set the <strong>Pixel Format</strong>.
-The preferred format is YUYV (native UVC web-cam format), but you can experiment and see
-which one works the best for you (just avoid the JPEG/MJPG formats as they aren't supported).
+The preferred format is YUYV (native UVC web-cam format), because it is the best-supported direct path in Linuxtrack.
+Compressed formats such as JPEG/MJPG can still be useful, especially on high-FPS cameras, but Linuxtrack then depends on
+driver/libv4l conversion and the active mode may differ from the requested one.
 </p>
 <p>Continue by selecting the desired <strong>Resolution &amp; Frame rate</strong>.
 The safest bet would be something around 352x288@30; when tracking with these setting works, you can 
-experiment with different resolutions and frame rates.
+experiment with different resolutions and frame rates. When trying higher frame rates, check the Tracking window
+diagnostics to see the active mode and the driver-reported FPS after Start.
 </p>
 <p>
 To ensure best frame rate (stable and high), it is recommended to turn at least the Automatic exposure off
@@ -72,12 +74,14 @@ On Linux you can use the guvcview for this purpose.
 <h1><A name="Web-cam_ft">Web-cam Setup for face tracking</A></h1>
 <img src="Facetracker.png" alt="Facetracker setup.">
 <p>To configure a web-cam, first of all you have to set the <strong>Pixel Format</strong>.
-The preferred format is YUYV (native UVC web-cam format), but you can experiment and see
-which one works the best for you (just avoid the JPEG/MJPG formats as they aren't supported).
+The preferred format is YUYV (native UVC web-cam format), because it is the best-supported direct path in Linuxtrack.
+Compressed formats such as JPEG/MJPG can still work, especially on cameras that only expose their fast modes that way,
+but Linuxtrack then depends on driver/libv4l conversion and the active mode may differ from the requested one.
 </p>
 <p>Continue by selecting the desired <strong>Resolution &amp; Frame rate</strong>. <br>
 The safest bet would be something around 352x288@30; when tracking with these setting works, you can 
-experiment with different resolutions and frame rates.
+experiment with different resolutions and frame rates. When trying higher frame rates, check the Tracking window
+diagnostics to see the active mode and the driver-reported FPS after Start.
 </p>
 <p>The last thing to set before the first test is the path to the cascade used to track the face.
 OpenCV Haar and LBP cascades are supported.

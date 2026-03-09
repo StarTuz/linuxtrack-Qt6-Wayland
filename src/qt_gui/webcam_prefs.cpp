@@ -23,6 +23,23 @@ WebcamPrefs::~WebcamPrefs()
 
 static WebcamInfo *wc_info = nullptr;
 
+static void update_webcam_mode_hint(Ui::WebcamSetupForm &ui, WebcamInfo *info) {
+  if ((info == nullptr) || (ui.WebcamFormats->currentIndex() < 0)) {
+    ui.WebcamModeHint->clear();
+    return;
+  }
+  const int fmtIndex = ui.WebcamFormats->currentIndex();
+  const int resIndex = ui.WebcamResolutions->currentIndex();
+  QString hint = WebcamInfo::describeFormatPolicy(info->getFourcc(fmtIndex), false);
+  const QString resHint =
+      info->describeResolutionPolicy(fmtIndex, resIndex, false);
+  if (!resHint.isEmpty()) {
+    hint += QString::fromUtf8(" ");
+    hint += resHint;
+  }
+  ui.WebcamModeHint->setText(hint);
+}
+
 static void persist_selected_webcam_mode(Ui::WebcamSetupForm &ui,
                                          WebcamInfo *info) {
   if ((info == nullptr) || (ui.WebcamFormats->currentIndex() < 0)) {
@@ -48,6 +65,7 @@ void WebcamPrefs::on_WebcamFormats_activated(int index)
 {
   ui.WebcamResolutions->clear();
   if(currentId == QString::fromUtf8("None")){
+    update_webcam_mode_hint(ui, wc_info);
     return;
   }
   ui.WebcamResolutions->addItems(wc_info->getResolutions(index));
@@ -61,6 +79,7 @@ void WebcamPrefs::on_WebcamFormats_activated(int index)
     ui.WebcamResolutions->setCurrentIndex(res_index);
   }
   on_WebcamResolutions_activated(res_index);
+  update_webcam_mode_hint(ui, wc_info);
 }
 
 void WebcamPrefs::on_WebcamResolutions_activated(int index)
@@ -80,6 +99,7 @@ void WebcamPrefs::on_WebcamResolutions_activated(int index)
       ltr_int_wc_set_fps(num, den);
     }
   }
+  update_webcam_mode_hint(ui, wc_info);
 }
 
 bool WebcamPrefs::Activate(const QString &ID, bool init)
@@ -137,6 +157,7 @@ bool WebcamPrefs::Activate(const QString &ID, bool init)
     if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty())) {
       persist_selected_webcam_mode(ui, wc_info);
     }
+    update_webcam_mode_hint(ui, wc_info);
     
     ui.WebcamThreshold->setValue(ltr_int_wc_get_threshold());
     ui.WebcamMaxBlob->setValue(ltr_int_wc_get_max_blob());

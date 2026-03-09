@@ -12,7 +12,8 @@ class WebcamInfo{
   WebcamInfo(const QString &id);
   const QStringList& getFormats();
   const QStringList& getResolutions(int index);
-  QString getFourcc(int index);
+  QString getFormatDisplayName(int index) const;
+  QString getFourcc(int index) const;
   int findFourcc(const QString &fcc);
   bool findFmtSpecs(int i_fmt, int i_res, QString &res, 
 	            QString &fps, QString &fmt);
@@ -20,6 +21,9 @@ class WebcamInfo{
 	      const int &fps_den, const QString &fourcc);
   static bool decodeRes(const QString &res, int &res_x, int &res_y);
   static bool decodeFps(const QString &fps, int &num, int &den);
+  static QString describeFormatPolicy(const QString &fourcc, bool faceTracker);
+  QString describeResolutionPolicy(int i_fmt, int i_res,
+                                   bool faceTracker) const;
   ~WebcamInfo();
   static QStringList& EnumerateWebcams();
  private:

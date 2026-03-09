@@ -14,6 +14,19 @@
 #endif
 #include <QtDebug>
 
+static bool isNativeFormat(const QString &fourcc) {
+  return (fourcc == QString::fromUtf8("YUYV")) ||
+         (fourcc == QString::fromUtf8("YU12")) ||
+         (fourcc == QString::fromUtf8("YV12")) ||
+         (fourcc == QString::fromUtf8("RGB3")) ||
+         (fourcc == QString::fromUtf8("BGR3"));
+}
+
+static bool isCompressedFormat(const QString &fourcc) {
+  return (fourcc == QString::fromUtf8("MJPG")) ||
+         (fourcc == QString::fromUtf8("JPEG"));
+}
+
 typedef int (*enum_webcams_fun_t)(char **ids[]);
 typedef int (*enum_webcam_formats_fun_t)(const char *id,
                                          webcam_formats *all_formats);
@@ -91,7 +104,7 @@ WebcamInfo::WebcamInfo(const QString &id) {
       index = fmts.formats[j].i;
       if (fmt_index != index) {
         fmt_index = index;
-        format_strings.push_back(QString::fromUtf8(fmts.fmt_strings[index]));
+        format_strings.push_back(getFormatDisplayName(index));
         fmt_descs.push_back(QList<webcam_format *>());
         res_list.push_back(QStringList());
       }
@@ -107,6 +120,17 @@ WebcamInfo::WebcamInfo(const QString &id) {
 }
 
 const QStringList &WebcamInfo::getFormats() { return format_strings; }
+
+QString WebcamInfo::getFormatDisplayName(int index) const {
+  const QString fourcc = getFourcc(index);
+  if (isNativeFormat(fourcc)) {
+    return QString::fromUtf8("%1 (Native)").arg(fourcc);
+  }
+  if (isCompressedFormat(fourcc)) {
+    return QString::fromUtf8("%1 (Converted)").arg(fourcc);
+  }
+  return QString::fromUtf8("%1 (Driver-dependent)").arg(fourcc);
+}
 
 const QStringList &WebcamInfo::getResolutions(int index) {
   // std::cout<<"Selecting format index "<<index<<"\n";
@@ -125,7 +149,7 @@ static QString U32_2_String(uint32_t fourcc) {
   return QString(QString::fromUtf8(fcc1));
 }
 
-QString WebcamInfo::getFourcc(int index) {
+QString WebcamInfo::getFourcc(int index) const {
   if ((index >= 0) && (index <= fmt_index)) {
     return U32_2_String(fmt_descs[index][0]->fourcc);
   } else {
@@ -246,6 +270,58 @@ bool WebcamInfo::findFmtSpecs(int i_fmt, int i_res, QString &res, QString &fps,
             .arg(QString::number(format->fps_num));
   fmt = getFourcc(i_fmt);
   return true;
+}
+
+QString WebcamInfo::describeFormatPolicy(const QString &fourcc,
+                                         bool faceTracker) {
+  if (isNativeFormat(fourcc)) {
+    if (faceTracker) {
+      return QString::fromUtf8(
+          "Native backend path. Best-supported for preview and face tracking.");
+    }
+    return QString::fromUtf8(
+        "Native backend path. Best-supported for preview and blob tracking.");
+  }
+  if (isCompressedFormat(fourcc)) {
+    return QString::fromUtf8(
+        "Compressed camera mode. Often required for high-FPS webcams, but "
+        "Linuxtrack depends on driver/libv4l conversion and the active mode "
+        "may differ from the requested one.");
+  }
+  return QString::fromUtf8(
+      "Driver-dependent format. Linuxtrack may rely on driver-side "
+      "conversion; if preview is black or tracking is unstable, prefer YUYV.");
+}
+
+QString WebcamInfo::describeResolutionPolicy(int i_fmt, int i_res,
+                                             bool faceTracker) const {
+  if ((i_fmt < 0) || (i_fmt >= fmt_descs.size()) || (i_res < 0) ||
+      (i_res >= fmt_descs[i_fmt].size())) {
+    return QString();
+  }
+
+  webcam_format *format = fmt_descs[i_fmt][i_res];
+  const QString fourcc = getFourcc(i_fmt);
+  float fps = 0.0f;
+  if (format->fps_num > 0) {
+    fps = (float)format->fps_den / (float)format->fps_num;
+  }
+
+  if (fps >= 90.0f && isCompressedFormat(fourcc)) {
+    return QString::fromUtf8(
+        "High requested FPS on a compressed stream. Check Camera View "
+        "diagnostics after Start for the active mode and driver-reported FPS.");
+  }
+  if (fps >= 90.0f) {
+    return QString::fromUtf8(
+        "High requested FPS. Camera diagnostics will show whether the driver "
+        "actually negotiated this rate.");
+  }
+  if (faceTracker && fps < 30.0f) {
+    return QString::fromUtf8(
+        "Low requested FPS for face tracking. Tracking quality may feel laggy.");
+  }
+  return QString();
 }
 
 WebcamInfo::~WebcamInfo() { enum_webcam_formats_cleanup_fun(&fmts); }

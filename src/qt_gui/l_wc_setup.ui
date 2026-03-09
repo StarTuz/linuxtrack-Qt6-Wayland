@@ -77,6 +77,16 @@
         <item row="0" column="1">
          <widget class="QComboBox" name="WebcamFormats"/>
         </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QLabel" name="WebcamModeHint">
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>

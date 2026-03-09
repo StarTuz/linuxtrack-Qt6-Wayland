@@ -23,6 +23,24 @@ WebcamFtPrefs::~WebcamFtPrefs()
 
 static WebcamInfo *wc_info = nullptr;
 
+static void update_webcam_ft_mode_hint(Ui::WebcamFtSetupForm &ui,
+                                       WebcamInfo *info) {
+  if ((info == nullptr) || (ui.WebcamFtFormats->currentIndex() < 0)) {
+    ui.WebcamFtModeHint->clear();
+    return;
+  }
+  const int fmtIndex = ui.WebcamFtFormats->currentIndex();
+  const int resIndex = ui.WebcamFtResolutions->currentIndex();
+  QString hint =
+      WebcamInfo::describeFormatPolicy(info->getFourcc(fmtIndex), true);
+  const QString resHint = info->describeResolutionPolicy(fmtIndex, resIndex, true);
+  if (!resHint.isEmpty()) {
+    hint += QString::fromUtf8(" ");
+    hint += resHint;
+  }
+  ui.WebcamFtModeHint->setText(hint);
+}
+
 static void persist_selected_webcam_ft_mode(Ui::WebcamFtSetupForm &ui,
                                             WebcamInfo *info) {
   if ((info == nullptr) || (ui.WebcamFtFormats->currentIndex() < 0)) {
@@ -49,6 +67,7 @@ void WebcamFtPrefs::on_WebcamFtFormats_activated(int index)
   ui.WebcamFtResolutions->clear();
   if(currentId == QString::fromUtf8("None")){
     //std::cout<<"None!\n";
+    update_webcam_ft_mode_hint(ui, wc_info);
     return;
   }
   ui.WebcamFtResolutions->addItems(wc_info->getResolutions(index));
@@ -62,6 +81,7 @@ void WebcamFtPrefs::on_WebcamFtFormats_activated(int index)
     ui.WebcamFtResolutions->setCurrentIndex(res_index);
   }
   on_WebcamFtResolutions_activated(res_index);
+  update_webcam_ft_mode_hint(ui, wc_info);
 }
 
 void WebcamFtPrefs::on_WebcamFtResolutions_activated(int index)
@@ -81,6 +101,7 @@ void WebcamFtPrefs::on_WebcamFtResolutions_activated(int index)
       ltr_int_wc_set_fps(num, den);
     }
   }
+  update_webcam_ft_mode_hint(ui, wc_info);
 }
 
 bool WebcamFtPrefs::Activate(const QString &ID, bool init)
@@ -138,6 +159,7 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
     if ((tmp == nullptr) || (QString::fromUtf8(tmp).isEmpty())) {
       persist_selected_webcam_ft_mode(ui, wc_info);
     }
+    update_webcam_ft_mode_hint(ui, wc_info);
     const char *cascade = ltr_int_wc_get_cascade();
     QString cascadePath;
     if((cascade == nullptr) || (!QFile::exists(QString::fromUtf8(cascade)))){
