@@ -20,15 +20,15 @@ find_library(LTR_LIBRARY
     PATHS 
         /opt/linuxtrack/lib
         /usr/local/lib
-        ${CMAKE_SOURCE_DIR}/../../build/src
+        ${CMAKE_SOURCE_DIR}/build/src
     PATH_SUFFIXES linuxtrack
 )
 
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/../..  # For linuxtrack.h
-    ${CMAKE_BINARY_DIR}/../..  # For config.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/..  # For linuxtrack.h
+    ${CMAKE_BINARY_DIR}             # For config.h
 )
 
 # Plugin shared library
@@ -42,9 +42,9 @@ if(LTR_LIBRARY)
 else()
     # Direct source inclusion fallback
     target_sources(scs_linuxtrack PRIVATE
-        ${CMAKE_SOURCE_DIR}/../linuxtrack.c
-        ${CMAKE_SOURCE_DIR}/../ipc_utils.c
-        ${CMAKE_SOURCE_DIR}/../utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../linuxtrack.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../ipc_utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/../utils.c
     )
     target_link_libraries(scs_linuxtrack m dl pthread)
 endif()
