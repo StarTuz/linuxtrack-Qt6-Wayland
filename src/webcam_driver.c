@@ -644,9 +644,20 @@ int ltr_int_tracker_init(struct camera_control_block *ccb) {
 
 int ltr_int_tracker_close() {
   ltr_int_log_message("Webcam shutting down!\n");
+  if (wc_info.fd >= 0) {
+    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_STREAMOFF, &type)) {
+      ltr_int_log_message("Streamoff during shutdown failed (%s)\n",
+                          strerror(errno));
+    } else {
+      ltr_int_log_message("Streaming stopped during shutdown.\n");
+    }
+  }
   release_buffers();
   free(wc_info.bw_frame);
+  wc_info.bw_frame = NULL;
   v4l2_close(wc_info.fd);
+  wc_info.fd = -1;
 #ifdef OPENCV
   ltr_int_stop_face_detect();
 #endif
