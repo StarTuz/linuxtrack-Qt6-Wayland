@@ -60,8 +60,8 @@ WebcamLibProxy::~WebcamLibProxy() {
 }
 
 static webcam_format def_fmt1 = {0, *"YUYV", 160, 120, 1, 30};
-// static webcam_format def_fmt2 = {0, *"YUYV", 320, 240, 1, 30};
-// static webcam_format def_fmt3 = {0, *"YUYV", 352, 288, 1, 30};
+static webcam_format def_fmt2 = {0, *"YUYV", 320, 240, 1, 30};
+static webcam_format def_fmt3 = {0, *"YUYV", 352, 288, 1, 30};
 
 WebcamInfo::WebcamInfo(const QString &id) {
   if (!webcamInfoOk) {
@@ -81,6 +81,8 @@ WebcamInfo::WebcamInfo(const QString &id) {
     fmt_descs.push_back(QList<webcam_format *>());
     res_list.push_back(QStringList());
     fmt_descs[0].push_back(&def_fmt1);
+    fmt_descs[0].push_back(&def_fmt2);
+    fmt_descs[0].push_back(&def_fmt3);
     res_list[0].push_back(QString::fromUtf8("160 x 120 @ 30"));
     res_list[0].push_back(QString::fromUtf8("320 x 240 @ 30"));
     res_list[0].push_back(QString::fromUtf8("352 x 288 @ 30"));
@@ -98,7 +100,7 @@ WebcamInfo::WebcamInfo(const QString &id) {
       height = QString::number(fmts.formats[j].h);
       fps = QString::number((float)fmts.formats[j].fps_den /
                             fmts.formats[j].fps_num);
-      item = QString::fromUtf8("%2 x %3 @ %4").arg(width, height, fps);
+      item = QString::fromUtf8("%1 x %2 @ %3").arg(width, height, fps);
       res_list.back().push_back(item);
     }
   }
