@@ -452,8 +452,9 @@ static bool set_capture_format(struct camera_control_block *ccb) {
 static bool set_stream_params() {
   int num, den;
   if (!ltr_int_wc_get_fps(&num, &den)) {
-    ltr_int_log_message("I don't understand fps specification!\n");
-    return false;
+    ltr_int_log_message(
+        "No explicit fps specification found, using driver defaults.\n");
+    return true;
   }
 
   struct v4l2_streamparm sp;
@@ -464,9 +465,20 @@ static bool set_stream_params() {
   sp.parm.capture.timeperframe.denominator = num;
 
   if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_S_PARM, &sp)) {
-    ltr_int_log_message("Stream parameters setup failed! (%s)\n",
-                        strerror(errno));
-    return false;
+    switch (errno) {
+    case EINVAL:
+    case ENOTTY:
+    case EBUSY:
+      ltr_int_log_message(
+          "Stream parameter setup unsupported for this mode/device, "
+          "continuing with driver defaults. (%s)\n",
+          strerror(errno));
+      return true;
+    default:
+      ltr_int_log_message("Stream parameters setup failed! (%s)\n",
+                          strerror(errno));
+      return false;
+    }
   }
   return true;
 }
