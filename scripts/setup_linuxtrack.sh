@@ -355,13 +355,16 @@ update_config_prefix() {
         else
             printf '\n[Global]\nPrefix = "%s/bin"\n' "$PREFIX" >> "$config_file"
         fi
+    else
+        cat > "$config_file" <<EOF
+[Global]
+Prefix = "$PREFIX/bin"
+EOF
     fi
 }
 
 perform_install() {
-    if [ ! -x "$BUILD_DIR/src/qt_gui/ltr_gui" ]; then
-        perform_build
-    fi
+    perform_build
 
     log "\n${GREEN}🚀 Installing to $PREFIX${NC}"
 
