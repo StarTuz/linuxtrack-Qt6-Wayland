@@ -501,7 +501,15 @@ static bool set_capture_format(struct camera_control_block *ccb) {
   struct v4l2_format fmt = requested_fmt;
 #ifdef HAVE_LIBV4LCONVERT
   if (wc_info.convert != NULL) {
+    int fps_num = 0;
+    int fps_den = 0;
     struct v4l2_format desired_fmt = requested_fmt;
+    if (ltr_int_wc_get_fps(&fps_num, &fps_den) && fps_den > 0) {
+      int requested_fps = fps_num / fps_den;
+      if (requested_fps > 0) {
+        v4lconvert_set_fps(wc_info.convert, requested_fps);
+      }
+    }
     if (!is_directly_supported_fourcc(desired_fmt.fmt.pix.pixelformat)) {
       desired_fmt.fmt.pix.pixelformat = *(__u32 *)"YUYV";
       desired_fmt.fmt.pix.field = V4L2_FIELD_ANY;
