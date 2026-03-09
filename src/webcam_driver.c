@@ -44,6 +44,7 @@ typedef struct {
   unsigned int buffers;
   int w;
   int h;
+  unsigned char *proc_frame;
   unsigned char *bw_frame;
   unsigned int threshold;
   int min_blob_pixels;
@@ -68,6 +69,7 @@ static void reset_webcam_state(void) {
   wc_info.buffers = 0;
   wc_info.w = 0;
   wc_info.h = 0;
+  wc_info.proc_frame = NULL;
   wc_info.bw_frame = NULL;
   wc_info.threshold = 0;
   wc_info.min_blob_pixels = 0;
@@ -85,6 +87,8 @@ static void cleanup_webcam_resources(bool stop_stream) {
     }
   }
   release_buffers();
+  free(wc_info.proc_frame);
+  wc_info.proc_frame = NULL;
   free(wc_info.bw_frame);
   wc_info.bw_frame = NULL;
   if (wc_info.fd >= 0) {
@@ -477,6 +481,7 @@ static bool set_capture_format(struct camera_control_block *ccb) {
   }
   ccb->pixel_width = wc_info.w = fmt.fmt.pix.width;
   ccb->pixel_height = wc_info.h = fmt.fmt.pix.height;
+  wc_info.proc_frame = (unsigned char *)ltr_int_my_malloc(wc_info.w * wc_info.h);
   wc_info.bw_frame = (unsigned char *)ltr_int_my_malloc(wc_info.w * wc_info.h);
   ltr_int_log_message("Switch of the format successfull!\n");
   return true;
@@ -724,26 +729,18 @@ int ltr_int_tracker_pause() {
   return 0;
 }
 
-static void get_bw_image(unsigned char *source_buf, unsigned char *dest_buf,
-                         unsigned int bytes_used) {
+static void get_gray_image(unsigned char *source_buf, unsigned char *dest_buf,
+                           unsigned int bytes_used) {
   unsigned int cntr, cntr1;
 
   if (wc_info.fourcc == *(__u32 *)"YUYV") {
     for (cntr = cntr1 = 0; cntr < bytes_used; cntr += 2, ++cntr1) {
-      if (source_buf[cntr] > wc_info.threshold) {
-        dest_buf[cntr1] = source_buf[cntr];
-      } else {
-        dest_buf[cntr1] = 0;
-      }
+      dest_buf[cntr1] = source_buf[cntr];
     }
   } else if ((wc_info.fourcc == *(__u32 *)"YU12") ||
              (wc_info.fourcc == *(__u32 *)"YV12")) {
     for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
-      if (source_buf[cntr] > wc_info.threshold) {
-        dest_buf[cntr] = source_buf[cntr];
-      } else {
-        dest_buf[cntr] = 0;
-      }
+      dest_buf[cntr] = source_buf[cntr];
     }
   } else if (wc_info.fourcc == *(__u32 *)"RGB3") {
     float y;
@@ -754,11 +751,7 @@ static void get_bw_image(unsigned char *source_buf, unsigned char *dest_buf,
           0.098 * ((float)source_buf[cntr + 2]) + 16;
       if (y > 255)
         y = 255.0;
-      if (y > wc_info.threshold) {
-        dest_buf[cntr1] = y;
-      } else {
-        dest_buf[cntr1] = 0;
-      }
+      dest_buf[cntr1] = y;
     }
   } else if (wc_info.fourcc == *(__u32 *)"BGR3") {
     float y;
@@ -769,14 +762,22 @@ static void get_bw_image(unsigned char *source_buf, unsigned char *dest_buf,
           0.098 * ((float)source_buf[cntr + 0]) + 16;
       if (y > 255)
         y = 255.0;
-      if (y > wc_info.threshold) {
-        dest_buf[cntr1] = y;
-      } else {
-        dest_buf[cntr1] = 0;
-      }
+      dest_buf[cntr1] = y;
     }
   } else {
     for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
+      dest_buf[cntr] = 0;
+    }
+  }
+}
+
+static void threshold_gray_image(unsigned char *source_buf,
+                                 unsigned char *dest_buf) {
+  unsigned int cntr;
+  for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
+    if (source_buf[cntr] > wc_info.threshold) {
+      dest_buf[cntr] = source_buf[cntr];
+    } else {
       dest_buf[cntr] = 0;
     }
   }
@@ -836,8 +837,19 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   assert(buf.index < wc_info.buffers);
 
   unsigned char *source_buf = (buffers[buf.index]).start;
-  unsigned char *dest_buf = (f->bitmap != NULL) ? f->bitmap : wc_info.bw_frame;
-  get_bw_image(source_buf, dest_buf, buf.bytesused);
+  unsigned char *preview_buf =
+      (f->bitmap != NULL) ? f->bitmap : wc_info.bw_frame;
+  unsigned char *tracking_buf = wc_info.proc_frame;
+  get_gray_image(source_buf, preview_buf, buf.bytesused);
+  if (tracking_buf != NULL) {
+#ifdef OPENCV
+    memcpy(tracking_buf, preview_buf, wc_info.w * wc_info.h);
+#else
+    threshold_gray_image(preview_buf, tracking_buf);
+#endif
+  } else {
+    tracking_buf = preview_buf;
+  }
   // ltr_int_log_message("%d points found!\n", pts);
 
   if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_QBUF, &buf)) {
@@ -845,7 +857,7 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   }
   // ltr_int_log_message("Queued buffer %d\n", buf.index);
   image_t img = {
-      .bitmap = dest_buf, .w = wc_info.w, .h = wc_info.h, .ratio = 1.0f};
+      .bitmap = tracking_buf, .w = wc_info.w, .h = wc_info.h, .ratio = 1.0f};
 
 #ifdef DEBUG
   // Save sequence of frames
@@ -856,7 +868,7 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   fprintf(stderr, "%s\n", fname);
   FILE *ff;
   if ((ff = fopen(fname, "wb")) != NULL) {
-    fwrite(dest_buf, 1, wc_info.w * wc_info.h, ff);
+    fwrite(preview_buf, 1, wc_info.w * wc_info.h, ff);
     fclose(ff);
   }
 #endif

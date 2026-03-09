@@ -69,13 +69,13 @@ static QString cameraViewModeText(deviceType_t devType, const QString &modelType
     case MACWEBCAM:
     case MACPS3EYE:
       if(modelType.compare(QString::fromUtf8("Face"), Qt::CaseInsensitive) == 0){
-        return QString::fromUtf8("Camera View shows a processed diagnostic frame. This device/model combination is not a native face-tracker path.");
+        return QString::fromUtf8("Camera View shows a grayscale preview frame. This device/model combination is not a native face-tracker path.");
       }
-      return QString::fromUtf8("Camera View shows the processed tracking mask, not a raw webcam preview.");
+      return QString::fromUtf8("Camera View shows a grayscale preview frame. Blob tracking still uses its own processed mask internally.");
     case WEBCAM_FT:
     case MACWEBCAM_FT:
     case MACPS3EYE_FT:
-      return QString::fromUtf8("Camera View shows the processed grayscale frame used for face detection, not a raw webcam preview.");
+      return QString::fromUtf8("Camera View shows a grayscale preview frame used by the face-tracker pipeline.");
     case TIR:
       return QString::fromUtf8("Camera View shows the processed sensor frame used for point tracking.");
     case WIIMOTE:
