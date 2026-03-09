@@ -121,8 +121,8 @@ static bool ensureStableLibraries() {
   // Libraries and plugins to copy
   QStringList libs;
   libs << QString::fromUtf8("liblinuxtrack.so.0")
-       << QString::fromUtf8("libltr.so") << QString::fromUtf8("xlinuxtrack9.so")
-       << QString::fromUtf8("xlinuxtrack9_32.so");
+       << QString::fromUtf8("libltr.so")
+       << QString::fromUtf8("xlinuxtrack9.so");
 
   // Also copy drivers if needed, but let's start with core libs
   QString appPath = QApplication::applicationDirPath() +

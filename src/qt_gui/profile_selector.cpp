@@ -24,6 +24,14 @@ ProfileSelector::ProfileSelector(QWidget *parent)
   connect(ui.Profiles, &QComboBox::currentIndexChanged, this,
           &ProfileSelector::profilesIndexChanged);
   setCurrentProfile(QString::fromUtf8("Default"));
+
+  // Create ProfileSetup widget for initial profile so tab is not blank
+  QString initialProfile = ui.Profiles->currentText();
+  if (ps == nullptr && !initialProfile.isEmpty() &&
+      PROFILE.isProfile(initialProfile) >= 0) {
+    ps = new ProfileSetup(initialProfile, this);
+    ui.AxesSetup->addWidget(ps);
+  }
 }
 
 ProfileSelector::~ProfileSelector() {

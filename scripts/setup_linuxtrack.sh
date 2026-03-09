@@ -228,12 +228,18 @@ perform_build() {
         return 1
     fi
     
+    # Determine project root (one level up from scripts/)
+    local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    
     # Check if we should use build or build_test
-    local BUILD_TARGET="build"
+    local BUILD_TARGET="$PROJECT_ROOT/build"
     mkdir -p "$BUILD_TARGET"
     
+    echo "Project root: $PROJECT_ROOT"
+    echo "Build directory: $BUILD_TARGET"
     echo "Configuring with CMake..."
-    if ! cmake -S . -B "$BUILD_TARGET" -DCMAKE_INSTALL_PREFIX=/opt/linuxtrack; then
+    if ! cmake -S "$PROJECT_ROOT" -B "$BUILD_TARGET" -DCMAKE_INSTALL_PREFIX=/opt/linuxtrack; then
         echo -e "${RED}❌ CMake configuration failed.${NC}"
         return 1
     fi
