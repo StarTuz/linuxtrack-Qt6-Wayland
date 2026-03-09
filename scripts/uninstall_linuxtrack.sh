@@ -1,108 +1,185 @@
 #!/bin/bash
-# Linuxtrack Uninstallation Script
-# Cleans up all Linuxtrack components from the system.
+# Linuxtrack uninstaller with manifest support.
 
-set -e
+set -euo pipefail
 
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'
+NC='\033[0m'
 
-echo -e "${RED}Linuxtrack Uninstaller${NC}"
-echo "======================"
+ASSUME_YES=false
+PURGE_USER_DATA=false
+PREFIXES=()
 
-# 1. Path Discovery (Reuse discovery logic to find what to delete)
-SEARCH_PATHS=("/opt/linuxtrack" "/usr/local" "/usr" "$HOME/.local")
-FOUND_INSTALLS=()
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [options]
 
-for path in "${SEARCH_PATHS[@]}"; do
-    if [ -f "$path/bin/ltr_gui" ]; then
-        FOUND_INSTALLS+=("$path")
+Options:
+  --prefix PATH         Uninstall a specific prefix
+  --purge-user-data     Remove ~/.config/linuxtrack as well
+  --yes, -y             Non-interactive mode where possible
+  --help, -h            Show this help
+
+This script prefers manifest-based uninstall from:
+  <prefix>/share/linuxtrack/install_manifest.txt
+EOF
+}
+
+log() {
+    printf '%b\n' "$1"
+}
+
+confirm() {
+    local prompt="$1"
+    if [ "$ASSUME_YES" = true ]; then
+        return 0
     fi
+    read -r -p "$prompt [y/N] " reply
+    [[ "$reply" =~ ^[Yy]$ ]]
+}
+
+add_prefix() {
+    local prefix="$1"
+    local existing
+    for existing in "${PREFIXES[@]}"; do
+        if [ "$existing" = "$prefix" ]; then
+            return
+        fi
+    done
+    PREFIXES+=("$prefix")
+}
+
+discover_prefixes() {
+    local search_paths=("/opt/linuxtrack" "/usr/local" "/usr" "$HOME/.local")
+    local path
+    for path in "${search_paths[@]}"; do
+        if [ -f "$path/share/linuxtrack/install_manifest.txt" ] || [ -x "$path/bin/ltr_gui" ]; then
+            add_prefix "$path"
+        fi
+    done
+}
+
+remove_manifest_install() {
+    local prefix="$1"
+    local manifest="$prefix/share/linuxtrack/install_manifest.txt"
+    local sudo_prefix=""
+
+    if [ ! -f "$manifest" ]; then
+        return 1
+    fi
+    if [ ! -w "$prefix" ] && [ ! -w "$(dirname "$prefix")" ]; then
+        sudo_prefix="sudo"
+    fi
+
+    log "\n${GREEN}Removing manifest-managed install at $prefix${NC}"
+    while IFS= read -r installed_path; do
+        [ -n "$installed_path" ] || continue
+        if [ -e "$installed_path" ] || [ -L "$installed_path" ]; then
+            $sudo_prefix rm -f "$installed_path"
+        fi
+    done < "$manifest"
+
+    $sudo_prefix rm -f "$manifest"
+    $sudo_prefix rmdir --ignore-fail-on-non-empty "$prefix/share/linuxtrack/help/ltr_gui" 2>/dev/null || true
+    $sudo_prefix rmdir --ignore-fail-on-non-empty "$prefix/share/linuxtrack/help/mickey" 2>/dev/null || true
+    $sudo_prefix rmdir --ignore-fail-on-non-empty "$prefix/share/linuxtrack/help" 2>/dev/null || true
+    $sudo_prefix rmdir --ignore-fail-on-non-empty "$prefix/share/linuxtrack" 2>/dev/null || true
+    $sudo_prefix rmdir --ignore-fail-on-non-empty "$prefix/lib/linuxtrack" 2>/dev/null || true
+    return 0
+}
+
+remove_legacy_install() {
+    local prefix="$1"
+    local sudo_prefix=""
+
+    if [ ! -w "$prefix" ] && [ ! -w "$(dirname "$prefix")" ]; then
+        sudo_prefix="sudo"
+    fi
+
+    log "\n${YELLOW}Removing legacy install at $prefix${NC}"
+
+    if [ "$prefix" = "/usr" ] || [ "$prefix" = "/usr/local" ]; then
+        $sudo_prefix rm -f "$prefix/bin/ltr_gui" "$prefix/bin/ltr_server1" \
+            "$prefix/bin/ltr_recenter" "$prefix/bin/ltr_pipe" "$prefix/bin/ltr_extractor" \
+            "$prefix/bin/ltr_udp" "$prefix/bin/osc_server" "$prefix/bin/ltr_hotkeyd" \
+            "$prefix/bin/ltr_hotkey_gui" "$prefix/bin/mickey"
+        $sudo_prefix rm -rf "$prefix/lib/linuxtrack"
+        $sudo_prefix rm -rf "$prefix/share/linuxtrack"
+        $sudo_prefix rm -f "$prefix/share/applications/linuxtrack.desktop" \
+            "$prefix/share/applications/linuxtrack-wii.desktop"
+    else
+        $sudo_prefix rm -rf "$prefix"
+    fi
+}
+
+cleanup_integration() {
+    local rules=(/etc/udev/rules.d/99-TIR.rules /etc/udev/rules.d/99-Mickey.rules)
+    local rule
+
+    for rule in "${rules[@]}"; do
+        if [ -f "$rule" ]; then
+            sudo rm -f "$rule"
+        fi
+    done
+    sudo udevadm control --reload-rules || true
+
+    rm -f "$HOME/.local/share/applications/linuxtrack.desktop"
+    rm -rf "$HOME/.local/lib/linuxtrack"
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --prefix)
+            add_prefix "$2"
+            shift 2
+            ;;
+        --purge-user-data)
+            PURGE_USER_DATA=true
+            shift
+            ;;
+        --yes|-y)
+            ASSUME_YES=true
+            shift
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            log "${RED}Unknown argument: $1${NC}"
+            usage
+            exit 1
+            ;;
+    esac
 done
 
-if [ ${#FOUND_INSTALLS[@]} -eq 0 ]; then
-    echo "No standard installations found. Proceeding with system-wide cleanup."
+if [ "${#PREFIXES[@]}" -eq 0 ]; then
+    discover_prefixes
+fi
+
+if [ "${#PREFIXES[@]}" -eq 0 ]; then
+    log "${YELLOW}No Linuxtrack installations detected.${NC}"
 else
-    echo "The following installations were found:"
-    for i in "${!FOUND_INSTALLS[@]}"; do
-        echo "  $((i+1))) ${FOUND_INSTALLS[$i]}"
+    log "Detected installations:"
+    printf '  %s\n' "${PREFIXES[@]}"
+fi
+
+if [ "${#PREFIXES[@]}" -gt 0 ] && confirm "Remove the detected Linuxtrack installations?"; then
+    for prefix in "${PREFIXES[@]}"; do
+        if ! remove_manifest_install "$prefix"; then
+            remove_legacy_install "$prefix"
+        fi
     done
 fi
 
-remove_installation() {
-    local target="$1"
-    echo -e "\n🗑️  Removing installation at: $target"
-    
-    # We need to be careful with /usr/local and /usr
-    if [ "$target" == "/usr" ] || [ "$target" == "/usr/local" ]; then
-        echo -e "${YELLOW}⚠️  Warning: Target is a core system path ($target).${NC}"
-        echo "Only specific Linuxtrack files will be removed."
-        
-        SUDO=""
-        if [ ! -w "$target/bin" ]; then SUDO="sudo"; fi
-        
-        $SUDO rm -f "$target/bin/ltr_"*
-        $SUDO rm -f "$target/bin/mickey"
-        $SUDO rm -rf "$target/lib/linuxtrack"
-        $SUDO rm -rf "$target/share/linuxtrack"
-    else
-        SUDO=""
-        if [ ! -w "$target" ]; then SUDO="sudo"; fi
-        $SUDO rm -rf "$target"
-    fi
-    echo -e "  ✅ Installation removed."
-}
+cleanup_integration
 
-# Ask to remove found installs
-if [ ${#FOUND_INSTALLS[@]} -gt 0 ]; then
-    read -p "Do you want to remove the detected installations? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        for inst in "${FOUND_INSTALLS[@]}"; do
-            remove_installation "$inst"
-        done
-    fi
+if [ "$PURGE_USER_DATA" = true ]; then
+    rm -rf "$HOME/.config/linuxtrack"
+elif [ -d "$HOME/.config/linuxtrack" ] && confirm "Remove user profiles and firmware from ~/.config/linuxtrack?"; then
+    rm -rf "$HOME/.config/linuxtrack"
 fi
 
-# 2. Udev Rules Cleanup
-echo -e "\n🛠️  Cleaning up system integration..."
-UDEV_RULES=("/etc/udev/rules.d/99-TIR.rules" "/etc/udev/rules.d/99-Mickey.rules")
-for rule in "${UDEV_RULES[@]}"; do
-    if [ -f "$rule" ]; then
-        echo "Removing $rule..."
-        sudo rm "$rule"
-    fi
-done
-sudo udevadm control --reload-rules
-
-# 3. Desktop Entry Cleanup
-DESKTOP_FILE="$HOME/.local/share/applications/linuxtrack.desktop"
-if [ -f "$DESKTOP_FILE" ]; then
-    echo "Removing desktop entry..."
-    rm "$DESKTOP_FILE"
-fi
-
-# 4. AppImage Stable Library Cleanup
-STABLE_LIBS="$HOME/.local/lib/linuxtrack"
-if [ -d "$STABLE_LIBS" ]; then
-    echo "Removing stable libraries for AppImage..."
-    rm -rf "$STABLE_LIBS"
-fi
-
-# 5. User Data Cleanup (Optional)
-CONFIG_DIR="$HOME/.config/linuxtrack"
-if [ -d "$CONFIG_DIR" ]; then
-    echo -e "\n${YELLOW}📁 User data found at $CONFIG_DIR (Profiles, settings, firmware).${NC}"
-    read -p "Do you want to PERMANENTLY remove your user configuration and profiles? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        rm -rf "$CONFIG_DIR"
-        echo "  ✅ User data removed."
-    else
-        echo "  📂 User data preserved."
-    fi
-fi
-
-echo -e "\n${GREEN}🏁 Linuxtrack has been uninstalled.${NC}"
+log "\n${GREEN}Linuxtrack uninstall complete.${NC}"

@@ -160,25 +160,68 @@ If the 3D tracking view in `ltr_gui` shows a blank/black screen:
 
 ## 🛠️ Installation
 
-### 1. Build from Source (CMake)
+### Supported Install Modes
 
-**Prerequisites:** Qt6 (likely 6.10+ recommended), OpenGLES/OpenGL drivers, libusb-1.0, libmxml, liblo.
+Linuxtrack supports three practical install paths:
+
+1. **AppImage** for most end users.
+2. **Managed source install** via `scripts/setup_linuxtrack.sh`.
+3. **Manual CMake install** for developers packaging or debugging locally.
+
+### 1. AppImage (Recommended)
+
+AppImage is the easiest path for most users and keeps Linuxtrack self-contained.
+
+- Download the release AppImage.
+- Run it directly: `chmod +x Linuxtrack-*.AppImage && ./Linuxtrack-*.AppImage`
+- If you want desktop integration or X-Plane stable libraries, launch `ltr_gui` from the AppImage and use the built-in prompts.
+
+**Generic AppImage:** CI builds are available, but Qt6 ABI differences still matter across distros.
+**Arch Linux AppImage:** The Arch-built AppImage is currently the best-tested option for rolling-release systems.
+
+### 2. Managed Source Install
+
+Use the helper script if you want a source install without manually typing every build/install step.
 
 ```bash
-git clone https://github.com/StarTuz/linuxtrack.git
+git clone git@github.com:StarTuz/linuxtrack-Qt6-Wayland.git
 cd linuxtrack
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
-sudo make install
+scripts/setup_linuxtrack.sh --mode full --prefix /opt/linuxtrack
 ```
 
-### 2. AppImage Distribution
+Useful modes:
 
-**Generic AppImage:** The generic CI build is currently experimental due to Qt6 ABI complexity.
-**Arch Linux AppImage:** A verified, working AppImage (built against Arch system Qt) is available. This version uses the host system's Qt libraries for maximum compatibility on rolling release distros.
+- `--mode health` checks installs, config prefix, and binary linkage.
+- `--mode install` builds if needed and installs to `--prefix`.
+- `--mode upgrade` installs to an existing detected prefix.
+- `--mode integrate` installs udev rules and desktop entry only.
+- `--mode full` runs install plus integration.
 
-### 3. Configure Wine/Proton Support
+### 3. Manual CMake Install
+
+Use this if you are developing, packaging, or debugging the build itself.
+
+**Prerequisites:** Qt6, OpenGL/OpenGLES drivers, libusb-1.0, libmxml, liblo, OpenCV, and Wine build tools if you want Wine bridge support.
+
+```bash
+git clone git@github.com:StarTuz/linuxtrack-Qt6-Wayland.git
+cd linuxtrack
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/opt/linuxtrack
+cmake --build build -j"$(nproc)"
+sudo cmake --install build
+```
+
+### Uninstall
+
+For source installs, use the shipped uninstaller:
+
+```bash
+scripts/uninstall_linuxtrack.sh --prefix /opt/linuxtrack
+```
+
+If the install was performed through `setup_linuxtrack.sh`, the uninstaller will use the saved install manifest when available instead of guessing which files to remove.
+
+### Configure Wine/Proton Support
 
 1. Open `ltr_gui`.
 2. Go to the **Misc.** tab.
