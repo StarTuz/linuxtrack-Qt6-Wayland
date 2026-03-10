@@ -308,24 +308,6 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
   struct v4l2_frmivalenum ival;
   plist fmt_strings = ltr_int_create_list();
   plist formats = ltr_int_create_list();
-  /*
-    strcpy(fmt.description, "YUYVVV");
-    ltr_int_log_message("Supported format: %s\n", (char *)fmt.description);
-    ltr_int_add_element(fmt_strings, ltr_int_my_strdup((char
-    *)fmt.description)); fmt_cntr++; strcpy(fmt.description, "XYZ");
-    ltr_int_log_message("Supported format: %s\n", (char *)fmt.description);
-    ltr_int_add_element(fmt_strings, ltr_int_my_strdup((char
-    *)fmt.description)); fmt_cntr++; ival.discrete.denominator = 22;
-    ival.discrete.numerator = 1;
-              ltr_int_log_message("Supported framerate: %f\n",
-                                  (float)ival.discrete.denominator /
-    ival.discrete.numerator); webcam_format *new_fmt =
-    (webcam_format*)ltr_int_my_malloc(sizeof(webcam_format)); new_fmt->i =
-    fmt_cntr - 1; new_fmt->fourcc = 0x6768696a; new_fmt->w = 333; new_fmt->h =
-    222; new_fmt->fps_num = ival.discrete.numerator; new_fmt->fps_den =
-    ival.discrete.denominator; ltr_int_add_element(formats, new_fmt);
-              ++items;
-  */
 
   // Enumerate all available formats
   while (1) {
@@ -500,7 +482,7 @@ int ltr_int_enum_webcam_formats_cleanup(webcam_formats *all_formats) {
   return 0;
 }
 
-int search_for_webcam(const char *webcam_id) {
+static int search_for_webcam(const char *webcam_id) {
   if (webcam_id == NULL) {
     ltr_int_log_message("Please spacify webcam Id!\n");
     return -1;
@@ -891,6 +873,10 @@ static void get_gray_image(unsigned char *source_buf, unsigned char *dest_buf,
       dest_buf[cntr1] = y;
     }
   } else {
+    char fourcc_str[5];
+    fourcc_to_string(wc_info.fourcc, fourcc_str);
+    ltr_int_log_message("Unhandled pixel format %s — frame will be black. "
+                        "Check camera format configuration.\n", fourcc_str);
     for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
       dest_buf[cntr] = 0;
     }
@@ -912,7 +898,6 @@ static void threshold_gray_image(unsigned char *source_buf,
 int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
                               struct frame_type *f, bool *frame_acquired) {
   (void)ccb;
-  read_img_processing_prefs();
   clear_frame_diagnostics(f);
   f->bloblist.num_blobs = wc_info.expecting_blobs;
   f->width = wc_info.w;
@@ -939,6 +924,7 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
           ltr_int_log_message("Poll returned unexpected event! (%X)\n",
                               pfd.revents);
         }
+        return -1;
       }
     } else if (res == -1) {
       ltr_int_log_message("Poll returned error! (%s)", strerror(errno));

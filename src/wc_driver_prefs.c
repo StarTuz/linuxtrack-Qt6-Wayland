@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "tir_driver_prefs.h"
+#include "wc_driver_prefs.h"
 #include "pref.h"
 #include "pref_global.h"
 #include "utils.h"
@@ -40,7 +40,7 @@ bool ltr_int_wc_init_prefs()
   if(dev == NULL){
     return false;
   }
-  
+
   if(!ltr_int_get_key_int(dev, max_blob_key, &max_blob)){
     max_blob = 1024;
   }
@@ -85,7 +85,7 @@ bool ltr_int_wc_init_prefs()
   }else{
     flip = false;
   }
-  
+
   tmp = ltr_int_get_key(dev, cascade_key);
   if(cascade != NULL){
     free(cascade);
@@ -122,7 +122,10 @@ bool ltr_int_wc_set_max_blob(int val)
     val = 0;
   }
   max_blob = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), max_blob_key, val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, max_blob_key, val);
+  free(dev);
+  return res;
 }
 
 int ltr_int_wc_get_min_blob()
@@ -136,7 +139,10 @@ bool ltr_int_wc_set_min_blob(int val)
     val = 0;
   }
   min_blob = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), min_blob_key, val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, min_blob_key, val);
+  free(dev);
+  return res;
 }
 
 int ltr_int_wc_get_threshold()
@@ -153,15 +159,16 @@ bool ltr_int_wc_set_threshold(int val)
     val = 253;
   }
   threshold_val = val;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), threshold_key, val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, threshold_key, val);
+  free(dev);
+  return res;
 }
 
 const char *ltr_int_wc_get_id()
 {
   return camera_id;
 }
-
-
 
 const char *ltr_int_wc_get_pixfmt()
 {
@@ -175,7 +182,10 @@ bool ltr_int_wc_set_pixfmt(const char *fmt)
     free(pix_fmt);
   }
   pix_fmt = ltr_int_my_strdup(fmt);
-  return ltr_int_change_key(ltr_int_get_device_section(), pix_fmt_key, fmt);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key(dev, pix_fmt_key, fmt);
+  free(dev);
+  return res;
 }
 
 bool ltr_int_wc_get_resolution(int *x, int *y)
@@ -191,13 +201,16 @@ bool ltr_int_wc_get_resolution(int *x, int *y)
 bool ltr_int_wc_set_resolution(int x, int y)
 {
   char tmp[1024];
-  if(snprintf(tmp, sizeof(tmp), "%d x %d", x, y) != 0){
+  int n = snprintf(tmp, sizeof(tmp), "%d x %d", x, y);
+  if(n >= 0 && n < (int)sizeof(tmp)){
     res_x = x;
     res_y = y;
-    return ltr_int_change_key(ltr_int_get_device_section(), res_key, tmp);
-  }else{
-    return false;
+    char *dev = ltr_int_get_device_section();
+    bool res = ltr_int_change_key(dev, res_key, tmp);
+    free(dev);
+    return res;
   }
+  return false;
 }
 
 bool ltr_int_wc_get_fps(int *num, int *den)
@@ -213,13 +226,16 @@ bool ltr_int_wc_get_fps(int *num, int *den)
 bool ltr_int_wc_set_fps(int num, int den)
 {
   char tmp[1024];
-  if(snprintf(tmp, sizeof(tmp), "%d/%d", num, den) != 0){
+  int n = snprintf(tmp, sizeof(tmp), "%d/%d", num, den);
+  if(n >= 0 && n < (int)sizeof(tmp)){
     fps_num = num;
     fps_den = den;
-    return ltr_int_change_key(ltr_int_get_device_section(), fps_key, tmp);
-  }else{
-    return false;
+    char *dev = ltr_int_get_device_section();
+    bool res = ltr_int_change_key(dev, fps_key, tmp);
+    free(dev);
+    return res;
   }
+  return false;
 }
 
 bool ltr_int_wc_get_flip()
@@ -233,7 +249,10 @@ bool ltr_int_wc_set_flip(bool new_flip)
   char no[] = "No";
   char *val = (new_flip) ? yes : no;
   flip = new_flip;
-  return ltr_int_change_key(ltr_int_get_device_section(), flip_key, val);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key(dev, flip_key, val);
+  free(dev);
+  return res;
 }
 
 const char *ltr_int_wc_get_cascade()
@@ -247,7 +266,10 @@ bool ltr_int_wc_set_cascade(const char *new_cascade)
     free(cascade);
   }
   cascade = (new_cascade != NULL) ? ltr_int_my_strdup(new_cascade) : NULL;
-  return ltr_int_change_key(ltr_int_get_device_section(), cascade_key, new_cascade);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key(dev, cascade_key, new_cascade);
+  free(dev);
+  return res;
 }
 
 float ltr_int_wc_get_eff()
@@ -258,12 +280,15 @@ float ltr_int_wc_get_eff()
 bool ltr_int_wc_set_eff(float new_eff)
 {
   char tmp[1024];
-  if(snprintf(tmp, sizeof(tmp), "%g", new_eff) != 0){
+  int n = snprintf(tmp, sizeof(tmp), "%g", new_eff);
+  if(n >= 0 && n < (int)sizeof(tmp)){
     exp_filt = new_eff;
-    return ltr_int_change_key(ltr_int_get_device_section(), exp_filter_key, tmp);
-  }else{
-    return false;
+    char *dev = ltr_int_get_device_section();
+    bool res = ltr_int_change_key(dev, exp_filter_key, tmp);
+    free(dev);
+    return res;
   }
+  return false;
 }
 
 int ltr_int_wc_get_optim_level()
@@ -274,6 +299,8 @@ int ltr_int_wc_get_optim_level()
 bool ltr_int_wc_set_optim_level(int opt)
 {
   optim_level = opt;
-  return ltr_int_change_key_int(ltr_int_get_device_section(), optim_key, opt);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key_int(dev, optim_key, opt);
+  free(dev);
+  return res;
 }
-
