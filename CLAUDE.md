@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Linuxtrack is a head-tracking solution for Linux that enables applications (primarily flight simulators and games) to respond to head movement. It supports TrackIR USB devices, webcams, and OpenCV face tracking. Windows games are supported through a Wine/Proton bridge.
 
-**Current Version:** 1.3.5
+**Current Version:** 1.3.5 (HANDOFF.md last documented v1.1.12; consult git log for intermediate changes)
 
 ## Build Commands
 
@@ -77,12 +77,23 @@ Applications (X-Plane, Wine games, OSC clients)
 | `xlinuxtrack9.so` | `src/xlinuxtrack9.c` | X-Plane 9+ plugin |
 | Wine bridge | `src/wine_bridge/` | NPClient.dll, FreeTrack emulation |
 | `ltr_udp` | `src/` | OpenTrack UDP bridge for native games |
+| `ltr_hotkeyd` | `src/` | Global hotkey daemon (recenter/pause for native games) |
+| `ltr_probe` | `src/` | Webcam probe/diagnostics utility |
 
 ### IPC
 
 - Shared memory for client-server communication
 - Pipes as alternative interface
 - UDP bridge (port 4242) for OpenTrack protocol
+- `CMD_PROFILE_CHANGE` message: broadcast by master to all slaves when profile switches; slaves reinitialize axes curves immediately. Any new IPC handler must process this message.
+
+### Webcam Subsystem
+
+The webcam driver (`src/webcam_driver.c`, `libwc.so`) uses V4L2 with libv4lconvert for pixel format negotiation. Key design points:
+- Prefers native grayscale/YUV formats over compressed (MJPEG) for lower CPU overhead
+- Multiple webcams are disambiguated by device identifier (not just index)
+- Webcam preview mode is separate from tracking mask mode (`src/qt_gui/`)
+- `ltr_probe` can enumerate V4L2 device capabilities for diagnostics
 
 ### Preferences
 
@@ -118,6 +129,7 @@ Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxt
 - Use CMake (not Autotools) for all changes
 - Maintain Qt6 compatibility
 - Uses `$ORIGIN` RPATH for relocatable binaries
+- CMake changes, Wine bridge modifications, and `xlinuxtrack9.c` edits are **Tier 2 (High-Risk)**; verify current file state before acting (per GUARDRAILS.md)
 
 ### 3D View Transparency (Qt6/GLES)
 
@@ -137,10 +149,11 @@ Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxt
 
 ## Key Documentation
 
-- `HANDOFF.md` - Detailed technical implementation notes and version history
-- `GUARDRAILS.md` - Non-negotiable requirements for code changes
+- `HANDOFF.md` - Detailed technical implementation notes and version history (v1.0→v1.1.12)
+- `GUARDRAILS.md` - Non-negotiable requirements; defines Action Risk Tiers (T0–T3)
 - `README.md` - User-facing setup and troubleshooting guide
 - `MODERNIZATION_ROADMAP.md` - Future improvements
+- `.agent/workflows/critical-rules.md` - Read before starting any non-trivial work session
 
 ## Related Projects
 
