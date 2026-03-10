@@ -127,6 +127,9 @@ list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/${REL_LIB_PATH}")
 file(RELATIVE_PATH REL_LIB_PATH2 "${CMAKE_INSTALL_PREFIX}/bin" "${CMAKE_INSTALL_PREFIX}/lib")
 list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/${REL_LIB_PATH2}")
 
+# Enable CTest support
+include(CTest)
+
 # Subdirectories
 add_subdirectory(src)
 

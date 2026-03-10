@@ -173,6 +173,11 @@ endif()
 # LAL (Licensed Asset Loader)
 add_subdirectory(lal)
 
+# Unit / regression tests (requires BUILD_TESTING which include(CTest) enables)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+
 # Native Hotkey GUI
 add_subdirectory(ltr_hotkey_gui)
 
