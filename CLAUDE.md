@@ -131,6 +131,11 @@ Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxt
 - Uses `$ORIGIN` RPATH for relocatable binaries
 - CMake changes, Wine bridge modifications, and `xlinuxtrack9.c` edits are **Tier 2 (High-Risk)**; verify current file state before acting (per GUARDRAILS.md)
 
+### AppImage / CI
+
+- `xlinuxtrack9.so` requires the X-Plane SDK headers at `/usr/include/xplane_sdk/XPLM/`. The CI downloads XPSDK 4.3.0 automatically before the build step — without it, CMake silently skips building the plugin.
+- `xlinuxtrack9.so` must only exist in `usr/lib/linuxtrack/` inside the AppImage. It is **not** a runtime dependency and must be excluded from the linuxdeploy `--library` loop (`packaging/appimage/make_appimage.sh`) to prevent a spurious duplicate copy in `usr/lib/`.
+
 ### 3D View Transparency (Qt6/GLES)
 
 **CRITICAL:** The 3D view suffers from compositor "bleed-through" on modern Linux desktops (Wayland/X11). This is fixed via a multi-layered defense:

@@ -454,6 +454,24 @@ The `WineLauncher` helper class was forcing `WINEARCH=win32` environment variabl
 3. **LALDialog**: Added a native Qt GUI dialog ("Manage Assets (LAL)...") to the Misc tab, allowing users to browse and install firmware archives easily.
 4. **Verification**: Verified UI functionality and native extraction logic via unit tests.
 
+### 3.17 X-Plane Plugin Missing from AppImage (v1.3.5+)
+
+**Status:** ✅ COMPLETE
+
+**Problem:** `xlinuxtrack9.so` was never included in CI-produced AppImages. The CMakeLists.txt conditionally builds the plugin only when X-Plane SDK headers exist at `/usr/include/xplane_sdk/XPLM`. The CI build environment (Ubuntu 24.04) has no apt package for this SDK, so CMake silently skipped it every time.
+
+**Fix:**
+
+Added an "Install X-Plane SDK headers" step to `.github/workflows/build.yml` before the main build pass. Downloads XPSDK 4.3.0 from the official Laminar Research URL, finds `XPLMPlugin.h` by filename (robust against zip structure changes), and installs headers to `/usr/include/xplane_sdk/XPLM/` and `/usr/include/xplane_sdk/Widgets/`.
+
+**Secondary Issue:** Once the plugin was built, linuxdeploy's `--library` loop in `make_appimage.sh` copied it to `usr/lib/` in addition to the correct `usr/lib/linuxtrack/` location. `xlinuxtrack9.so` is an X-Plane plugin, not a runtime library, so the `usr/lib/` copy was spurious. Fixed by excluding `xlinuxtrack9*.so` from the `--library` loop.
+
+**Correct AppImage layout:**
+- `usr/lib/linuxtrack/xlinuxtrack9.so` ✅ (only location; used by ltr_gui's X-Plane installer)
+- `usr/lib/xlinuxtrack9.so` ✗ (was a linuxdeploy artifact — now removed)
+
+---
+
 ### 3.16 AppImage Packaging
 
 **Status:** ✅ COMPLETE
