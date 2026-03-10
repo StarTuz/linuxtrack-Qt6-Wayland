@@ -158,6 +158,19 @@ If the 3D tracking view in `ltr_gui` shows a blank/black screen:
 3. Check if other OpenGL apps work (e.g., `glxgears`)
 4. Tracking still works — the 3D view is purely for visualization
 
+### Webcam Probe Utility
+
+If webcam negotiation is unclear, build and run the shipped probe utility instead of guessing from the GUI alone:
+
+```bash
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/opt/linuxtrack
+cmake --build build --target ltr_webcam_probe -j"$(nproc)"
+./build/src/ltr_webcam_probe --list
+./build/src/ltr_webcam_probe --device "Your Webcam Name" --format MJPG --size 800x600 --fps 1/120 --frames 3
+```
+
+The probe prints the requested mode plus the active mode and driver-reported FPS that Linuxtrack actually negotiated. Use it when a camera appears black, falls back to another format, or runs below the requested frame rate.
+
 ## 🛠️ Installation
 
 ### Supported Install Modes
