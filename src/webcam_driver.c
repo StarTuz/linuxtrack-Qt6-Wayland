@@ -311,6 +311,7 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
 
   // Enumerate all available formats
   while (1) {
+    memset(&fmt, 0, sizeof(fmt));
     fmt.index = fmt_cntr;
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (v4l2_ioctl(fd, VIDIOC_ENUM_FMT, &fmt) != 0) {
@@ -325,6 +326,7 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
                         ltr_int_my_strdup((char *)fmt.description));
     sizes_cntr = 0;
     while (1) {
+      memset(&frm, 0, sizeof(frm));
       frm.index = sizes_cntr++;
       frm.pixel_format = fmt.pixelformat;
       if (v4l2_ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frm) != 0) {
@@ -333,15 +335,38 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
         }
         break;
       }
+      // Collect one or two (w,h) pairs to enumerate intervals for.
+      // Discrete: one exact size. Stepwise/Continuous: min and max.
+      uint32_t size_w[2], size_h[2];
+      int num_sizes;
       if (frm.type == V4L2_FRMSIZE_TYPE_DISCRETE) {
         ltr_int_log_message("Frame size %d x %d\n", frm.discrete.width,
                             frm.discrete.height);
+        size_w[0] = frm.discrete.width;
+        size_h[0] = frm.discrete.height;
+        num_sizes = 1;
+      } else if (frm.type == V4L2_FRMSIZE_TYPE_STEPWISE ||
+                 frm.type == V4L2_FRMSIZE_TYPE_CONTINUOUS) {
+        ltr_int_log_message("Stepwise frame sizes %dx%d to %dx%d\n",
+                            frm.stepwise.min_width, frm.stepwise.min_height,
+                            frm.stepwise.max_width, frm.stepwise.max_height);
+        size_w[0] = frm.stepwise.min_width;
+        size_h[0] = frm.stepwise.min_height;
+        size_w[1] = frm.stepwise.max_width;
+        size_h[1] = frm.stepwise.max_height;
+        num_sizes = 2;
+      } else {
+        ltr_int_log_message("Unsupported framesize type %d\n", frm.type);
+        break;
+      }
+      for (int si = 0; si < num_sizes; ++si) {
         ival_cntr = 0;
         while (1) {
+          memset(&ival, 0, sizeof(ival));
           ival.index = ival_cntr++;
           ival.pixel_format = fmt.pixelformat;
-          ival.width = frm.discrete.width;
-          ival.height = frm.discrete.height;
+          ival.width = size_w[si];
+          ival.height = size_h[si];
           webcam_format *new_fmt;
           if (v4l2_ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &ival) != 0) {
             if (errno != EINVAL) {
@@ -354,8 +379,8 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
                   (webcam_format *)ltr_int_my_malloc(sizeof(webcam_format));
               new_fmt->i = fmt_cntr - 1;
               new_fmt->fourcc = fmt.pixelformat;
-              new_fmt->w = frm.discrete.width;
-              new_fmt->h = frm.discrete.height;
+              new_fmt->w = size_w[si];
+              new_fmt->h = size_h[si];
               new_fmt->fps_num = 30;
               new_fmt->fps_den = 1;
               ltr_int_add_element(formats, new_fmt);
@@ -370,8 +395,8 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
             new_fmt = (webcam_format *)ltr_int_my_malloc(sizeof(webcam_format));
             new_fmt->i = fmt_cntr - 1;
             new_fmt->fourcc = fmt.pixelformat;
-            new_fmt->w = frm.discrete.width;
-            new_fmt->h = frm.discrete.height;
+            new_fmt->w = size_w[si];
+            new_fmt->h = size_h[si];
             new_fmt->fps_num = ival.discrete.numerator;
             new_fmt->fps_den = ival.discrete.denominator;
             ltr_int_add_element(formats, new_fmt);
@@ -385,8 +410,8 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
             new_fmt = (webcam_format *)ltr_int_my_malloc(sizeof(webcam_format));
             new_fmt->i = fmt_cntr - 1;
             new_fmt->fourcc = fmt.pixelformat;
-            new_fmt->w = frm.discrete.width;
-            new_fmt->h = frm.discrete.height;
+            new_fmt->w = size_w[si];
+            new_fmt->h = size_h[si];
             new_fmt->fps_num = ival.stepwise.min.numerator;
             new_fmt->fps_den = ival.stepwise.min.denominator;
             ltr_int_add_element(formats, new_fmt);
@@ -394,8 +419,8 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
             new_fmt = (webcam_format *)ltr_int_my_malloc(sizeof(webcam_format));
             new_fmt->i = fmt_cntr - 1;
             new_fmt->fourcc = fmt.pixelformat;
-            new_fmt->w = frm.discrete.width;
-            new_fmt->h = frm.discrete.height;
+            new_fmt->w = size_w[si];
+            new_fmt->h = size_h[si];
             new_fmt->fps_num = ival.stepwise.max.numerator;
             new_fmt->fps_den = ival.stepwise.max.denominator;
             ltr_int_add_element(formats, new_fmt);
@@ -410,8 +435,8 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
             new_fmt = (webcam_format *)ltr_int_my_malloc(sizeof(webcam_format));
             new_fmt->i = fmt_cntr - 1;
             new_fmt->fourcc = fmt.pixelformat;
-            new_fmt->w = frm.discrete.width;
-            new_fmt->h = frm.discrete.height;
+            new_fmt->w = size_w[si];
+            new_fmt->h = size_h[si];
             new_fmt->fps_num = ival.stepwise.min.numerator;
             new_fmt->fps_den = ival.stepwise.min.denominator;
             ltr_int_add_element(formats, new_fmt);
@@ -419,8 +444,8 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
             new_fmt = (webcam_format *)ltr_int_my_malloc(sizeof(webcam_format));
             new_fmt->i = fmt_cntr - 1;
             new_fmt->fourcc = fmt.pixelformat;
-            new_fmt->w = frm.discrete.width;
-            new_fmt->h = frm.discrete.height;
+            new_fmt->w = size_w[si];
+            new_fmt->h = size_h[si];
             new_fmt->fps_num = ival.stepwise.max.numerator;
             new_fmt->fps_den = ival.stepwise.max.denominator;
             ltr_int_add_element(formats, new_fmt);
@@ -432,9 +457,6 @@ int ltr_int_enum_webcam_formats(const char *id, webcam_formats *all_formats) {
             break;
           }
         }
-      } else {
-        ltr_int_log_message("Unsupported framesize format! %d\n", frm.type);
-        break;
       }
     }
   }
@@ -860,6 +882,11 @@ static void get_gray_image(unsigned char *source_buf, unsigned char *dest_buf,
       if (y > 255)
         y = 255.0;
       dest_buf[cntr1] = y;
+    }
+  } else if (wc_info.fourcc == *(__u32 *)"GREY") {
+    // 8-bit grayscale: each byte is already a Y value
+    for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
+      dest_buf[cntr] = source_buf[cntr];
     }
   } else if (wc_info.fourcc == *(__u32 *)"BGR3") {
     float y;

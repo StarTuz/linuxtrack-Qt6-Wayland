@@ -20,7 +20,8 @@ static bool isNativeFormat(const QString &fourcc) {
          (fourcc == QString::fromUtf8("YU12")) ||
          (fourcc == QString::fromUtf8("YV12")) ||
          (fourcc == QString::fromUtf8("RGB3")) ||
-         (fourcc == QString::fromUtf8("BGR3"));
+         (fourcc == QString::fromUtf8("BGR3")) ||
+         (fourcc == QString::fromUtf8("GREY"));
 }
 
 static bool isCompressedFormat(const QString &fourcc) {
