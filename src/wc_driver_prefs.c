@@ -170,6 +170,19 @@ const char *ltr_int_wc_get_id()
   return camera_id;
 }
 
+bool ltr_int_wc_set_id(const char *id)
+{
+  assert(id != NULL);
+  if(camera_id != NULL){
+    free(camera_id);
+  }
+  camera_id = ltr_int_my_strdup(id);
+  char *dev = ltr_int_get_device_section();
+  bool res = ltr_int_change_key(dev, id_key, id);
+  free(dev);
+  return res;
+}
+
 const char *ltr_int_wc_get_pixfmt()
 {
   return pix_fmt;

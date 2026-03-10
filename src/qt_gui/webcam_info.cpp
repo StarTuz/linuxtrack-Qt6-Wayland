@@ -6,6 +6,7 @@
 #include <QtGlobal>
 #include <assert.h>
 #include <iostream>
+#include <stdexcept>
 #include <stdint.h>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QRegularExpression>
@@ -80,7 +81,7 @@ static webcam_format def_fmt3 = {0, kYUYV, 352, 288, 1, 30};
 
 WebcamInfo::WebcamInfo(const QString &id) {
   if (!webcamInfoOk) {
-    throw(0);
+    throw std::runtime_error("libwc not available");
   }
   webcam_id = id;
   enum_webcam_formats_fun(webcam_id.toUtf8().constData(), &fmts);
@@ -135,8 +136,7 @@ QString WebcamInfo::getFormatDisplayName(int index) const {
 }
 
 const QStringList &WebcamInfo::getResolutions(int index) {
-  // std::cout<<"Selecting format index "<<index<<"\n";
-  if ((index >= 0) && (index <= fmt_index)) {
+  if ((index >= 0) && (index < res_list.size())) {
     return res_list[index];
   } else {
     return res_list[0];
@@ -152,7 +152,7 @@ static QString U32_2_String(uint32_t fourcc) {
 }
 
 QString WebcamInfo::getFourcc(int index) const {
-  if ((index >= 0) && (index <= fmt_index)) {
+  if ((index >= 0) && (index < fmt_descs.size())) {
     return U32_2_String(fmt_descs[index][0]->fourcc);
   } else {
     return U32_2_String(*"YUYV");

@@ -20,6 +20,7 @@ int ltr_int_wc_get_threshold();
 bool ltr_int_wc_set_threshold(int val);
 
 const char *ltr_int_wc_get_id();
+bool ltr_int_wc_set_id(const char *id);
 
 const char *ltr_int_wc_get_pixfmt();
 bool ltr_int_wc_set_pixfmt(const char *fmt);
