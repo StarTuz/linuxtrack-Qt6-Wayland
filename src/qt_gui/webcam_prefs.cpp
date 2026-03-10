@@ -139,10 +139,18 @@ bool WebcamPrefs::Activate(const QString &ID, bool init)
   ui.WebcamResolutions->clear();
   if((currentId != QString::fromUtf8("None")) && (currentId.size() != 0)){
     if(wc_info != nullptr){
-      delete(wc_info);
+      delete wc_info;
+      wc_info = nullptr;
     }
-    wc_info = new WebcamInfo(currentId);
-    
+    try {
+      wc_info = new WebcamInfo(currentId);
+    } catch (...) {
+      qWarning("Failed to query webcam formats for '%s'.",
+               currentId.toUtf8().constData());
+      initializing = false;
+      return false;
+    }
+
     ui.WebcamFormats->addItems(wc_info->getFormats());
     QString fourcc, thres, bmin, bmax, res, fps, flip;
     int fmt_index = 0;
@@ -192,7 +200,7 @@ bool WebcamPrefs::AddAvailableDevices(QComboBox &combo)
     webcam_selected = true;
   }
   
-  QStringList &webcams = WebcamInfo::EnumerateWebcams();
+  QStringList webcams = WebcamInfo::EnumerateWebcams();
   QStringList::iterator i;
   PrefsLink *pl;
   QVariant v;
@@ -205,7 +213,6 @@ bool WebcamPrefs::AddAvailableDevices(QComboBox &combo)
       res = true;
     }
   }
-  delete(&webcams);
   return res;
 }
 

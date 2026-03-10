@@ -124,9 +124,9 @@ static void update_frame_diagnostics(struct frame_type *f) {
     snprintf(f->camera_diag, sizeof(f->camera_diag),
              "Requested %s %dx%d @ %.1f fps", requested_fourcc,
              wc_info.requested_w, wc_info.requested_h,
-             (wc_info.requested_fps_num > 0)
-                 ? ((float)wc_info.requested_fps_den /
-                    (float)wc_info.requested_fps_num)
+             (wc_info.requested_fps_den > 0)
+                 ? ((float)wc_info.requested_fps_num /
+                    (float)wc_info.requested_fps_den)
                  : 0.0f);
   }
 

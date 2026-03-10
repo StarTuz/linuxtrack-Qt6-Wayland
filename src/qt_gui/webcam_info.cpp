@@ -72,9 +72,11 @@ WebcamLibProxy::~WebcamLibProxy() {
   libhandle = nullptr;
 }
 
-static webcam_format def_fmt1 = {0, *"YUYV", 160, 120, 1, 30};
-static webcam_format def_fmt2 = {0, *"YUYV", 320, 240, 1, 30};
-static webcam_format def_fmt3 = {0, *"YUYV", 352, 288, 1, 30};
+// YUYV fourcc: four bytes 'Y','U','Y','V' packed little-endian into uint32_t
+static const uint32_t kYUYV = ('Y') | ('U' << 8) | ('Y' << 16) | ('V' << 24);
+static webcam_format def_fmt1 = {0, kYUYV, 160, 120, 1, 30};
+static webcam_format def_fmt2 = {0, kYUYV, 320, 240, 1, 30};
+static webcam_format def_fmt3 = {0, kYUYV, 352, 288, 1, 30};
 
 WebcamInfo::WebcamInfo(const QString &id) {
   if (!webcamInfoOk) {
@@ -326,10 +328,10 @@ QString WebcamInfo::describeResolutionPolicy(int i_fmt, int i_res,
 
 WebcamInfo::~WebcamInfo() { enum_webcam_formats_cleanup_fun(&fmts); }
 
-QStringList &WebcamInfo::EnumerateWebcams() {
-  QStringList *res = new QStringList();
+QStringList WebcamInfo::EnumerateWebcams() {
+  QStringList res;
   if (!webcamInfoOk) {
-    return *res;
+    return res;
   }
   char **ids = nullptr;
 
@@ -337,10 +339,10 @@ QStringList &WebcamInfo::EnumerateWebcams() {
     int id_num = 0;
 
     while ((ids[id_num]) != nullptr) {
-      res->append(QString::fromUtf8(ids[id_num]));
+      res.append(QString::fromUtf8(ids[id_num]));
       ++id_num;
     }
     ltr_int_array_cleanup(&ids);
   }
-  return *res;
+  return res;
 }

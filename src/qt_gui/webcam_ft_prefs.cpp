@@ -188,7 +188,7 @@ bool WebcamFtPrefs::AddAvailableDevices(QComboBox &combo)
     webcam_selected = true;
   }
   
-  QStringList &webcams = WebcamInfo::EnumerateWebcams();
+  QStringList webcams = WebcamInfo::EnumerateWebcams();
   QStringList::iterator i;
   PrefsLink *pl;
   QVariant v;
@@ -201,7 +201,6 @@ bool WebcamFtPrefs::AddAvailableDevices(QComboBox &combo)
       res = true;
     }
   }
-  delete(&webcams);
   return res;
 }
 

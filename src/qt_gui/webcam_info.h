@@ -25,7 +25,7 @@ class WebcamInfo{
   QString describeResolutionPolicy(int i_fmt, int i_res,
                                    bool faceTracker) const;
   ~WebcamInfo();
-  static QStringList& EnumerateWebcams();
+  static QStringList EnumerateWebcams();
  private:
   QString webcam_id;
   webcam_formats fmts;
