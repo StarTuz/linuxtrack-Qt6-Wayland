@@ -967,7 +967,9 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
       ltr_int_log_message("Poll returned error! (%s)", strerror(errno));
       return -1;
     } else if (res == 0) {
-      ltr_int_log_message("Poll timed out!\n");
+      // No frame in 500ms — return to caller so the runloop can check
+      // for shutdown requests. frame_acquired remains false.
+      return 0;
     } else {
       ltr_int_log_message("Poll returned unexpected value %d!\n", res);
       return -1;
