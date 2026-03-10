@@ -167,7 +167,26 @@ static __u32 get_effective_caps(const struct v4l2_capability *capability) {
   return capability->capabilities;
 }
 
-static char *get_webcam_id(int fd) {
+static char *format_webcam_id(const struct v4l2_capability *capability,
+                              const char *fname) {
+  char *res = NULL;
+  const char *card = (const char *)capability->card;
+  const char *bus = (const char *)capability->bus_info;
+
+  if ((bus != NULL) && (bus[0] != '\0')) {
+    if (asprintf(&res, "%s [%s]", card, bus) >= 0) {
+      return res;
+    }
+  }
+  if ((fname != NULL) && (fname[0] != '\0')) {
+    if (asprintf(&res, "%s [%s]", card, fname) >= 0) {
+      return res;
+    }
+  }
+  return ltr_int_my_strdup(card);
+}
+
+static char *get_webcam_id(int fd, const char *fname) {
   struct v4l2_capability capability;
 
   // Query device capabilities
@@ -180,17 +199,31 @@ static char *get_webcam_id(int fd) {
     ltr_int_log_message("  Found V4L2 webcam: '%s'\n", capability.card);
     // Look for capabilities we need
     if (has_capture && has_streaming) {
-      ////for leading space infested name verification
-      //  char *spaced_name = NULL;
-      //  asprintf(&spaced_name, " %s",(char *)capability.card);
-      //  return spaced_name;
-      return ltr_int_my_strdup((char *)capability.card);
+      return format_webcam_id(&capability, fname);
     } else {
       ltr_int_log_message("  Rejecting V4L2 device '%s' (caps=0x%08X).\n",
                           capability.card, cap);
     }
   }
   return NULL;
+}
+
+static bool webcam_id_matches(const struct v4l2_capability *capability,
+                              const char *fname, const char *webcam_id) {
+  char *full_id = format_webcam_id(capability, fname);
+  bool match = false;
+  if (full_id == NULL) {
+    return false;
+  }
+
+  char *stripped_full = full_id + strspn(full_id, " \t");
+  char *card = (char *)capability->card;
+  char *stripped_card = card + strspn(card, " \t");
+
+  match = (strcasecmp(stripped_full, webcam_id) == 0) ||
+          (strcasecmp(stripped_card, webcam_id) == 0);
+  free(full_id);
+  return match;
 }
 
 static int is_our_webcam(const char *fname, const char *webcam_id) {
@@ -200,18 +233,16 @@ static int is_our_webcam(const char *fname, const char *webcam_id) {
     return -1;
   }
 
-  char *current_id = get_webcam_id(fd);
-  if (current_id == NULL) {
+  struct v4l2_capability capability;
+  if (v4l2_ioctl(fd, VIDIOC_QUERYCAP, &capability) != 0) {
     v4l2_close(fd);
     return -1;
   }
-  char *stripped = current_id + strspn(current_id, " \t");
-  if (strncasecmp(stripped, webcam_id, strlen(webcam_id)) == 0) {
+
+  if (webcam_id_matches(&capability, fname, webcam_id)) {
     // this is the device we are looking for!
-    free(current_id);
     return fd;
   } else {
-    free(current_id);
     v4l2_close(fd);
   }
   return -1;
@@ -243,7 +274,7 @@ int ltr_int_enum_webcams(char **ids[]) {
         continue;
       }
 
-      id = get_webcam_id(fd);
+      id = get_webcam_id(fd, fname);
       if (id != NULL) {
         // get rid of leading spaces!
         char *tmp = id + strspn(id, " \t");
