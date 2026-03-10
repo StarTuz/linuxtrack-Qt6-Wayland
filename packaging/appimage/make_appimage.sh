@@ -116,10 +116,15 @@ export STRIP=${STRIP:-true}
 # Avoid SQL drivers which are the most common source of "libfbclient.so.2 not found"
 export QT_INSTALL_SQLDRIVERS=""
 
-# Find all libraries in our specific subdir to ensure linuxdeploy bundles them
+# Find all libraries in our specific subdir to ensure linuxdeploy bundles them.
+# Exclude X-Plane plugins: they are not runtime dependencies and must only exist
+# in usr/lib/linuxtrack/ for the GUI installer to find them.
 LIBRARY_FLAGS=""
 for lib in "$APP_DIR"/usr/lib/linuxtrack/*.so*; do
     if [ -f "$lib" ]; then
+        case "$(basename "$lib")" in
+            xlinuxtrack9*.so*) continue ;;
+        esac
         LIBRARY_FLAGS="$LIBRARY_FLAGS --library $lib"
     fi
 done
