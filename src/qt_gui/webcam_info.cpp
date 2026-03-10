@@ -108,11 +108,15 @@ WebcamInfo::WebcamInfo(const QString &id) {
       index = fmts.formats[j].i;
       if (fmt_index != index) {
         fmt_index = index;
-        format_strings.push_back(getFormatDisplayName(index));
         fmt_descs.push_back(QList<webcam_format *>());
         res_list.push_back(QStringList());
       }
       fmt_descs.back().push_back(&(fmts.formats[j]));
+      // Generate the display name after the first entry is in fmt_descs
+      // so getFourcc() can read the actual fourcc from the format data.
+      if (fmt_descs.back().size() == 1) {
+        format_strings.push_back(getFormatDisplayName(fmt_descs.size() - 1));
+      }
       width = QString::number(fmts.formats[j].w);
       height = QString::number(fmts.formats[j].h);
       fps = QString::number((float)fmts.formats[j].fps_den /
@@ -156,7 +160,7 @@ QString WebcamInfo::getFourcc(int index) const {
   if ((index >= 0) && (index < fmt_descs.size())) {
     return U32_2_String(fmt_descs[index][0]->fourcc);
   } else {
-    return U32_2_String(*"YUYV");
+    return U32_2_String(kYUYV);
   }
 }
 
