@@ -239,6 +239,16 @@ static int is_our_webcam(const char *fname, const char *webcam_id) {
     return -1;
   }
 
+  // Require VIDEO_CAPTURE capability — metadata nodes share the same
+  // card/bus_info as the capture node but don't support VIDIOC_ENUM_FMT.
+  __u32 caps = get_effective_caps(&capability);
+  bool has_capture = ((caps & V4L2_CAP_VIDEO_CAPTURE) != 0) ||
+                     ((caps & V4L2_CAP_VIDEO_CAPTURE_MPLANE) != 0);
+  if (!has_capture) {
+    v4l2_close(fd);
+    return -1;
+  }
+
   if (webcam_id_matches(&capability, fname, webcam_id)) {
     // this is the device we are looking for!
     return fd;
