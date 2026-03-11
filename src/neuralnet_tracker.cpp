@@ -331,9 +331,10 @@ void NeuralNetTracker::image_to_world_position(const cv::Point2f &center,
   const float ypos =
       (center.y / image_size.height * 2.0f - 1.0f) * xpos / focal_length_h_;
 
-  tx = -zpos * 0.1f;
-  ty = ypos * 0.1f;
-  tz = -xpos * 0.1f;
+  // The shared tracking pipeline uses millimeters for translations.
+  tx = -zpos;
+  ty = ypos;
+  tz = -xpos;
 }
 
 bool NeuralNetTracker::detect(const cv::Mat &frame, float &pitch, float &yaw,
