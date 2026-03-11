@@ -5,6 +5,18 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTextStream>
+#include <algorithm>
+#include <cmath>
+
+static int min_cutoff_to_slider(float min_cutoff) {
+  const float clamped = std::clamp(min_cutoff, 0.1f, 5.0f);
+  return std::clamp((int)std::lround((5.1f - clamped) * 10.0f), 1, 50);
+}
+
+static float slider_to_min_cutoff(int slider_val) {
+  const int clamped = std::clamp(slider_val, 1, 50);
+  return (51.0f - (float)clamped) / 10.0f;
+}
 
 ProfileSetup::ProfileSetup(const QString &name, QWidget *parent)
     : QWidget(parent), sc(nullptr), profileName(name), initializing(true) {
@@ -81,8 +93,9 @@ void ProfileSetup::initAxes() {
   // One Euro filter state - read from PITCH axis as representative
   ui.OneEuroEnabled->setCheckState(
       TRACKER.axisGetBool(PITCH, AXIS_ONE_EURO_ENABLED) ? Qt::Checked : Qt::Unchecked);
-  // min_cutoff slider: 1-50 maps to 0.1-5.0
-  ui.OneEuroMinCutoff->setValue((int)(TRACKER.axisGet(PITCH, AXIS_ONE_EURO_MIN_CUTOFF) * 10.0f));
+  // Higher slider position should mean smoother tracking (lower cutoff).
+  ui.OneEuroMinCutoff->setValue(
+      min_cutoff_to_slider(TRACKER.axisGet(PITCH, AXIS_ONE_EURO_MIN_CUTOFF)));
   // beta slider: 0-100 maps to 0.0-0.1
   ui.OneEuroBeta->setValue((int)(TRACKER.axisGet(PITCH, AXIS_ONE_EURO_BETA) * 1000.0f));
   // Enable/disable sliders based on checkbox
@@ -230,8 +243,8 @@ void ProfileSetup::on_OneEuroEnabled_stateChanged(int state) {
 
 void ProfileSetup::on_OneEuroMinCutoff_valueChanged(int val) {
   if (!initializing) {
-    // Slider 1-50 maps to 0.1-5.0 (inverted: lower slider = smoother)
-    float min_cutoff = (float)val / 10.0f;
+    // Slider 1-50 maps to 5.0-0.1 so moving right increases smoothing.
+    float min_cutoff = slider_to_min_cutoff(val);
     for (int i = PITCH; i <= TZ; ++i) {
       TRACKER.axisChange((axis_t)i, AXIS_ONE_EURO_MIN_CUTOFF, min_cutoff);
     }

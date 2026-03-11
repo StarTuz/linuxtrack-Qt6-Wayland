@@ -127,16 +127,16 @@ void SCurve::on_SCFilterSlider_valueChanged(int value)
 void SCurve::setDeadzone(float val, bool signal)
 {
   if(!signal){
-    ui.SCDeadZone->setValue(round(val * 101.0));
+    ui.SCDeadZone->setValue(round(val * 100.0));
   }
   //ui.SCDZoneLabel->setText(QString("%1").arg(val, 2, 'f', 2));
 }
 
 void SCurve::on_SCDeadZone_valueChanged(int value)
 {
-  float fval = value / 101.0;
+  float fval = value / 100.0f;
   if(!initializing) TRACKER.axisChange(axis, AXIS_DEADZONE, fval);
-  setDeadzone(value / 101.0, true);
+  setDeadzone(value / 100.0f, true);
   emit changed();
 }
 
@@ -214,7 +214,7 @@ void SCurve::axisChanged(int a, int elem)
       }
       break;
     case AXIS_FULL:
-      ui.SCFactor->setValue(TRACKER.axisGet(axis, AXIS_MULT) / 12.0);
+      ui.SCFactor->setValue(TRACKER.axisGet(axis, AXIS_MULT) * 12.0);
       //ui.SCCurvL->setText(QString("Curvature: %1").arg(TRACKER.axisGet(axis, AXIS_LCURV), 2, 'f', 2));
       //ui.SCCurvR->setText(QString("Curvature: %1").arg(TRACKER.axisGet(axis, AXIS_RCURV), 2, 'f', 2));
       setDeadzone(TRACKER.axisGet(axis, AXIS_DEADZONE));
@@ -245,4 +245,3 @@ void SCurve::initAxes()
 }
 
 #include "moc_scurve.cpp"
-

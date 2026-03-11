@@ -12,8 +12,29 @@
 #include "ps3eye_driver.h"
 #include "utils.h"
 #include "dyn_load.h"
+#include <algorithm>
+#include <cmath>
 
 static QString currentId = QString::fromUtf8("None");
+static constexpr float kFaceSmoothMinEff = 0.02f;
+static constexpr float kFaceSmoothMaxEff = 1.0f;
+
+static int eff_to_slider(const QSlider *slider, float eff)
+{
+  const int max = std::max(1, slider->maximum());
+  const float clamped = std::clamp(eff, kFaceSmoothMinEff, kFaceSmoothMaxEff);
+  const float t = std::log(clamped / kFaceSmoothMaxEff) /
+                  std::log(kFaceSmoothMinEff / kFaceSmoothMaxEff);
+  return std::clamp((int)std::lround(t * max), 0, max);
+}
+
+static float slider_to_eff(const QSlider *slider, int value)
+{
+  const int max = std::max(1, slider->maximum());
+  const float t = std::clamp((float)value / (float)max, 0.0f, 1.0f);
+  return kFaceSmoothMaxEff *
+         std::pow(kFaceSmoothMinEff / kFaceSmoothMaxEff, t);
+}
 
 
 typedef int (*ltr_int_ps3eye_found_fun_t)(void);
@@ -165,7 +186,7 @@ bool MacP3eFtPrefs::Activate(const QString &ID, bool init)
       cascadePath = QString::fromUtf8(cascade);
     }
     ui.CascadePathMac->setText(cascadePath);
-    int n = (2.0 / ltr_int_wc_get_eff()) - 2;
+    int n = eff_to_slider(ui.ExpFilterFactorMac, ltr_int_wc_get_eff());
     ui.ExpFilterFactorMac->setValue(n);
     on_ExpFilterFactorMac_valueChanged(n);
     n = ltr_int_wc_get_optim_level();
@@ -330,7 +351,7 @@ void MacP3eFtPrefs::on_CascadePathMac_editingFinished()
 
 void MacP3eFtPrefs::on_ExpFilterFactorMac_valueChanged(int value)
 {
-  float a = 2 / (value + 2.0); //EWMA window size
+  float a = slider_to_eff(ui.ExpFilterFactorMac, value);
   //ui.ExpFiltFactorValMac->setText(QString("%1").arg(a, 0, 'g', 2));
   if(!initializing){
     ltr_int_wc_set_eff(a);
