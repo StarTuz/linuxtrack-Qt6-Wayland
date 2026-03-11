@@ -95,6 +95,27 @@ jobs:
           cd build
           ctest --output-on-failure
 
+      - name: Install packaging tools
+        run: |
+          sudo apt-get install -y rpm desktop-file-utils
+
+      - name: Build native packages
+        run: |
+          mkdir build_pkg
+          cd build_pkg
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_WINE32=OFF
+          make -j$(nproc)
+          cpack -G DEB
+          cpack -G RPM
+
+      - name: Upload native packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linuxtrack-Native-Packages
+          path: |
+            build_pkg/*.deb
+            build_pkg/*.rpm
+
       - name: Generate AppImage
         env:
           BUILD_DIR: "build"

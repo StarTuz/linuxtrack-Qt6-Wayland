@@ -127,6 +127,21 @@ cleanup_integration() {
 
     rm -f "$HOME/.local/share/applications/linuxtrack.desktop"
     rm -rf "$HOME/.local/lib/linuxtrack"
+    sudo rm -f /usr/bin/ltr_gui /usr/bin/ltr_server1 /usr/bin/ltr_recenter \
+        /usr/bin/ltr_pipe /usr/bin/ltr_extractor /usr/bin/ltr_udp \
+        /usr/bin/ltr_webcam_probe /usr/bin/osc_server /usr/bin/ltr_hotkeyd \
+        /usr/bin/ltr_hotkey_gui /usr/bin/mickey 2>/dev/null || true
+    sudo rm -f /usr/share/applications/linuxtrack.desktop \
+        /usr/share/applications/linuxtrack-wii.desktop \
+        /usr/share/metainfo/linuxtrack.metainfo.xml \
+        /usr/share/pixmaps/linuxtrack.xpm \
+        /usr/share/pixmaps/linuxtrack-wii.xpm \
+        /usr/share/icons/hicolor/scalable/apps/linuxtrack.svg \
+        /usr/share/icons/hicolor/scalable/apps/linuxtrack-wii.svg \
+        /usr/share/icons/hicolor/48x48/apps/linuxtrack.png \
+        /usr/share/icons/hicolor/48x48/apps/linuxtrack-wii.png \
+        /usr/lib/udev/rules.d/99-TIR.rules \
+        /usr/lib/udev/rules.d/99-Mickey.rules 2>/dev/null || true
 }
 
 while [ $# -gt 0 ]; do

@@ -61,6 +61,19 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_WINE32=OFF
           make -j$(nproc)
 
+      - name: Install packaging tools
+        run: |
+          sudo apt-get install -y rpm desktop-file-utils
+
+      - name: Build Native Packages
+        run: |
+          mkdir build_pkg
+          cd build_pkg
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_WINE32=OFF
+          make -j$(nproc)
+          cpack -G DEB
+          cpack -G RPM
+
       - name: Generate Slim AppImage
         env:
           BUILD_DIR: "build"
@@ -75,7 +88,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: Linuxtrack-*-x86_64.AppImage
+          files: |
+            Linuxtrack-*-x86_64.AppImage
+            build_pkg/*.deb
+            build_pkg/*.rpm
           generate_release_notes: true
           draft: false
           prerelease: false

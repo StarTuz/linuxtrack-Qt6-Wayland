@@ -1,0 +1,14 @@
+Linuxtrack is a head-tracking suite for Linux flight simulators and games.
+
+This package installs the full application payload under /opt/linuxtrack and
+adds system integration files under standard system paths:
+
+- /usr/bin command shims for user-facing tools
+- /usr/share/applications desktop entries
+- /usr/share/icons and /usr/share/pixmaps icons
+- /usr/share/metainfo AppStream metadata
+- /usr/lib/udev/rules.d packaged udev rules
+
+Linuxtrack supports TrackIR devices, webcam blob tracking, and webcam face
+tracking, with native Linux integrations plus Wine/Proton compatibility
+helpers for Windows titles.

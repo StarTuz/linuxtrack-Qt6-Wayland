@@ -15,6 +15,13 @@ set(CMAKE_C_STANDARD 11)
 option(BUILD_GUI "Build Qt GUI" ON)
 option(BUILD_MICKEY "Build Mickey mouse emulator" ON)
 option(BUILD_WINE_BRIDGE "Build Wine bridge (requires winegcc)" ON)
+if(UNIX AND NOT APPLE)
+    option(LINUXTRACK_INSTALL_STANDARD_INTEGRATION
+           "Install desktop files, wrappers, AppStream metadata, and udev rules into standard system paths"
+           ON)
+else()
+    set(LINUXTRACK_INSTALL_STANDARD_INTEGRATION OFF)
+endif()
 
 # Project version (legacy compatibility)
 set(PACKAGE_VERSION "${PROJECT_VERSION}")
@@ -84,6 +91,33 @@ set(Linuxtrack_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/linuxtrack")
 set(Linuxtrack_HELP_DIR "${Linuxtrack_DATA_DIR}/help")
 add_definitions(-DLTR_DATA_PATH="${Linuxtrack_DATA_DIR}")
 
+if(LINUXTRACK_INSTALL_STANDARD_INTEGRATION)
+    set(LINUXTRACK_SYSTEM_BINDIR "/usr/bin" CACHE PATH
+        "Absolute path for system command shims")
+    set(LINUXTRACK_SYSTEM_APPLICATIONS_DIR "/usr/share/applications" CACHE PATH
+        "Absolute path for desktop entries")
+    set(LINUXTRACK_SYSTEM_PIXMAPS_DIR "/usr/share/pixmaps" CACHE PATH
+        "Absolute path for legacy pixmap icons")
+    set(LINUXTRACK_SYSTEM_ICON_SCALABLE_DIR "/usr/share/icons/hicolor/scalable/apps" CACHE PATH
+        "Absolute path for scalable application icons")
+    set(LINUXTRACK_SYSTEM_ICON_48_DIR "/usr/share/icons/hicolor/48x48/apps" CACHE PATH
+        "Absolute path for 48x48 application icons")
+    set(LINUXTRACK_SYSTEM_METAINFODIR "/usr/share/metainfo" CACHE PATH
+        "Absolute path for AppStream metadata")
+    set(LINUXTRACK_SYSTEM_UDEV_RULES_DIR "/usr/lib/udev/rules.d" CACHE PATH
+        "Absolute path for packaged udev rules")
+else()
+    set(LINUXTRACK_SYSTEM_BINDIR "${CMAKE_INSTALL_BINDIR}")
+    set(LINUXTRACK_SYSTEM_APPLICATIONS_DIR "${CMAKE_INSTALL_DATAROOTDIR}/applications")
+    set(LINUXTRACK_SYSTEM_PIXMAPS_DIR "${CMAKE_INSTALL_DATAROOTDIR}/pixmaps")
+    set(LINUXTRACK_SYSTEM_ICON_SCALABLE_DIR
+        "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps")
+    set(LINUXTRACK_SYSTEM_ICON_48_DIR
+        "${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/48x48/apps")
+    set(LINUXTRACK_SYSTEM_METAINFODIR "${CMAKE_INSTALL_DATAROOTDIR}/metainfo")
+    set(LINUXTRACK_SYSTEM_UDEV_RULES_DIR "${CMAKE_INSTALL_DATAROOTDIR}/linuxtrack")
+endif()
+
 # System Check: Headers
 check_include_file(assert.h HAVE_ASSERT_H)
 check_include_file(fcntl.h HAVE_FCNTL_H)
@@ -152,6 +186,16 @@ list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/${REL_LIB_PATH2}")
 # Enable CTest support
 include(CTest)
 
+function(linuxtrack_install_command_shim name target_path)
+    install(CODE "
+        set(_dest \"\$ENV{DESTDIR}${LINUXTRACK_SYSTEM_BINDIR}\")
+        file(MAKE_DIRECTORY \"\${_dest}\")
+        execute_process(COMMAND \"${CMAKE_COMMAND}\" -E rm -f \"\${_dest}/${name}\")
+        execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink
+                        \"${target_path}\" \"\${_dest}/${name}\")
+    ")
+endfunction()
+
 # Subdirectories
 add_subdirectory(src)
 
@@ -178,10 +222,20 @@ endif()
 
 # Installation of global files
 install(FILES README README.devel README.xplane doc/README.ltr_pipe DESTINATION share/doc/linuxtrack)
-install(FILES src/linuxtrack.desktop src/linuxtrack-wii.desktop DESTINATION share/applications)
-install(FILES src/linuxtrack.svg src/linuxtrack.png src/linuxtrack.xpm 
-              src/linuxtrack-wii.svg src/linuxtrack-wii.png src/linuxtrack-wii.xpm
-        DESTINATION share/pixmaps)
+install(FILES src/linuxtrack.desktop src/linuxtrack-wii.desktop
+        DESTINATION "${LINUXTRACK_SYSTEM_APPLICATIONS_DIR}")
+install(FILES src/linuxtrack.svg src/linuxtrack-wii.svg
+        DESTINATION "${LINUXTRACK_SYSTEM_ICON_SCALABLE_DIR}")
+install(FILES src/linuxtrack.png src/linuxtrack-wii.png
+        DESTINATION "${LINUXTRACK_SYSTEM_ICON_48_DIR}")
+install(FILES src/linuxtrack.xpm src/linuxtrack-wii.xpm
+        DESTINATION "${LINUXTRACK_SYSTEM_PIXMAPS_DIR}")
+install(FILES packaging/linuxtrack.metainfo.xml
+        DESTINATION "${LINUXTRACK_SYSTEM_METAINFODIR}")
+if(LINUXTRACK_INSTALL_STANDARD_INTEGRATION)
+    install(FILES src/99-TIR.rules src/99-Mickey.rules
+            DESTINATION "${LINUXTRACK_SYSTEM_UDEV_RULES_DIR}")
+endif()
 
 if(HAVE_ONNXRUNTIME)
     install(FILES
@@ -189,4 +243,44 @@ if(HAVE_ONNXRUNTIME)
         opentrack_research/tracker-neuralnet/models/head-pose-0.4-big-int8.onnx
         opentrack_research/tracker-neuralnet/models/head-pose-0.4-small-f32.onnx
         DESTINATION share/linuxtrack/models)
+endif()
+
+if(LINUXTRACK_INSTALL_STANDARD_INTEGRATION AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+    if(TARGET ltr_gui)
+        linuxtrack_install_command_shim(ltr_gui "${CMAKE_INSTALL_PREFIX}/bin/ltr_gui")
+    endif()
+    if(TARGET ltr_server1)
+        linuxtrack_install_command_shim(ltr_server1 "${CMAKE_INSTALL_PREFIX}/bin/ltr_server1")
+    endif()
+    if(TARGET ltr_recenter)
+        linuxtrack_install_command_shim(ltr_recenter "${CMAKE_INSTALL_PREFIX}/bin/ltr_recenter")
+    endif()
+    if(TARGET ltr_pipe)
+        linuxtrack_install_command_shim(ltr_pipe "${CMAKE_INSTALL_PREFIX}/bin/ltr_pipe")
+    endif()
+    if(TARGET ltr_extractor)
+        linuxtrack_install_command_shim(ltr_extractor "${CMAKE_INSTALL_PREFIX}/bin/ltr_extractor")
+    endif()
+    if(TARGET ltr_udp)
+        linuxtrack_install_command_shim(ltr_udp "${CMAKE_INSTALL_PREFIX}/bin/ltr_udp")
+    endif()
+    if(TARGET ltr_webcam_probe)
+        linuxtrack_install_command_shim(ltr_webcam_probe "${CMAKE_INSTALL_PREFIX}/bin/ltr_webcam_probe")
+    endif()
+    if(TARGET osc_server)
+        linuxtrack_install_command_shim(osc_server "${CMAKE_INSTALL_PREFIX}/bin/osc_server")
+    endif()
+    if(TARGET ltr_hotkeyd)
+        linuxtrack_install_command_shim(ltr_hotkeyd "${CMAKE_INSTALL_PREFIX}/bin/ltr_hotkeyd")
+    endif()
+    if(TARGET ltr_hotkey_gui)
+        linuxtrack_install_command_shim(ltr_hotkey_gui "${CMAKE_INSTALL_PREFIX}/bin/ltr_hotkey_gui")
+    endif()
+    if(TARGET mickey)
+        linuxtrack_install_command_shim(mickey "${CMAKE_INSTALL_PREFIX}/bin/mickey")
+    endif()
+endif()
+
+if(UNIX AND NOT APPLE)
+    include(cmake/LinuxtrackCPack.cmake)
 endif()
