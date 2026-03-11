@@ -26,6 +26,9 @@ include(CheckTypeSize)
 include(GNUInstallDirs)
 include(FindPkgConfig)
 
+# Custom CMake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # Dependency Checks
 pkg_check_modules(MXML REQUIRED mxml)
 pkg_check_modules(LIBUSB10 libusb-1.0)
@@ -36,6 +39,25 @@ find_library(LTR_LIBM m)
 find_library(LTR_LIBDL dl)
 find_library(LTR_LIBPTHREAD pthread)
 find_library(LTR_LIBV4L2 v4l2)
+
+# ONNX Runtime for neural face tracking
+option(BUILD_NEURALNET_TRACKER "Build neural network webcam face tracker" ON)
+if(BUILD_NEURALNET_TRACKER)
+    find_package(ONNXRuntime QUIET)
+    if(ONNXRuntime_FOUND)
+        set(HAVE_ONNXRUNTIME TRUE)
+        message(STATUS "ONNXRuntime found - neural webcam face tracking enabled")
+    else()
+        set(HAVE_ONNXRUNTIME FALSE)
+        message(STATUS "ONNXRuntime not found - neural webcam face tracking disabled")
+    endif()
+else()
+    set(HAVE_ONNXRUNTIME FALSE)
+endif()
+
+if(HAVE_ONNXRUNTIME)
+    find_package(OpenMP QUIET)
+endif()
 
 # Qt Dependencies for GUI and Mickey
 if(BUILD_GUI OR BUILD_MICKEY)
@@ -160,3 +182,11 @@ install(FILES src/linuxtrack.desktop src/linuxtrack-wii.desktop DESTINATION shar
 install(FILES src/linuxtrack.svg src/linuxtrack.png src/linuxtrack.xpm 
               src/linuxtrack-wii.svg src/linuxtrack-wii.png src/linuxtrack-wii.xpm
         DESTINATION share/pixmaps)
+
+if(HAVE_ONNXRUNTIME)
+    install(FILES
+        opentrack_research/tracker-neuralnet/models/head-localizer.onnx
+        opentrack_research/tracker-neuralnet/models/head-pose-0.4-big-int8.onnx
+        opentrack_research/tracker-neuralnet/models/head-pose-0.4-small-f32.onnx
+        DESTINATION share/linuxtrack/models)
+endif()

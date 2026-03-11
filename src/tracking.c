@@ -446,7 +446,9 @@ int ltr_int_update_pose(struct frame_type *frame)
 
   pthread_mutex_unlock(&pose_mutex);
   bool res = -1;
-  if(ltr_int_is_single_point()){
+  if(ltr_int_is_face() && frame->bloblist.num_blobs >= 3){
+    res = update_absolute_pose(frame);
+  }else if(ltr_int_is_single_point()){
     res = update_pose_1pt(frame);
   }else if(ltr_int_is_absolute()){
     res = update_absolute_pose(frame);
@@ -489,4 +491,3 @@ int ltr_int_tracking_get_pose(linuxtrack_full_pose_t *pose)
   pthread_mutex_unlock(&pose_mutex);
   return 0;
 }
-

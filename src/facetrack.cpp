@@ -1,5 +1,10 @@
 #include "facetrack.h"
+#include "one_euro_filter.h"
 #include "wc_driver_prefs.h"
+#ifdef HAVE_ONNXRUNTIME
+#include "neuralnet_tracker.h"
+#endif
+#include <chrono>
 #include <vector>
 
 #include <opencv2/core/core.hpp>
@@ -14,6 +19,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 enum detector_mode_t { DETECTOR_NONE, DETECTOR_CASCADE, DETECTOR_YUNET };
 
@@ -51,6 +57,26 @@ static cv::Mat bgr_input;
 static cv::Size minFace(40, 40);
 static float expFiltFactor = 0.2;
 static bool init = true;
+
+#ifdef HAVE_ONNXRUNTIME
+static std::unique_ptr<ltr_neuralnet::NeuralNetTracker> nn_tracker;
+static bool use_neuralnet = false;
+#endif
+
+static float pose_pitch = 0.0f;
+static float pose_yaw = 0.0f;
+static float pose_roll = 0.0f;
+static float pose_tx = 0.0f;
+static float pose_ty = 0.0f;
+static float pose_tz = 0.0f;
+static bool pose_valid = false;
+static std::mutex pose_mutex_6dof;
+
+#ifdef HAVE_ONNXRUNTIME
+static one_euro_filter_t nn_pose_filters[6];
+static bool nn_filters_initialized = false;
+static std::chrono::steady_clock::time_point nn_last_frame_time;
+#endif
 
 float ltr_int_expfilt(float x, float y_minus_1, float filterfactor);
 
@@ -109,10 +135,65 @@ void ltr_int_detect(cv::Mat &img) {
   double current_scale = 1.0;
   cv::Rect candidate_rect;
   bool candidate_found = false;
+  bool have_fallback_detector = false;
 
-  if (detector_mode == DETECTOR_YUNET) {
+#ifdef HAVE_ONNXRUNTIME
+  if (use_neuralnet && nn_tracker) {
+    float pitch, yaw, roll, tx, ty, tz;
+    candidate_found = nn_tracker->detect(img, pitch, yaw, roll, tx, ty, tz);
+    if (candidate_found) {
+      auto now = std::chrono::steady_clock::now();
+      float dt = 1.0f / 30.0f;
+      if (!nn_filters_initialized) {
+        for (int i = 0; i < 6; ++i) {
+          one_euro_init(&nn_pose_filters[i], 1.0f, 0.007f, 1.0f);
+        }
+        nn_filters_initialized = true;
+      } else {
+        dt = std::chrono::duration<float>(now - nn_last_frame_time).count();
+        if (dt <= 0.0f) {
+          dt = 1.0f / 30.0f;
+        }
+      }
+      nn_last_frame_time = now;
+
+      const float filtered_pitch = one_euro_filter(&nn_pose_filters[0], pitch, dt);
+      const float filtered_yaw = one_euro_filter(&nn_pose_filters[1], yaw, dt);
+      const float filtered_roll = one_euro_filter(&nn_pose_filters[2], roll, dt);
+      const float filtered_tx = one_euro_filter(&nn_pose_filters[3], tx, dt);
+      const float filtered_ty = one_euro_filter(&nn_pose_filters[4], ty, dt);
+      const float filtered_tz = one_euro_filter(&nn_pose_filters[5], tz, dt);
+      {
+        std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+        pose_pitch = filtered_pitch;
+        pose_yaw = filtered_yaw;
+        pose_roll = filtered_roll;
+        pose_tx = filtered_tx;
+        pose_ty = filtered_ty;
+        pose_tz = filtered_tz;
+        pose_valid = true;
+      }
+      missed_frames = 0;
+      auto roi = nn_tracker->last_face_box();
+      if (roi) {
+        candidate_rect = cv::Rect(cvRound(roi->x), cvRound(roi->y),
+                                  cvRound(roi->width), cvRound(roi->height));
+      }
+    } else {
+      std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+      pose_valid = false;
+      nn_filters_initialized = false;
+    }
+  }
+#endif
+
+  have_fallback_detector = (detector_mode == DETECTOR_YUNET) ||
+                           ((detector_mode == DETECTOR_CASCADE) &&
+                            (cascade != nullptr));
+
+  if (!candidate_found && detector_mode == DETECTOR_YUNET) {
     candidate_found = detect_face_with_yunet(img, candidate_rect);
-  } else {
+  } else if (!candidate_found && have_fallback_detector) {
     switch (ltr_int_wc_get_optim_level()) {
     case 0:
       cv::equalizeHist(img, img);
@@ -223,6 +304,11 @@ void *ltr_int_detector_thread(void *) {
   cascade = nullptr;
   yunet.release();
   detector_mode = DETECTOR_NONE;
+#ifdef HAVE_ONNXRUNTIME
+  nn_tracker.reset();
+  use_neuralnet = false;
+  nn_filters_initialized = false;
+#endif
   delete cvimage;
   cvimage = nullptr;
   bgr_input.release();
@@ -233,14 +319,43 @@ void *ltr_int_detector_thread(void *) {
 
 bool ltr_int_init_face_detect() {
   cv::setNumThreads(1);
+#ifdef HAVE_ONNXRUNTIME
+  char *localizer_path = ltr_int_get_data_path("models/head-localizer.onnx");
+  char *posenet_big =
+      ltr_int_get_data_path("models/head-pose-0.4-big-int8.onnx");
+  char *posenet_small =
+      ltr_int_get_data_path("models/head-pose-0.4-small-f32.onnx");
+  const char *posenet_path = nullptr;
+  if ((localizer_path != nullptr) && (access(localizer_path, R_OK) == 0)) {
+    if ((posenet_big != nullptr) && (access(posenet_big, R_OK) == 0)) {
+      posenet_path = posenet_big;
+    } else if ((posenet_small != nullptr) && (access(posenet_small, R_OK) == 0)) {
+      posenet_path = posenet_small;
+    }
+  }
+  if ((localizer_path != nullptr) && (posenet_path != nullptr)) {
+    nn_tracker = std::make_unique<ltr_neuralnet::NeuralNetTracker>();
+    if (nn_tracker->init(localizer_path, posenet_path)) {
+      nn_tracker->set_fov(80.0f);
+      use_neuralnet = true;
+      ltr_int_log_message("Neural webcam tracker initialized.\n");
+    } else {
+      nn_tracker.reset();
+    }
+  }
+  free(localizer_path);
+  free(posenet_big);
+  free(posenet_small);
+#endif
+
   const char *cascade_path = ltr_int_wc_get_cascade();
-  if (cascade_path == nullptr) {
+  if (!use_neuralnet && cascade_path == nullptr) {
     ltr_int_log_message("Cascade path not specified!\n");
     return false;
   }
 
-  const char *suffix = strrchr(cascade_path, '.');
-  if ((suffix != nullptr) && (strcasecmp(suffix, ".onnx") == 0)) {
+  const char *suffix = (cascade_path != nullptr) ? strrchr(cascade_path, '.') : nullptr;
+  if (!use_neuralnet && (suffix != nullptr) && (strcasecmp(suffix, ".onnx") == 0)) {
     try {
       yunet = cv::FaceDetectorYN::create(
           cascade_path, "", cv::Size(320, 320),
@@ -253,7 +368,7 @@ bool ltr_int_init_face_detect() {
                           cascade_path, e.what());
       return false;
     }
-  } else {
+  } else if (!use_neuralnet) {
     cascade = new cv::CascadeClassifier();
     if (!cascade->load(cascade_path)) {
       ltr_int_log_message("Could't load cascade '%s'!\n", cascade_path);
@@ -269,6 +384,7 @@ bool ltr_int_init_face_detect() {
   face_w = 0;
   face_h = 0;
   missed_frames = 0;
+  pose_valid = false;
   init = true;
   run = true;
   detector_thread_started =
@@ -316,10 +432,29 @@ void ltr_int_face_detect(image_t *img, struct bloblist_type *blt) {
     }
   }
   if (face_w * face_h > 0) {
-    blt->num_blobs = 1;
-    blt->blobs[0].x = face_x;
-    blt->blobs[0].y = face_y;
-    blt->blobs[0].score = face_w * face_h;
+    bool emitted_absolute = false;
+#ifdef HAVE_ONNXRUNTIME
+    if (use_neuralnet) {
+      std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+      if (pose_valid) {
+        blt->num_blobs = 3;
+        blt->blobs[0].score = face_w * face_h;
+        blt->blobs[0].y = -pose_pitch;
+        blt->blobs[0].x = -pose_yaw;
+        blt->blobs[1].x = pose_roll;
+        blt->blobs[1].y = pose_tx;
+        blt->blobs[2].x = pose_ty;
+        blt->blobs[2].y = pose_tz;
+        emitted_absolute = true;
+      }
+    }
+#endif
+    if (!emitted_absolute) {
+      blt->num_blobs = 1;
+      blt->blobs[0].x = -face_x;
+      blt->blobs[0].y = -face_y;
+      blt->blobs[0].score = face_w * face_h;
+    }
     ltr_int_draw_empty_square(img, face_x1, face_y1, face_x2, face_y2);
   } else {
     blt->num_blobs = 0;

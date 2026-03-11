@@ -25,6 +25,7 @@
 #cmakedefine HAVE_SYS_STAT_H
 #cmakedefine HAVE_SYS_TYPES_H
 #cmakedefine HAVE_UNISTD_H
+#cmakedefine HAVE_ONNXRUNTIME
 #cmakedefine HAVE__BOOL
 #cmakedefine LIBV4L2
 #cmakedefine V4L2

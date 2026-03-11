@@ -75,10 +75,25 @@ endif()
 
 # libft (Facetracker Plugin)
 if(OPENCV_FOUND AND HAS_V4L2 AND LTR_LIBV4L2)
-    add_library(ft MODULE webcam_driver.c webcam_driver.h runloop.c runloop.h facetrack.cpp facetrack.h)
+    set(FT_SOURCES
+        webcam_driver.c webcam_driver.h
+        runloop.c runloop.h
+        facetrack.cpp facetrack.h
+    )
+    if(HAVE_ONNXRUNTIME)
+        list(APPEND FT_SOURCES neuralnet_tracker.cpp neuralnet_tracker.h)
+    endif()
+    add_library(ft MODULE ${FT_SOURCES})
     target_compile_definitions(ft PRIVATE OPENCV)
     target_include_directories(ft PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCV_INCLUDE_DIRS})
     target_link_libraries(ft PRIVATE ltr ${LTR_LIBV4L2} ${LTR_LIBPTHREAD} ${OPENCV_LIBRARIES})
+    if(HAVE_ONNXRUNTIME)
+        target_compile_definitions(ft PRIVATE HAVE_ONNXRUNTIME)
+        target_link_libraries(ft PRIVATE onnxruntime::onnxruntime)
+        if(OpenMP_FOUND)
+            target_link_libraries(ft PRIVATE OpenMP::OpenMP_CXX)
+        endif()
+    endif()
     set_target_properties(ft PROPERTIES PREFIX "lib" LINK_FLAGS ${DRIVER_LDFLAGS})
 endif()
 
@@ -218,6 +233,13 @@ install(FILES linuxtrack1.conf linuxtrack.c linuxtrack_hello_world.c linuxtrack_
 install(FILES 99-TIR.rules 99-Mickey.rules DESTINATION share/linuxtrack)
 if(HAS_OPENCV)
     install(FILES haarcascade_frontalface_alt2.xml DESTINATION share/linuxtrack)
+endif()
+if(HAVE_ONNXRUNTIME)
+    install(FILES
+        ${CMAKE_SOURCE_DIR}/opentrack_research/tracker-neuralnet/models/head-localizer.onnx
+        ${CMAKE_SOURCE_DIR}/opentrack_research/tracker-neuralnet/models/head-pose-0.4-big-int8.onnx
+        ${CMAKE_SOURCE_DIR}/opentrack_research/tracker-neuralnet/models/head-pose-0.4-small-f32.onnx
+        DESTINATION share/linuxtrack/models)
 endif()
 
 # 5. Headers
