@@ -19,6 +19,8 @@
 
 namespace ltr_neuralnet {
 
+static constexpr float kNeuralFaceZoomGain = 1.5f;
+
 int find_input_intensity_quantile(const cv::Mat &frame, float percentage) {
   const int channels[] = {0};
   const int hist_size[] = {256};
@@ -334,7 +336,7 @@ void NeuralNetTracker::image_to_world_position(const cv::Point2f &center,
   // The shared tracking pipeline uses millimeters for translations.
   tx = -zpos;
   ty = ypos;
-  tz = -xpos;
+  tz = -xpos * kNeuralFaceZoomGain;
 }
 
 bool NeuralNetTracker::detect(const cv::Mat &frame, float &pitch, float &yaw,
