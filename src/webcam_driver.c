@@ -29,7 +29,7 @@
 
 #include <libv4l2.h>
 
-#define NUM_OF_BUFFERS 8
+#define NUM_OF_BUFFERS 3
 typedef struct {
   void *start;
   size_t length;
@@ -976,17 +976,39 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
     }
   };
 
-  while (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_DQBUF, &buf)) {
-    switch (errno) {
-    case EAGAIN:
-      continue;
+  // Drain stale frames: V4L2 DQBUF returns frames in FIFO (oldest-first) order.
+  // If processing lags behind the camera rate the queue fills with old frames.
+  // Re-queue and discard all but the most recently captured frame so the
+  // tracking pipeline always sees fresh data.
+  while (1) {
+    memset(&buf, 0, sizeof(buf));
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_MMAP;
+    while (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_DQBUF, &buf)) {
+      switch (errno) {
+      case EAGAIN:
+        continue;
+      default:
+        ltr_int_log_message("Problem dequeing buffer! (%s)\n", strerror(errno));
+        return -1;
+      }
+    }
+    assert(buf.index < wc_info.buffers);
+
+    // Non-blocking check: is another frame already waiting?
+    struct pollfd drain_pfd = {
+        .fd = wc_info.fd, .events = POLLIN | POLLRDNORM, .revents = 0};
+    if (poll(&drain_pfd, 1, 0) <= 0 ||
+        !(drain_pfd.revents & (POLLIN | POLLRDNORM))) {
+      // buf is the freshest available frame; proceed to process it.
       break;
-    default:
-      ltr_int_log_message("Problem dequeing buffer! (%s)\n", strerror(errno));
+    }
+    // A newer frame is already queued — discard this stale one.
+    if (-1 == v4l2_ioctl(wc_info.fd, VIDIOC_QBUF, &buf)) {
+      ltr_int_log_message("Error re-queuing stale buffer!\n");
       return -1;
     }
   }
-  assert(buf.index < wc_info.buffers);
 
   unsigned char *source_buf = (buffers[buf.index]).start;
   unsigned char *preview_buf =
