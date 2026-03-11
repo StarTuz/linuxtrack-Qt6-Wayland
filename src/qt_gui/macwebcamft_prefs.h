@@ -24,6 +24,7 @@ class MacWebcamFtPrefs : public QWidget{
   void on_FindCascadeMac_pressed();
   void on_CascadePathMac_editingFinished();
   void on_ExpFilterFactorMac_valueChanged(int value);
+  void on_CameraFovMac_valueChanged(double value);
   void on_OptimLevelMac_valueChanged(int value);
 };
 

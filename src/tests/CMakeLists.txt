@@ -54,3 +54,21 @@ target_include_directories(test_image_process PRIVATE
 )
 
 add_test(NAME test_image_process COMMAND test_image_process)
+
+# -------------------------------------------------------------------------
+# test_wc_driver_prefs — webcam face-tracker pref defaults and clamping
+# -------------------------------------------------------------------------
+set(WC_DRIVER_PREFS_TEST_SOURCES
+    test_wc_driver_prefs.cpp
+    ../wc_driver_prefs.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_wc_driver_prefs ${WC_DRIVER_PREFS_TEST_SOURCES})
+
+target_include_directories(test_wc_driver_prefs PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_wc_driver_prefs COMMAND test_wc_driver_prefs)

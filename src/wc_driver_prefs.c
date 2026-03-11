@@ -23,6 +23,7 @@ static char *cascade = NULL;
 static float exp_filt = 0.1;
 static int optim_level = 0;
 static float confidence_threshold = 0.6f;
+static float camera_fov = 56.0f;
 
 static char max_blob_key[] = "Max-blob";
 static char min_blob_key[] = "Min-blob";
@@ -36,6 +37,7 @@ static char cascade_key[] = "Cascade";
 static char exp_filter_key[] = "Exp-filter-factor";
 static char optim_key[] = "Optimization-level";
 static char confidence_key[] = "Confidence-threshold";
+static char camera_fov_key[] = "Camera-fov";
 
 static bool file_exists(const char *path)
 {
@@ -127,6 +129,10 @@ bool ltr_int_wc_init_prefs()
   }
   if(!ltr_int_get_key_flt(dev, confidence_key, &confidence_threshold)){
     confidence_threshold = 0.6f;
+  }
+  if((!ltr_int_get_key_flt(dev, camera_fov_key, &camera_fov)) ||
+     (camera_fov < 30.0f) || (camera_fov > 140.0f)){
+    camera_fov = 56.0f;
   }
 
   char *device_type = ltr_int_get_key(dev, "Capture-device");
@@ -378,6 +384,31 @@ bool ltr_int_wc_set_confidence_threshold(float threshold)
     confidence_threshold = threshold;
     char *dev = ltr_int_get_device_section();
     bool res = ltr_int_change_key(dev, confidence_key, tmp);
+    free(dev);
+    return res;
+  }
+  return false;
+}
+
+float ltr_int_wc_get_camera_fov()
+{
+  return camera_fov;
+}
+
+bool ltr_int_wc_set_camera_fov(float fov)
+{
+  char tmp[1024];
+  if(fov < 30.0f){
+    fov = 30.0f;
+  }
+  if(fov > 140.0f){
+    fov = 140.0f;
+  }
+  int n = snprintf(tmp, sizeof(tmp), "%g", fov);
+  if(n >= 0 && n < (int)sizeof(tmp)){
+    camera_fov = fov;
+    char *dev = ltr_int_get_device_section();
+    bool res = ltr_int_change_key(dev, camera_fov_key, tmp);
     free(dev);
     return res;
   }

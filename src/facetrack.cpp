@@ -76,9 +76,69 @@ static std::mutex pose_mutex_6dof;
 static one_euro_filter_t nn_pose_filters[6];
 static bool nn_filters_initialized = false;
 static std::chrono::steady_clock::time_point nn_last_frame_time;
+static constexpr float nn_default_dt = 1.0f / 60.0f;
+static constexpr float nn_max_dt = 0.1f;
+static constexpr float nn_angle_min_cutoff = 0.8f;
+static constexpr float nn_angle_beta = 0.02f;
+static constexpr float nn_translation_min_cutoff = 0.6f;
+static constexpr float nn_translation_beta = 0.02f;
+static float nn_pose_history[6][3] = {};
+static int nn_pose_history_index = 0;
+static int nn_pose_history_count = 0;
 #endif
 
 float ltr_int_expfilt(float x, float y_minus_1, float filterfactor);
+
+#ifdef HAVE_ONNXRUNTIME
+static void init_nn_pose_filters() {
+  for (int i = 0; i < 3; ++i) {
+    one_euro_init(&nn_pose_filters[i], nn_angle_min_cutoff, nn_angle_beta,
+                  1.0f);
+  }
+  for (int i = 3; i < 6; ++i) {
+    one_euro_init(&nn_pose_filters[i], nn_translation_min_cutoff,
+                  nn_translation_beta, 1.0f);
+  }
+  nn_filters_initialized = true;
+}
+
+static void reset_nn_pose_history() {
+  nn_pose_history_index = 0;
+  nn_pose_history_count = 0;
+}
+
+static float median3(float a, float b, float c) {
+  if (a > b) {
+    std::swap(a, b);
+  }
+  if (b > c) {
+    std::swap(b, c);
+  }
+  if (a > b) {
+    std::swap(a, b);
+  }
+  return b;
+}
+
+static float filter_nn_pose_sample(int axis, float value) {
+  nn_pose_history[axis][nn_pose_history_index] = value;
+  if (nn_pose_history_count < 3) {
+    ++nn_pose_history_count;
+  }
+  if (nn_pose_history_count == 1) {
+    return nn_pose_history[axis][0];
+  }
+  if (nn_pose_history_count == 2) {
+    return 0.5f * (nn_pose_history[axis][0] + nn_pose_history[axis][1]);
+  }
+  return median3(nn_pose_history[axis][0], nn_pose_history[axis][1],
+                 nn_pose_history[axis][2]);
+}
+
+static void advance_nn_pose_history() {
+  nn_pose_history_index = (nn_pose_history_index + 1) % 3;
+}
+#endif
 
 static void find_faces_with_cascade(cv::Mat &img, float factor) {
   cv::Size s(lastCandidate.width * roi_factor,
@@ -136,6 +196,7 @@ void ltr_int_detect(cv::Mat &img) {
   cv::Rect candidate_rect;
   bool candidate_found = false;
   bool have_fallback_detector = false;
+  bool holding_neural_pose = false;
 
 #ifdef HAVE_ONNXRUNTIME
   if (use_neuralnet && nn_tracker) {
@@ -143,26 +204,31 @@ void ltr_int_detect(cv::Mat &img) {
     candidate_found = nn_tracker->detect(img, pitch, yaw, roll, tx, ty, tz);
     if (candidate_found) {
       auto now = std::chrono::steady_clock::now();
-      float dt = 1.0f / 30.0f;
+      float dt = nn_default_dt;
       if (!nn_filters_initialized) {
-        for (int i = 0; i < 6; ++i) {
-          one_euro_init(&nn_pose_filters[i], 1.0f, 0.007f, 1.0f);
-        }
-        nn_filters_initialized = true;
+        init_nn_pose_filters();
+        reset_nn_pose_history();
       } else {
         dt = std::chrono::duration<float>(now - nn_last_frame_time).count();
-        if (dt <= 0.0f) {
-          dt = 1.0f / 30.0f;
+        if ((dt <= 0.0f) || (dt > nn_max_dt)) {
+          dt = nn_default_dt;
         }
       }
       nn_last_frame_time = now;
 
-      const float filtered_pitch = one_euro_filter(&nn_pose_filters[0], pitch, dt);
-      const float filtered_yaw = one_euro_filter(&nn_pose_filters[1], yaw, dt);
-      const float filtered_roll = one_euro_filter(&nn_pose_filters[2], roll, dt);
-      const float filtered_tx = one_euro_filter(&nn_pose_filters[3], tx, dt);
-      const float filtered_ty = one_euro_filter(&nn_pose_filters[4], ty, dt);
-      const float filtered_tz = one_euro_filter(&nn_pose_filters[5], tz, dt);
+      const float filtered_pitch = one_euro_filter(
+          &nn_pose_filters[0], filter_nn_pose_sample(0, pitch), dt);
+      const float filtered_yaw = one_euro_filter(
+          &nn_pose_filters[1], filter_nn_pose_sample(1, yaw), dt);
+      const float filtered_roll = one_euro_filter(
+          &nn_pose_filters[2], filter_nn_pose_sample(2, roll), dt);
+      const float filtered_tx = one_euro_filter(
+          &nn_pose_filters[3], filter_nn_pose_sample(3, tx), dt);
+      const float filtered_ty = one_euro_filter(
+          &nn_pose_filters[4], filter_nn_pose_sample(4, ty), dt);
+      const float filtered_tz = one_euro_filter(
+          &nn_pose_filters[5], filter_nn_pose_sample(5, tz), dt);
+      advance_nn_pose_history();
       {
         std::lock_guard<std::mutex> lock(pose_mutex_6dof);
         pose_pitch = filtered_pitch;
@@ -180,9 +246,18 @@ void ltr_int_detect(cv::Mat &img) {
                                   cvRound(roi->width), cvRound(roi->height));
       }
     } else {
-      std::lock_guard<std::mutex> lock(pose_mutex_6dof);
-      pose_valid = false;
-      nn_filters_initialized = false;
+      if ((missed_frames < max_missed_frames) && (lastCandidate.width > 0) &&
+          (lastCandidate.height > 0)) {
+        candidate_rect = lastCandidate;
+        candidate_found = true;
+        holding_neural_pose = true;
+        ++missed_frames;
+      } else {
+        std::lock_guard<std::mutex> lock(pose_mutex_6dof);
+        pose_valid = false;
+        nn_filters_initialized = false;
+        reset_nn_pose_history();
+      }
     }
   }
 #endif
@@ -236,8 +311,10 @@ void ltr_int_detect(cv::Mat &img) {
   }
 
   if (candidate_found) {
-    missed_frames = 0;
-    lastCandidate = candidate_rect;
+    if (!holding_neural_pose) {
+      missed_frames = 0;
+      lastCandidate = candidate_rect;
+    }
     expFiltFactor = ltr_int_wc_get_eff();
 
     face_x1 = candidate_rect.x / current_scale;
@@ -308,6 +385,7 @@ void *ltr_int_detector_thread(void *) {
   nn_tracker.reset();
   use_neuralnet = false;
   nn_filters_initialized = false;
+  reset_nn_pose_history();
 #endif
   delete cvimage;
   cvimage = nullptr;
@@ -336,7 +414,7 @@ bool ltr_int_init_face_detect() {
   if ((localizer_path != nullptr) && (posenet_path != nullptr)) {
     nn_tracker = std::make_unique<ltr_neuralnet::NeuralNetTracker>();
     if (nn_tracker->init(localizer_path, posenet_path)) {
-      nn_tracker->set_fov(80.0f);
+      nn_tracker->set_fov(ltr_int_wc_get_camera_fov());
       use_neuralnet = true;
       ltr_int_log_message("Neural webcam tracker initialized.\n");
     } else {

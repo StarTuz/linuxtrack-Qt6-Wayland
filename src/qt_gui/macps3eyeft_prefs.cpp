@@ -78,6 +78,8 @@ bool MacP3eFtPrefs::Activate(const QString &ID, bool init)
                               QString::fromUtf8("/haarcascades/haarcascade_frontalface_alt2.xml"));
 	  QFileInfo finf = QFileInfo(cascadePath);
 	  PREF.addKeyVal(sec, QString::fromUtf8("Cascade"), finf.canonicalFilePath());
+      PREF.addKeyVal(sec, QString::fromUtf8("Camera-fov"),
+                     QString::number(56.0f));
       PREF.activateDevice(sec);
     }else{
       return false;
@@ -169,6 +171,7 @@ bool MacP3eFtPrefs::Activate(const QString &ID, bool init)
     n = ltr_int_wc_get_optim_level();
     ui.OptimLevelMac->setValue(n);
     on_OptimLevelMac_valueChanged(n);
+    ui.CameraFovMac->setValue(ltr_int_wc_get_camera_fov());
 
   }
   initializing = false;
@@ -334,6 +337,13 @@ void MacP3eFtPrefs::on_ExpFilterFactorMac_valueChanged(int value)
   }
 }
 
+void MacP3eFtPrefs::on_CameraFovMac_valueChanged(double value)
+{
+  if(!initializing){
+    ltr_int_wc_set_camera_fov(value);
+  }
+}
+
 void MacP3eFtPrefs::on_OptimLevelMac_valueChanged(int value)
 {
   if(!initializing){
@@ -342,4 +352,3 @@ void MacP3eFtPrefs::on_OptimLevelMac_valueChanged(int value)
 }
 
 #include "moc_macps3eyeft_prefs.cpp"
-

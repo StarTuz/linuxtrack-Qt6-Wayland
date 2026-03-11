@@ -7,6 +7,7 @@
 #include <../ltr_srv_slave.h>
 #include <QApplication>
 #include <QMessageBox>
+#include <cmath>
 #include <cstdio>
 #include <iostream>
 #include <cstring>
@@ -249,10 +250,22 @@ static float limit_ff(float val) {
   return val;
 }
 
+static float common_ff_to_axis_delta(float val) {
+  if (val < 0.0f) {
+    val = 0.0f;
+  }
+  if (val > 1.0f) {
+    val = 1.0f;
+  }
+  // Re-bias the common smoothing slider so useful smoothing arrives earlier.
+  const float curved = std::pow(val, 0.7f);
+  return limit_ff(curved * 1.25f);
+}
+
 bool Tracker::axisChange(axis_t axis, axis_param_t elem, float val) {
   if (elem == AXIS_FILTER) {
     ffs[axis] = val;
-    val = limit_ff(val + common_ff);
+    val = limit_ff(val + common_ff_to_axis_delta(common_ff));
   }
   bool res = ltr_int_set_axis_param(axes, axis, elem, val);
   emit axisChanged(axis, elem);
@@ -284,8 +297,9 @@ bool Tracker::setCommonFilterFactor(float c_f) {
   common_ff = c_f;
   bool res = true;
   float val;
+  const float common_delta = common_ff_to_axis_delta(common_ff);
   for (int i = PITCH; i <= TZ; ++i) {
-    val = limit_ff(ffs[i] + common_ff);
+    val = limit_ff(ffs[i] + common_delta);
     res &= ltr_int_set_axis_param(axes, (axis_t)i, AXIS_FILTER, val);
     emit axisChanged(i, AXIS_FILTER);
     ltr_int_change(currentProfile.toUtf8().constData(), i, AXIS_FILTER, val);

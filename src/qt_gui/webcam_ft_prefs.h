@@ -26,6 +26,7 @@ class WebcamFtPrefs : public QWidget{
   void on_FindCascade_pressed();
   void on_CascadePath_editingFinished();
   void on_ExpFilterFactor_valueChanged(int value);
+  void on_CameraFov_valueChanged(double value);
   void on_OptimLevel_valueChanged(int value);
 };
 

@@ -141,6 +141,8 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       PREF.addKeyVal(sec, QString::fromUtf8("Cascade"), finf.canonicalFilePath());
       PREF.addKeyVal(sec, QString::fromUtf8("Confidence-threshold"),
                      QString::number(0.6f));
+      PREF.addKeyVal(sec, QString::fromUtf8("Camera-fov"),
+                     QString::number(56.0f));
       PREF.activateDevice(sec);
     }else{
       return false;
@@ -187,6 +189,7 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
     ui.ExpFilterFactor->setValue(n);
     on_ExpFilterFactor_valueChanged(n);
     ui.OptimLevel->setValue(ltr_int_wc_get_optim_level());
+    ui.CameraFov->setValue(ltr_int_wc_get_camera_fov());
   }
   initializing = false;
   return res;
@@ -249,6 +252,13 @@ void WebcamFtPrefs::on_ExpFilterFactor_valueChanged(int value)
 //  ui.ExpFiltFactorVal->setText(QString("%1").arg(a, 0, 'g', 2));
   if(!initializing){
     ltr_int_wc_set_eff(a);
+  }
+}
+
+void WebcamFtPrefs::on_CameraFov_valueChanged(double value)
+{
+  if(!initializing){
+    ltr_int_wc_set_camera_fov(value);
   }
 }
 

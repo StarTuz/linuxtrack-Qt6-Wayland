@@ -44,6 +44,8 @@ int ltr_int_wc_get_optim_level();
 bool ltr_int_wc_set_optim_level(int opt);
 float ltr_int_wc_get_confidence_threshold();
 bool ltr_int_wc_set_confidence_threshold(float threshold);
+float ltr_int_wc_get_camera_fov();
+bool ltr_int_wc_set_camera_fov(float fov);
 
 #ifdef __cplusplus
 }
