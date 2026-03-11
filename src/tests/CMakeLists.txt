@@ -34,3 +34,23 @@ target_link_libraries(test_webcam_info PRIVATE Qt6::Core)
 target_compile_definitions(test_webcam_info PRIVATE)
 
 add_test(NAME test_webcam_info COMMAND test_webcam_info)
+
+# -------------------------------------------------------------------------
+# test_image_process — guards shared blob extraction semantics
+# -------------------------------------------------------------------------
+set(IMAGE_PROCESS_TEST_SOURCES
+    test_image_process.cpp
+    stubs_utils.cpp
+    ../image_process.c
+    ../list.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_image_process ${IMAGE_PROCESS_TEST_SOURCES})
+
+target_include_directories(test_image_process PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_image_process COMMAND test_image_process)
