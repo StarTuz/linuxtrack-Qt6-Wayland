@@ -1,0 +1,13 @@
+Linuxtrack 1.3.7 (2026-03-11)
+=============================
+
+- Fixed a TrackIR regression introduced during webcam blob-threshold work by
+  scoping blob-area scaling to webcam-style callers instead of the shared blob
+  extractor.
+- Added regression coverage for shared blob extraction semantics so webcam
+  threshold tuning does not silently change TrackIR behavior again.
+- Improved neural webcam face tracking with a configurable camera FOV, better
+  pose holdover and filtering, restored translation scale, and stronger forward
+  translation.
+- Tuned several GUI tracking sliders so their useful range is less bunched and
+  the labels match the actual smoothing behavior.

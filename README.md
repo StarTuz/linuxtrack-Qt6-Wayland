@@ -26,6 +26,13 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
+## 🆕 Recent in 1.3.7
+
+- **TrackIR regression fixed:** Webcam blob-threshold scaling is now applied only in webcam-style drivers, so TrackIR keeps its native 3-point pose behavior.
+- **Regression test added:** Shared blob extraction now has automated coverage to catch webcam changes that would alter TrackIR semantics.
+- **Webcam face tracking improved:** Neural webcam tracking now has a configurable camera FOV, steadier pose filtering, correct translation scale, and stronger forward/back response.
+- **Slider ranges tuned:** Common smoothing, One Euro smoothness, webcam face smoothing, and detailed-axis controls now land in a more useful part of their range.
+
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
 
 ### Udev Rules (Required for USB Access)

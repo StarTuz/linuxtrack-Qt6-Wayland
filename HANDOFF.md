@@ -1,6 +1,6 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-01-08
+**Last Updated:** 2026-03-11
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
@@ -223,6 +223,22 @@ The project now compiles successfully on modern Linux with:
 - **Webcam Tracking Regression — blob size limits (critical):** `min_blob=4, max_blob=230` were calibrated at 160×120. At 800×600 (~25× the reference area) the same physical IR LED covers ~250–1250 pixels, so every blob was rejected by `max_blob=230`. **Final Fix:** Keep the shared blob extractor (`src/image_process.c`) device-agnostic and apply the 160×120 area scaling only in webcam-style callers (`src/webcam_driver.c`, `src/ps3eye_driver.c`). This preserves the intended webcam fix without changing TrackIR blob semantics.
 
 - **TrackIR Regression From Webcam Blob Scaling (critical, 2026-03-11):** The first webcam fix implementation scaled blob-size thresholds globally inside `ltr_int_stripes_to_blobs` (`src/image_process.c`). TrackIR uses the same extractor via `src/tir_img.c`, but its `Min-blob` / `Max-blob` values are already calibrated for native TrackIR resolutions (for example, 640×480 on TrackIR 5). Applying the webcam scale factor to TrackIR inflated `120/2500` to `1920/40000`, which poisoned the TrackIR 3-point pose path: bright points were visible in the camera view, but the 3D view produced no usable pose. **Fix:** Move the scaling out of the shared extractor and make it opt-in for webcam / PS3Eye callers only.
+
+**Recent Additions (2026-03-11) [v1.3.7 — TrackIR regression coverage and webcam face tuning]:**
+
+- **Version Bump:** Project version advanced to `1.3.7`.
+
+- **TrackIR Regression Test Coverage:** Added `src/tests/test_image_process.cpp` coverage that locks down the shared blob extractor semantics. The test explicitly guards the failure mode where webcam-oriented blob scaling at 640×480 would have filtered out TrackIR-sized blobs before the 3-point pose solver ever ran.
+
+- **Webcam Face Tracking: Camera FOV Control:** Added a `Camera-fov` preference for the webcam face tracker (`src/wc_driver_prefs.c`) and exposed it in the Linux and macOS webcam-face setup dialogs. The neural tracker now uses the configured FOV instead of a hardcoded wide angle, which makes forward/back movement tunable per camera.
+
+- **Webcam Face Tracking: Pose Stability:** The neural face path now keeps the last valid pose across brief detector misses, clamps bad `dt` values after stalls, and applies stronger translation/angle filtering with a short median stage. This reduced visible jitter without touching the TrackIR path.
+
+- **Webcam Face Tracking: Translation Scale:** Removed the accidental `0.1x` translation downscale in `src/neuralnet_tracker.cpp`. The shared pose layer expects translations in millimeters, so the old scale reduction made webcam forward/back movement far too subtle compared to TrackIR.
+
+- **Webcam Face Tracking: Forward Translation Gain:** Added a Z-only gain so webcam face tracking has a stronger forward/back feel without changing X/Y motion semantics.
+
+- **Qt GUI Slider Audit:** Tuned the common smoothing mapping, corrected the One Euro `Smoothness` slider direction so moving right actually means smoother, fixed detailed-axis deadzone/sensitivity refresh bugs, and reworked the webcam face smoothing slider curve so the useful range is not pushed to the far right.
 
 ---
 
