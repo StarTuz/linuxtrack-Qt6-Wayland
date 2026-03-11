@@ -457,13 +457,7 @@ int ltr_int_stripes_to_blobs(unsigned int num_blobs, struct bloblist_type *blt,
   preblob_t *pb;
   ltr_int_init_iterator(preblobs, &i);
   while ((pb = (preblob_t *)ltr_int_get_next(&i)) != NULL) {
-    /* Scale blob size limits proportionally to image area so that thresholds
-     * calibrated at the reference 160×120 resolution remain meaningful at any
-     * resolution (e.g. 800×600 is ~25× the reference area). */
-    float area_scale = ((float)img->w * (float)img->h) / (160.0f * 120.0f);
-    int scaled_min = (int)(min_pts * area_scale);
-    int scaled_max = (int)(max_pts * area_scale);
-    if ((pb->points < scaled_min) || (pb->points > scaled_max)) {
+    if ((pb->points < min_pts) || (pb->points > max_pts)) {
       continue;
     }
     ++valid;
@@ -506,4 +500,23 @@ int ltr_int_stripes_to_blobs(unsigned int num_blobs, struct bloblist_type *blt,
     }
   }
   return 0;
+}
+
+void ltr_int_scale_blob_limits_for_resolution(const image_t *img, int *min_pts,
+                                              int *max_pts) {
+  if ((img == NULL) || (min_pts == NULL) || (max_pts == NULL) ||
+      (img->w <= 0) || (img->h <= 0)) {
+    return;
+  }
+
+  /* Webcam blob prefs were historically tuned around 160x120 preview frames.
+   * Keep the scaling opt-in at the call site so TrackIR and other blob-based
+   * devices preserve their existing threshold semantics. */
+  float area_scale = ((float)img->w * (float)img->h) / (160.0f * 120.0f);
+  if (*min_pts > 0) {
+    *min_pts = (int)(*min_pts * area_scale);
+  }
+  if (*max_pts > 0) {
+    *max_pts = (int)(*max_pts * area_scale);
+  }
 }

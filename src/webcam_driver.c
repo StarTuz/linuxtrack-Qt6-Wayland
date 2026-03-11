@@ -1065,9 +1065,13 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
 #endif
 
 #ifndef OPENCV
+  int min_blob_pixels = wc_info.min_blob_pixels;
+  int max_blob_pixels = wc_info.max_blob_pixels;
+  ltr_int_scale_blob_limits_for_resolution(&img, &min_blob_pixels,
+                                           &max_blob_pixels);
   ltr_int_to_stripes(&img);
-  ltr_int_stripes_to_blobs(MAX_BLOBS, &(f->bloblist), wc_info.min_blob_pixels,
-                           wc_info.max_blob_pixels, &img);
+  ltr_int_stripes_to_blobs(MAX_BLOBS, &(f->bloblist), min_blob_pixels,
+                           max_blob_pixels, &img);
   if (wc_info.flip) {
     unsigned int tmp;
     for (tmp = 0; tmp < f->bloblist.num_blobs; ++tmp) {

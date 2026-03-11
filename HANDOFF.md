@@ -207,6 +207,23 @@ The project now compiles successfully on modern Linux with:
 - **AppImage Qt Plugin Fix:** When manually building AppImages (bypassing linuxdeploy), Qt6 platform plugins must be explicitly bundled. See Section 3.16 for details.
 - **Version Bump:** Project version advanced to `1.1.12`.
 
+**Recent Additions (2026-03-10) [v1.3.5 — Webcam tracking fixes]:**
+
+- **Webcam Format Correctness (UI):** Fixed three bugs in `src/qt_gui/webcam_info.cpp`:
+  1. `GREY` was missing from `isNativeFormat()`, causing the UI to display "Driver-dependent" instead of "Native" for greyscale webcams.
+  2. The `kYUYV` sentinel constant was initialised via `*"YUYV"` (pointer dereference = single char `'Y'`). Replaced with a proper four-byte literal so the default fallback format is correctly identified.
+  3. `decodeRes` / `decodeFps` regex patterns were too strict; updated to accept formats used by real webcam drivers.
+
+- **Webcam Setup UI Improvements:** Added webcam preview mode toggle, webcam negotiation diagnostics panel, labeled webcam mode support, and disambiguated multiple webcams of the same model via device identifier (path/serial).
+
+- **Regression Test Infrastructure:** Added Catch2 v3 (amalgamated) test suite `src/tests/test_webcam_info.cpp` covering the three bugs above (12 test cases, 34 assertions). Tests are wired into CTest (`ctest --output-on-failure`) and run automatically in CI on both Ubuntu and Arch Linux. Added `stubs_dyn_load.cpp` so the test binary links without requiring a live webcam library.
+
+- **Webcam Tracking Regression — MJPG passthrough (critical):** When the user configured `Pixel-format=MJPG`, `read_pref_format` in `src/webcam_driver.c` passed MJPG directly to `VIDIOC_S_FMT`. libv4l2 only decodes MJPG→YUV transparently when the *application* requests a YUV format; if the app explicitly requests MJPG, libv4l2 forwards raw JPEG bytes unchanged. `get_gray_image` has no JPEG decoder, so every frame produced a black image → no blobs → tracking appeared dead. **Fix:** Redirect MJPG/JPEG to YUYV in the `v4l2_format` struct before format negotiation. `wc_info.requested_fourcc` retains the original value for diagnostic logs.
+
+- **Webcam Tracking Regression — blob size limits (critical):** `min_blob=4, max_blob=230` were calibrated at 160×120. At 800×600 (~25× the reference area) the same physical IR LED covers ~250–1250 pixels, so every blob was rejected by `max_blob=230`. **Final Fix:** Keep the shared blob extractor (`src/image_process.c`) device-agnostic and apply the 160×120 area scaling only in webcam-style callers (`src/webcam_driver.c`, `src/ps3eye_driver.c`). This preserves the intended webcam fix without changing TrackIR blob semantics.
+
+- **TrackIR Regression From Webcam Blob Scaling (critical, 2026-03-11):** The first webcam fix implementation scaled blob-size thresholds globally inside `ltr_int_stripes_to_blobs` (`src/image_process.c`). TrackIR uses the same extractor via `src/tir_img.c`, but its `Min-blob` / `Max-blob` values are already calibrated for native TrackIR resolutions (for example, 640×480 on TrackIR 5). Applying the webcam scale factor to TrackIR inflated `120/2500` to `1920/40000`, which poisoned the TrackIR 3-point pose path: bright points were visible in the camera view, but the 3D view produced no usable pose. **Fix:** Move the scaling out of the shared extractor and make it opt-in for webcam / PS3Eye callers only.
+
 ---
 
 ## 3. Changes Made
@@ -453,6 +470,103 @@ The `WineLauncher` helper class was forcing `WINEARCH=win32` environment variabl
 2. **Manifest-Driven**: Assets are defined in `lal_manifest.json`, making updates easy without recompiling.
 3. **LALDialog**: Added a native Qt GUI dialog ("Manage Assets (LAL)...") to the Misc tab, allowing users to browse and install firmware archives easily.
 4. **Verification**: Verified UI functionality and native extraction logic via unit tests.
+
+### 3.18 Webcam Tracking Regression Fixes (2026-03-10)
+
+**Status:** ✅ COMPLETE
+
+#### Root Cause 1 — MJPG passthrough (`src/webcam_driver.c`)
+
+**Problem:** `read_pref_format` set `fmt->fmt.pix.pixelformat` to whatever the user configured. When the user selected `MJPG`, libv4l2 passed raw JPEG byte-streams to the application unchanged. `get_gray_image` has no JPEG decoder; the result was a black frame every capture cycle → no blobs detected → tracking appeared completely dead.
+
+**Fix:** After recording `wc_info.requested_fourcc` (for diagnostics), redirect any MJPG/JPEG pixelformat in the `v4l2_format` struct to YUYV before passing it to `VIDIOC_S_FMT`. libv4l2 then performs the MJPG→YUYV decode transparently:
+
+```c
+static const __u32 kMJPG = V4L2_PIX_FMT_MJPEG;
+static const __u32 kJPEG = V4L2_PIX_FMT_JPEG;
+static const __u32 kYUYV = V4L2_PIX_FMT_YUYV;
+if (fmt->fmt.pix.pixelformat == kMJPG || fmt->fmt.pix.pixelformat == kJPEG) {
+    ltr_int_log_message("Compressed pixel format requested; redirecting to YUYV for libv4l2 decode.\n");
+    fmt->fmt.pix.pixelformat = kYUYV;
+}
+```
+
+#### Root Cause 2 — Absolute blob size limits (`src/image_process.c`)
+
+**Problem:** `min_blob` and `max_blob` preferences (defaults 4 and 230) are raw pixel-count thresholds calibrated for 160×120 — the original hardcoded fallback resolution. At 800×600 (25× more pixels), the same IR LED subtends ~250–1250 pixels, so every candidate blob was rejected by `max_blob=230`.
+
+**Initial Fix:** Scale both limits proportionally to the current image area before filtering:
+
+```c
+float area_scale = ((float)img->w * (float)img->h) / (160.0f * 120.0f);
+int scaled_min = (int)(min_pts * area_scale);
+int scaled_max = (int)(max_pts * area_scale);
+if ((pb->points < scaled_min) || (pb->points > scaled_max)) {
+    continue;
+}
+```
+
+This makes webcam thresholds resolution-invariant, but the first implementation applied it too low in the stack.
+
+**Final Fix (2026-03-11):** Keep `ltr_int_stripes_to_blobs` device-agnostic and move the scaling to webcam-style callers only:
+
+```c
+int min_blob_pixels = wc_info.min_blob_pixels;
+int max_blob_pixels = wc_info.max_blob_pixels;
+ltr_int_scale_blob_limits_for_resolution(&img, &min_blob_pixels,
+                                         &max_blob_pixels);
+ltr_int_stripes_to_blobs(MAX_BLOBS, &(f->bloblist), min_blob_pixels,
+                         max_blob_pixels, &img);
+```
+
+TrackIR still calls `ltr_int_stripes_to_blobs(..., min, max, img)` directly from `src/tir_img.c`, so its device-specific thresholds are no longer distorted by a webcam-specific assumption.
+
+---
+
+### 3.19 Regression Test Infrastructure — Webcam (2026-03-10)
+
+**Status:** ✅ COMPLETE
+
+Added `src/tests/test_webcam_info.cpp` (Catch2 v3 amalgamated) — 12 test cases / 34 assertions covering:
+
+| Test group | What it guards |
+|---|---|
+| `describeFormatPolicy` — native formats | YUYV, YU12, YV12, RGB3, BGR3, GREY all → "Native" |
+| `describeFormatPolicy` — GREY regression | GREY must not produce "Driver-dependent" |
+| `describeFormatPolicy` — compressed | MJPG, JPEG → "Compressed" |
+| `describeFormatPolicy` — unknown | NV12 → "Driver-dependent" |
+| `describeFormatPolicy` — single-char Y | "Y" must not be classified Native (guards kYUYV pointer-deref bug) |
+| `decodeRes` | Standard, large, uppercase-X formats; garbage rejection |
+| `decodeFps` | Rational `num/den` with/without spaces; garbage rejection |
+
+`src/tests/stubs_dyn_load.cpp` stubs `ltr_int_load_library` → nullptr so the test binary links without `libwc.so`. Both tests (`test_lal`, `test_webcam_info`) run via `ctest` in CI on Ubuntu 24.04 and Arch Linux.
+
+---
+
+### 3.20 TrackIR Regression From Webcam Blob Scaling (2026-03-11)
+
+**Status:** ✅ COMPLETE
+
+**Symptom:** After the webcam blob-size fix landed, TrackIR still showed bright points / blobs in the camera view, but the 3D view stopped moving. This looked like a TrackIR pose regression even though the original change targeted webcams.
+
+**Root Cause:** The first webcam fix version placed the 160×120 area scaling inside the shared blob extractor `ltr_int_stripes_to_blobs` (`src/image_process.c`). That function is also used by TrackIR through `src/tir_img.c`. TrackIR blob thresholds are already device-specific (`Min-blob`, `Max-blob` in the TrackIR section), so the extra scaling changed their meaning. On a 640×480 TrackIR 5 stream, the scale factor is `16x`, turning `120/2500` into `1920/40000` before the 3-point pose solver ever sees the blob list.
+
+**Why This Broke TrackIR But Not Webcam:** Webcam thresholds were historically tuned around 160×120 preview frames, so they benefit from resolution compensation. TrackIR thresholds were already tuned at native device resolution. A shared fix was the wrong abstraction boundary.
+
+**Fix:** Revert `src/image_process.c` to use the raw thresholds passed in by the caller, add helper `ltr_int_scale_blob_limits_for_resolution(...)`, and call it only from webcam-style drivers:
+
+- `src/webcam_driver.c`
+- `src/ps3eye_driver.c`
+
+TrackIR (`src/tir_img.c`) now keeps its original thresholds unchanged.
+
+**Verification:**
+
+1. Rebuilt `libltr.so` and `ltr_gui`.
+2. Ran `ctest --output-on-failure` successfully (`test_lal`, `test_webcam_info`).
+3. Hardware symptom resolved: TrackIR camera view still shows blobs and the 3D view moves again.
+
+---
 
 ### 3.17 X-Plane Plugin Missing from AppImage (v1.3.5+)
 

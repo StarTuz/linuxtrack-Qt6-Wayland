@@ -1245,9 +1245,12 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb, struct frame_typ
     img.ratio = 1.0f;
 
 #ifndef OPENCV
+    int min_blob = ltr_int_wc_get_min_blob();
+    int max_blob = ltr_int_wc_get_max_blob();
+    ltr_int_scale_blob_limits_for_resolution(&img, &min_blob, &max_blob);
     ltr_int_to_stripes(&img);
-    ltr_int_stripes_to_blobs(MAX_BLOBS, &(f->bloblist), ltr_int_wc_get_min_blob(),
-                    ltr_int_wc_get_max_blob(), &img);
+    ltr_int_stripes_to_blobs(MAX_BLOBS, &(f->bloblist), min_blob, max_blob,
+                    &img);
 #else
     ltr_int_face_detect(&img, &(f->bloblist));
 #endif
@@ -1266,4 +1269,3 @@ int ltr_int_ps3eye_found(void)
   ltr_int_finish_usb(-1);
   return res;
 }
-
