@@ -12,6 +12,7 @@
 #include <QDir>
 #include <QMessageBox>
 #include <QStringList>
+#include <vector>
 #include <iostream>
 
 PrefProxy *PrefProxy::prf = nullptr;
@@ -22,17 +23,200 @@ static int warnMessage(const QString &message) {
                               QMessageBox::Ok, QMessageBox::Ok);
 }
 
+static QString normalizeDeviceId(QString id) {
+  id = id.trimmed();
+  int bracketPos = id.lastIndexOf(QString::fromUtf8(" ["));
+  if ((bracketPos > 0) && id.endsWith(QChar::fromLatin1(']'))) {
+    id = id.left(bracketPos).trimmed();
+  }
+  return id;
+}
+
+static int deviceIdMatchScore(const QString &lhs, const QString &rhs) {
+  const QString lhsNorm = normalizeDeviceId(lhs);
+  const QString rhsNorm = normalizeDeviceId(rhs);
+  if (lhsNorm.compare(rhsNorm, Qt::CaseInsensitive) == 0) {
+    if (rhs.size() > lhs.size()) {
+      return 4;
+    }
+    if (lhs.compare(rhs, Qt::CaseInsensitive) == 0) {
+      return 3;
+    }
+    return 2;
+  }
+
+  if (lhs.compare(rhs, Qt::CaseInsensitive) == 0) {
+    return 3;
+  }
+
+  if (lhsNorm.startsWith(rhsNorm, Qt::CaseInsensitive) ||
+      rhsNorm.startsWith(lhsNorm, Qt::CaseInsensitive)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static bool findDeviceSectionByTypeAndId(const QString &devType,
+                                         const QString &devId,
+                                         QString &result) {
+  std::vector<std::string> sections;
+  ltr_int_get_section_list(&sections);
+  int bestScore = 0;
+  int bestIdLength = -1;
+  bool found = false;
+
+  for (const std::string &section : sections) {
+    char *devName =
+        ltr_int_get_key(section.c_str(), "Capture-device");
+    char *devIdStr =
+        ltr_int_get_key(section.c_str(), "Capture-device-id");
+    if ((devName != nullptr) && (devIdStr != nullptr)) {
+      const QString currentType = QString::fromUtf8(devName);
+      const QString currentId = QString::fromUtf8(devIdStr);
+      const int score =
+          (devType.compare(currentType, Qt::CaseInsensitive) == 0)
+              ? deviceIdMatchScore(devId, currentId)
+              : 0;
+      if ((score > bestScore) ||
+          ((score == bestScore) && (score > 0) &&
+           (currentId.size() > bestIdLength))) {
+        result = QString::fromStdString(section);
+        bestScore = score;
+        bestIdLength = currentId.size();
+        found = true;
+      }
+    }
+    free(devName);
+    free(devIdStr);
+  }
+
+  return found;
+}
+
+static QString matchingFaceTrackerType(const QString &deviceType) {
+  if (deviceType.compare(QString::fromUtf8("Webcam"), Qt::CaseInsensitive) ==
+      0) {
+    return QString::fromUtf8("Webcam-face");
+  }
+  if (deviceType.compare(QString::fromUtf8("MacWebcam"), Qt::CaseInsensitive) ==
+      0) {
+    return QString::fromUtf8("MacWebcam-face");
+  }
+  if (deviceType.compare(QString::fromUtf8("Ps3Eye"), Qt::CaseInsensitive) ==
+          0 ||
+      deviceType.compare(QString::fromUtf8("PS3Eye"), Qt::CaseInsensitive) ==
+          0) {
+    return QString::fromUtf8("Ps3Eye-face");
+  }
+  return QString();
+}
+
+static QString baseCaptureType(const QString &deviceType) {
+  if (deviceType.compare(QString::fromUtf8("Webcam-face"),
+                         Qt::CaseInsensitive) == 0) {
+    return QString::fromUtf8("Webcam");
+  }
+  if (deviceType.compare(QString::fromUtf8("MacWebcam-face"),
+                         Qt::CaseInsensitive) == 0) {
+    return QString::fromUtf8("MacWebcam");
+  }
+  if (deviceType.compare(QString::fromUtf8("Ps3Eye-face"),
+                         Qt::CaseInsensitive) == 0) {
+    return QString::fromUtf8("Ps3Eye");
+  }
+  return QString();
+}
+
+static bool recoverFaceTrackerInputIfNeeded() {
+  char *modelSection = ltr_int_get_key("Global", "Model");
+  if (modelSection == nullptr) {
+    return false;
+  }
+  const QString activeModel = QString::fromUtf8(modelSection);
+  free(modelSection);
+  if (activeModel.compare(QString::fromUtf8("Face"), Qt::CaseInsensitive) != 0) {
+    return false;
+  }
+
+  char *inputSection = ltr_int_get_key("Global", "Input");
+  if (inputSection == nullptr) {
+    return false;
+  }
+  const QString currentSection = QString::fromUtf8(inputSection);
+
+  char *devName = ltr_int_get_key(inputSection, "Capture-device");
+  char *devId = ltr_int_get_key(inputSection, "Capture-device-id");
+  free(inputSection);
+  if ((devName == nullptr) || (devId == nullptr)) {
+    free(devName);
+    free(devId);
+    return false;
+  }
+
+  const QString currentType = QString::fromUtf8(devName);
+  const QString currentId = QString::fromUtf8(devId);
+  free(devName);
+  free(devId);
+
+  QString desiredType = matchingFaceTrackerType(currentType);
+  QString lookupId = currentId;
+  if (desiredType.isEmpty()) {
+    const QString sourceType = baseCaptureType(currentType);
+    if (sourceType.isEmpty()) {
+      return false;
+    }
+    desiredType = currentType;
+
+    QString sourceSection;
+    if (findDeviceSectionByTypeAndId(sourceType, currentId, sourceSection)) {
+      char *sourceId =
+          ltr_int_get_key(sourceSection.toUtf8().constData(),
+                          "Capture-device-id");
+      if (sourceId != nullptr) {
+        lookupId = QString::fromUtf8(sourceId);
+        free(sourceId);
+      }
+    }
+  }
+
+  if (desiredType.isEmpty()) {
+    return false;
+  }
+
+  QString recoveredSection;
+  if (!findDeviceSectionByTypeAndId(desiredType, lookupId, recoveredSection)) {
+    return false;
+  }
+  if (recoveredSection.compare(currentSection, Qt::CaseInsensitive) == 0) {
+    return false;
+  }
+
+  ltr_int_log_message(
+      "Recovering face-tracker input: '%s' -> '%s' for model '%s'\n",
+      currentSection.toUtf8().constData(), recoveredSection.toUtf8().constData(),
+      activeModel.toUtf8().constData());
+  return ltr_int_change_key("Global", "Input",
+                            recoveredSection.toUtf8().constData());
+}
+
 PrefProxy::PrefProxy() {
   isAppImage = qEnvironmentVariableIsSet("APPIMAGE") ||
                qEnvironmentVariableIsSet("APPDIR");
   if (ltr_int_read_prefs(nullptr, false)) {
     checkPrefix(true);
+    if (recoverFaceTrackerInputIfNeeded()) {
+      savePrefs();
+    }
     return;
   }
   ltr_int_log_message("Pref file not found, trying linuxtrack.conf\n");
   if (ltr_int_read_prefs("linuxtrack.conf", false)) {
     ltr_int_prefs_changed();
     checkPrefix(true);
+    if (recoverFaceTrackerInputIfNeeded()) {
+      savePrefs();
+    }
     return;
   }
 
@@ -46,6 +230,9 @@ PrefProxy::PrefProxy() {
   ltr_int_new_prefs();
   ltr_int_read_prefs(nullptr, true);
   checkPrefix(true);
+  if (recoverFaceTrackerInputIfNeeded()) {
+    savePrefs();
+  }
 }
 
 bool PrefProxy::checkPrefix(bool save) {
@@ -293,25 +480,7 @@ bool PrefProxy::getFirstDeviceSection(const QString &devType, QString &result) {
 
 bool PrefProxy::getFirstDeviceSection(const QString &devType,
                                       const QString &devId, QString &result) {
-  QStringList sections;
-  getSectionList(sections);
-  char *devName, *devIdStr;
-  for (ssize_t i = 0; i < sections.size(); ++i) {
-    devName =
-        ltr_int_get_key(sections[i].toUtf8().constData(), "Capture-device");
-    devIdStr =
-        ltr_int_get_key(sections[i].toUtf8().constData(), "Capture-device-id");
-    if ((devName != nullptr) && (devIdStr != nullptr)) {
-      if ((devType.compare(QString::fromUtf8(devName), Qt::CaseInsensitive) ==
-           0) &&
-          (devId.compare(QString::fromUtf8(devIdStr), Qt::CaseInsensitive) ==
-           0)) {
-        result = QString(sections[i]);
-        return true;
-      }
-    }
-  }
-  return false;
+  return findDeviceSectionByTypeAndId(devType, devId, result);
 }
 
 bool PrefProxy::getActiveDevice(deviceType_t &devType, QString &id,

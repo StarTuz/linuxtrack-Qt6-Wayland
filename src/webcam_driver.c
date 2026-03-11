@@ -569,6 +569,22 @@ static bool read_pref_format(struct v4l2_format *fmt) {
   wc_info.requested_w = x;
   wc_info.requested_h = y;
   wc_info.requested_fourcc = *(__u32 *)pix;
+
+  /* Compressed formats (MJPG, JPEG): libv4l2 only decodes these when the
+   * application requests a YUV/RGB format and the driver offers MJPG as its
+   * only option.  If the application explicitly requests MJPG, libv4l2 passes
+   * the raw JPEG bytes through unchanged, which get_gray_image cannot handle.
+   * Redirect to YUYV so libv4l2 performs the MJPG→YUYV conversion for us.
+   * wc_info.requested_fourcc retains the original value for diagnostics. */
+  static const __u32 kMJPG = V4L2_PIX_FMT_MJPEG;
+  static const __u32 kJPEG = V4L2_PIX_FMT_JPEG;
+  static const __u32 kYUYV = V4L2_PIX_FMT_YUYV;
+  if (fmt->fmt.pix.pixelformat == kMJPG || fmt->fmt.pix.pixelformat == kJPEG) {
+    ltr_int_log_message(
+        "Compressed pixel format requested; redirecting to YUYV for "
+        "libv4l2 decode.\n");
+    fmt->fmt.pix.pixelformat = kYUYV;
+  }
   return true;
 }
 

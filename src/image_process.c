@@ -457,7 +457,13 @@ int ltr_int_stripes_to_blobs(unsigned int num_blobs, struct bloblist_type *blt,
   preblob_t *pb;
   ltr_int_init_iterator(preblobs, &i);
   while ((pb = (preblob_t *)ltr_int_get_next(&i)) != NULL) {
-    if ((pb->points < min_pts) || (pb->points > max_pts)) {
+    /* Scale blob size limits proportionally to image area so that thresholds
+     * calibrated at the reference 160×120 resolution remain meaningful at any
+     * resolution (e.g. 800×600 is ~25× the reference area). */
+    float area_scale = ((float)img->w * (float)img->h) / (160.0f * 120.0f);
+    int scaled_min = (int)(min_pts * area_scale);
+    int scaled_max = (int)(max_pts * area_scale);
+    if ((pb->points < scaled_min) || (pb->points > scaled_max)) {
       continue;
     }
     ++valid;

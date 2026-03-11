@@ -9,6 +9,7 @@
 #include "ltlib_int.h"
 
 static pthread_t cal_thread;
+static bool cal_thread_created = false;
 static ltr_new_frame_callback_t ltr_new_frame_cbk = NULL;
 static void *ltr_new_frame_cbk_param = NULL;
 
@@ -114,6 +115,7 @@ static void *cal_thread_fun(void *param)
 
 int ltr_int_init(void)
 {
+  cal_thread_created = false;
   if(!ltr_int_read_prefs(NULL, false)){
     ltr_int_log_message("Couldn't load preferences!\n");
     return -1;
@@ -122,7 +124,11 @@ int ltr_int_init(void)
     ltr_int_log_message("Couldn't initialize tracking!\n");
     return -1;
   }
-  pthread_create(&cal_thread, NULL, cal_thread_fun, NULL);
+  if (pthread_create(&cal_thread, NULL, cal_thread_fun, NULL) != 0) {
+    ltr_int_log_message("Couldn't create camera thread!\n");
+    return -1;
+  }
+  cal_thread_created = true;
   return 0;
 }
 
@@ -153,7 +159,12 @@ int ltr_int_shutdown(void)
 {
   ltr_int_log_message("Shutting down tracking...\n");
   int res = ltr_int_cal_shutdown();
-  pthread_join(cal_thread, NULL);
+  if (cal_thread_created) {
+    pthread_join(cal_thread, NULL);
+    cal_thread_created = false;
+  } else {
+    ltr_int_log_message("Camera thread was not started, skipping join.\n");
+  }
   return res;
 }
 
@@ -166,4 +177,3 @@ linuxtrack_state_type ltr_int_get_tracking_state(void)
 {
   return ltr_int_cal_get_state();
 }
-

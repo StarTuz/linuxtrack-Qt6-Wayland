@@ -1,10 +1,10 @@
 #include "facetrack.h"
 #include "wc_driver_prefs.h"
-#include <iostream>
 #include <vector>
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/objdetect/face.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 
 #include "utils.h"
@@ -15,9 +15,14 @@
 #include <stdio.h>
 #include <string.h>
 
+enum detector_mode_t { DETECTOR_NONE, DETECTOR_CASCADE, DETECTOR_YUNET };
+
 static cv::CascadeClassifier *cascade = nullptr;
+static cv::Ptr<cv::FaceDetectorYN> yunet;
+static detector_mode_t detector_mode = DETECTOR_NONE;
 static double scale = 0.5;
 static const double roi_factor = 0.3;
+static const int max_missed_frames = 6;
 
 static float face_x = 0;
 static float face_y = 0;
@@ -35,20 +40,21 @@ static float last_face_h = 0.0f;
 
 static std::vector<cv::Rect> faces;
 static cv::Rect lastCandidate;
+static int missed_frames = 0;
 
-// static int frame_size = 0;
 static int frame_w = 0;
 static int frame_h = 0;
 static uint8_t *frame = nullptr;
-static cv::Mat *cvimage;
+static cv::Mat *cvimage = nullptr;
 static cv::Mat scaled;
+static cv::Mat bgr_input;
 static cv::Size minFace(40, 40);
 static float expFiltFactor = 0.2;
 static bool init = true;
 
 float ltr_int_expfilt(float x, float y_minus_1, float filterfactor);
 
-void ltr_int_find_faces(cv::Mat &img, float factor) {
+static void find_faces_with_cascade(cv::Mat &img, float factor) {
   cv::Size s(lastCandidate.width * roi_factor,
              lastCandidate.height * roi_factor);
   cv::Rect new_roi(lastCandidate.x - s.width, lastCandidate.y - s.height,
@@ -71,62 +77,100 @@ void ltr_int_find_faces(cv::Mat &img, float factor) {
   }
 }
 
-void ltr_int_detect(cv::Mat &img) {
-  double current_scale;
-  switch (ltr_int_wc_get_optim_level()) {
-  case 0:
-    cv::equalizeHist(img, img);
-    // cascade->detectMultiScale(img, faces, 1.1, 2, 0, minFace);
-    ltr_int_find_faces(img, 1.1);
-    current_scale = 1;
-    break;
-  case 1:
-    cv::equalizeHist(img, img);
-    // cascade->detectMultiScale(img, faces, 1.2, 2, 0, minFace);
-    ltr_int_find_faces(img, 1.2);
-    current_scale = 1;
-    break;
-  case 2:
-    cv::resize(img, scaled, cv::Size(), scale, scale);
-    cv::equalizeHist(scaled, scaled);
-    // cascade->detectMultiScale(scaled, faces, 1.1, 2, 0, minFace);
-    ltr_int_find_faces(scaled, 1.1);
-    current_scale = scale;
-    break;
-  case 3:
-  default:
-    cv::resize(img, scaled, cv::Size(), scale, scale);
-    cv::equalizeHist(scaled, scaled);
-    // cascade->detectMultiScale(scaled, faces, 1.2, 2, 0, minFace);
-    ltr_int_find_faces(scaled, 1.2);
-    current_scale = scale;
-    break;
+static bool detect_face_with_yunet(cv::Mat &img, cv::Rect &candidate_rect) {
+  if (yunet.empty()) {
+    return false;
+  }
+  cv::cvtColor(img, bgr_input, cv::COLOR_GRAY2BGR);
+  yunet->setInputSize(cv::Size(bgr_input.cols, bgr_input.rows));
+
+  cv::Mat detections;
+  yunet->detect(bgr_input, detections);
+  if (detections.rows <= 0) {
+    return false;
   }
 
-  double area = -1;
-  const cv::Rect *candidate = nullptr;
-  for (std::vector<cv::Rect>::const_iterator i = faces.begin();
-       i != faces.end(); ++i) {
-    if (i->area() > area) {
-      candidate = &(*i);
-      area = i->area();
+  float best_score = -1.0f;
+  for (int row = 0; row < detections.rows; ++row) {
+    float score = detections.at<float>(row, 14);
+    if (score > best_score) {
+      best_score = score;
+      candidate_rect = cv::Rect(cvRound(detections.at<float>(row, 0)),
+                                cvRound(detections.at<float>(row, 1)),
+                                cvRound(detections.at<float>(row, 2)),
+                                cvRound(detections.at<float>(row, 3)));
     }
   }
-  if (candidate != nullptr) {
-    lastCandidate = *candidate;
+  candidate_rect &= cv::Rect(0, 0, img.cols, img.rows);
+  return (candidate_rect.width > 0) && (candidate_rect.height > 0);
+}
+
+void ltr_int_detect(cv::Mat &img) {
+  double current_scale = 1.0;
+  cv::Rect candidate_rect;
+  bool candidate_found = false;
+
+  if (detector_mode == DETECTOR_YUNET) {
+    candidate_found = detect_face_with_yunet(img, candidate_rect);
+  } else {
+    switch (ltr_int_wc_get_optim_level()) {
+    case 0:
+      cv::equalizeHist(img, img);
+      find_faces_with_cascade(img, 1.1);
+      current_scale = 1;
+      break;
+    case 1:
+      cv::equalizeHist(img, img);
+      find_faces_with_cascade(img, 1.2);
+      current_scale = 1;
+      break;
+    case 2:
+      cv::resize(img, scaled, cv::Size(), scale, scale);
+      cv::equalizeHist(scaled, scaled);
+      find_faces_with_cascade(scaled, 1.1);
+      current_scale = scale;
+      break;
+    case 3:
+    default:
+      cv::resize(img, scaled, cv::Size(), scale, scale);
+      cv::equalizeHist(scaled, scaled);
+      find_faces_with_cascade(scaled, 1.2);
+      current_scale = scale;
+      break;
+    }
+
+    double area = -1;
+    const cv::Rect *candidate = nullptr;
+    for (std::vector<cv::Rect>::const_iterator i = faces.begin();
+         i != faces.end(); ++i) {
+      if (i->area() > area) {
+        candidate = &(*i);
+        area = i->area();
+      }
+    }
+    if (candidate != nullptr) {
+      candidate_rect = *candidate;
+      candidate_found = true;
+    }
+  }
+
+  if (candidate_found) {
+    missed_frames = 0;
+    lastCandidate = candidate_rect;
     expFiltFactor = ltr_int_wc_get_eff();
 
-    face_x1 = candidate->x / current_scale;
-    face_y1 = candidate->y / current_scale;
-    face_x2 = (candidate->x + candidate->width) / current_scale;
-    face_y2 = (candidate->y + candidate->height) / current_scale;
+    face_x1 = candidate_rect.x / current_scale;
+    face_y1 = candidate_rect.y / current_scale;
+    face_x2 = (candidate_rect.x + candidate_rect.width) / current_scale;
+    face_y2 = (candidate_rect.y + candidate_rect.height) / current_scale;
 
-    float x =
-        (candidate->x + candidate->width / 2) / current_scale - frame_w / 2;
+    float x = (candidate_rect.x + candidate_rect.width / 2.0f) / current_scale -
+              frame_w / 2.0f;
     float y =
-        (candidate->y + candidate->height / 2) / current_scale - frame_h / 2;
-    float w = candidate->width / current_scale;
-    float h = candidate->height / current_scale;
+        (candidate_rect.y + candidate_rect.height / 2.0f) / current_scale -
+        frame_h / 2.0f;
+    float w = candidate_rect.width / current_scale;
+    float h = candidate_rect.height / current_scale;
 
     if (init) {
       last_face_x = face_x = x;
@@ -144,13 +188,14 @@ void ltr_int_detect(cv::Mat &img) {
       last_face_w = face_w;
       last_face_h = face_h;
     }
+  } else if (++missed_frames > max_missed_frames) {
+    face_w = 0;
+    face_h = 0;
   }
-  //  std::cout<<"Done\n";
 }
 
 static bool run = true;
 static enum { READY, PROCESSING, DONE } frame_status = DONE;
-// static bool request_frame = false;
 static std::condition_variable frame_cv;
 static std::mutex frame_mx;
 static pthread_t detect_thread_handle;
@@ -168,12 +213,7 @@ void *ltr_int_detector_thread(void *) {
     if (!run) {
       break;
     }
-    double t = (double)cv::getTickCount();
     ltr_int_detect(*cvimage);
-    t = (double)cv::getTickCount() - t;
-    // std::cout<<"detection time = "<<t/((double)cvGetTickFrequency()*1000.)<<"
-    // ms\n";
-
     {
       std::lock_guard<std::mutex> lock(frame_mx);
       frame_status = DONE;
@@ -181,8 +221,11 @@ void *ltr_int_detector_thread(void *) {
   }
   delete cascade;
   cascade = nullptr;
+  yunet.release();
+  detector_mode = DETECTOR_NONE;
   delete cvimage;
   cvimage = nullptr;
+  bgr_input.release();
   free(frame);
   frame = nullptr;
   return nullptr;
@@ -190,17 +233,43 @@ void *ltr_int_detector_thread(void *) {
 
 bool ltr_int_init_face_detect() {
   cv::setNumThreads(1);
-  cascade = new cv::CascadeClassifier();
   const char *cascade_path = ltr_int_wc_get_cascade();
   if (cascade_path == nullptr) {
     ltr_int_log_message("Cascade path not specified!\n");
     return false;
   }
-  if (!cascade->load(cascade_path)) {
-    ltr_int_log_message("Could't load cascade '%s'!\n", cascade_path);
-    return false;
+
+  const char *suffix = strrchr(cascade_path, '.');
+  if ((suffix != nullptr) && (strcasecmp(suffix, ".onnx") == 0)) {
+    try {
+      yunet = cv::FaceDetectorYN::create(
+          cascade_path, "", cv::Size(320, 320),
+          ltr_int_wc_get_confidence_threshold(), 0.3f, 5000);
+      detector_mode = DETECTOR_YUNET;
+      ltr_int_log_message("Using YuNet face detector '%s' (threshold=%g)\n",
+                          cascade_path, ltr_int_wc_get_confidence_threshold());
+    } catch (const cv::Exception &e) {
+      ltr_int_log_message("Could't load YuNet detector '%s' (%s)!\n",
+                          cascade_path, e.what());
+      return false;
+    }
+  } else {
+    cascade = new cv::CascadeClassifier();
+    if (!cascade->load(cascade_path)) {
+      ltr_int_log_message("Could't load cascade '%s'!\n", cascade_path);
+      delete cascade;
+      cascade = nullptr;
+      return false;
+    }
+    detector_mode = DETECTOR_CASCADE;
+    ltr_int_log_message("Using Haar cascade detector '%s'\n", cascade_path);
   }
+
   lastCandidate = cv::Rect(0, 0, 0, 0);
+  face_w = 0;
+  face_h = 0;
+  missed_frames = 0;
+  init = true;
   run = true;
   detector_thread_started =
       (pthread_create(&detect_thread_handle, nullptr, ltr_int_detector_thread,

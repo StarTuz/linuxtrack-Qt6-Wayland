@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include "wc_driver_prefs.h"
 #include "pref.h"
@@ -21,6 +22,7 @@ static bool flip = false;
 static char *cascade = NULL;
 static float exp_filt = 0.1;
 static int optim_level = 0;
+static float confidence_threshold = 0.6f;
 
 static char max_blob_key[] = "Max-blob";
 static char min_blob_key[] = "Min-blob";
@@ -33,6 +35,32 @@ static char flip_key[] = "Upside-down";
 static char cascade_key[] = "Cascade";
 static char exp_filter_key[] = "Exp-filter-factor";
 static char optim_key[] = "Optimization-level";
+static char confidence_key[] = "Confidence-threshold";
+
+static bool file_exists(const char *path)
+{
+  return (path != NULL) && (access(path, F_OK) == 0);
+}
+
+static bool is_face_tracker_device(const char *device_type)
+{
+  if (device_type == NULL) {
+    return false;
+  }
+  return (strcasecmp(device_type, "Webcam-face") == 0) ||
+         (strcasecmp(device_type, "MacWebcam-face") == 0) ||
+         (strcasecmp(device_type, "Ps3Eye-face") == 0);
+}
+
+static bool should_promote_stock_cascade(const char *cascade_path)
+{
+  if (cascade_path == NULL) {
+    return true;
+  }
+  const char *basename = strrchr(cascade_path, '/');
+  basename = (basename != NULL) ? basename + 1 : cascade_path;
+  return strcasecmp(basename, "haarcascade_frontalface_alt2.xml") == 0;
+}
 
 bool ltr_int_wc_init_prefs()
 {
@@ -97,6 +125,25 @@ bool ltr_int_wc_init_prefs()
   if(!ltr_int_get_key_int(dev, optim_key, &optim_level)){
     optim_level= 0;
   }
+  if(!ltr_int_get_key_flt(dev, confidence_key, &confidence_threshold)){
+    confidence_threshold = 0.6f;
+  }
+
+  char *device_type = ltr_int_get_key(dev, "Capture-device");
+  if (is_face_tracker_device(device_type)) {
+    char *yunet_path = ltr_int_get_data_path("face_detection_yunet.onnx");
+    if (file_exists(yunet_path) && should_promote_stock_cascade(cascade)) {
+      if ((cascade == NULL) || (strcmp(cascade, yunet_path) != 0)) {
+        ltr_int_log_message(
+            "Promoting face tracker detector to YuNet model '%s'.\n",
+            yunet_path);
+        ltr_int_wc_set_cascade(yunet_path);
+      }
+      ltr_int_wc_set_confidence_threshold(confidence_threshold);
+    }
+    free(yunet_path);
+  }
+  free(device_type);
   free(dev);
   return true;
 }
@@ -316,4 +363,23 @@ bool ltr_int_wc_set_optim_level(int opt)
   bool res = ltr_int_change_key_int(dev, optim_key, opt);
   free(dev);
   return res;
+}
+
+float ltr_int_wc_get_confidence_threshold()
+{
+  return confidence_threshold;
+}
+
+bool ltr_int_wc_set_confidence_threshold(float threshold)
+{
+  char tmp[1024];
+  int n = snprintf(tmp, sizeof(tmp), "%g", threshold);
+  if(n >= 0 && n < (int)sizeof(tmp)){
+    confidence_threshold = threshold;
+    char *dev = ltr_int_get_device_section();
+    bool res = ltr_int_change_key(dev, confidence_key, tmp);
+    free(dev);
+    return res;
+  }
+  return false;
 }

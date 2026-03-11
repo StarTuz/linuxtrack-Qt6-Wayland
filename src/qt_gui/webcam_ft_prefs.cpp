@@ -1,6 +1,7 @@
 #include <QMessageBox>
 #include <iostream>
 #include <QByteArray>
+#include <QFileInfo>
 #include "ui_l_wcft_setup.h"
 #include "webcam_ft_prefs.h"
 #include "wc_driver_prefs.h"
@@ -8,6 +9,17 @@
 #include "ltr_gui_prefs.h"
 
 static QString currentId = QString::fromUtf8("None");
+
+static QString defaultFaceDetectorPath()
+{
+  const QString yunet =
+      PrefProxy::getDataPath(QString::fromUtf8("face_detection_yunet.onnx"));
+  if (QFileInfo::exists(yunet)) {
+    return yunet;
+  }
+  return PrefProxy::getDataPath(
+      QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
+}
 
 WebcamFtPrefs::WebcamFtPrefs(const QString &dev_id, QWidget *parent) : QWidget(parent), id(dev_id)
 {
@@ -124,9 +136,11 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
       PREF.addKeyVal(sec, QString::fromUtf8("Pixel-format"), QString::fromUtf8(""));
       PREF.addKeyVal(sec, QString::fromUtf8("Resolution"), QString::fromUtf8(""));
       PREF.addKeyVal(sec, QString::fromUtf8("Fps"), QString::fromUtf8(""));
-      QString cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
+      QString cascadePath = defaultFaceDetectorPath();
       QFileInfo finf = QFileInfo(cascadePath);
       PREF.addKeyVal(sec, QString::fromUtf8("Cascade"), finf.canonicalFilePath());
+      PREF.addKeyVal(sec, QString::fromUtf8("Confidence-threshold"),
+                     QString::number(0.6f));
       PREF.activateDevice(sec);
     }else{
       return false;
@@ -163,7 +177,7 @@ bool WebcamFtPrefs::Activate(const QString &ID, bool init)
     const char *cascade = ltr_int_wc_get_cascade();
     QString cascadePath;
     if((cascade == nullptr) || (!QFile::exists(QString::fromUtf8(cascade)))){
-      cascadePath = PrefProxy::getDataPath(QString::fromUtf8("haarcascade_frontalface_alt2.xml"));
+      cascadePath = defaultFaceDetectorPath();
       ltr_int_wc_set_cascade(cascadePath.toUtf8().constData());
     }else{
       cascadePath = QString::fromUtf8(cascade);
@@ -216,7 +230,8 @@ void WebcamFtPrefs::on_FindCascade_pressed()
     path = tmp.filePath(path);
   }
   QString fileName = QFileDialog::getOpenFileName(nullptr,
-     QString::fromUtf8("Find Harr/LBP cascade"), path, QString::fromUtf8("xml Files (*.xml)"));
+     QString::fromUtf8("Find face detector model"), path,
+     QString::fromUtf8("Detector files (*.onnx *.xml)"));
   ui.CascadePath->setText(fileName);
   on_CascadePath_editingFinished();
 }

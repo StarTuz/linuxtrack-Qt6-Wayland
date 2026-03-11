@@ -36,6 +36,11 @@ static ltr_new_slave_callback_t new_slave_hook = nullptr;
 static bool save_prefs = true;
 static bool no_slaves = false;
 static std::mutex send_mx;
+static bool gui_shutdown_request = false;
+static struct pollfd *descs = nullptr;
+static size_t max_len = 0;
+static size_t current_len = 0;
+static nfds_t numfd = 0;
 
 bool ltr_int_gui_lock(bool do_lock) {
   static const char *lockName = "ltr_server.lock";
@@ -70,6 +75,47 @@ void ltr_int_gui_lock_clean() {
     ltr_int_closeSemaphore(pfSem);
     pfSem = nullptr;
   }
+}
+
+static void unregister_slave_fd(int fd) {
+  if (fd < 0) {
+    return;
+  }
+
+  for (auto it = slaves.begin(); it != slaves.end();) {
+    if (it->second == fd) {
+      ltr_int_log_message("Slave @socket %d left!\n", fd);
+      it = slaves.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  if (slaves.empty()) {
+    no_slaves = true;
+  }
+}
+
+static void reset_poll_descs(int preserve_fd) {
+  if (descs != nullptr) {
+    for (size_t i = 0; i < current_len; ++i) {
+      if ((descs[i].fd >= 0) && (descs[i].fd != preserve_fd)) {
+        close(descs[i].fd);
+      }
+    }
+    free(descs);
+    descs = nullptr;
+  }
+  max_len = 0;
+  current_len = 0;
+  numfd = 0;
+}
+
+static void reset_master_runtime_state() {
+  std::lock_guard<std::mutex> guard(send_mx);
+  slaves.clear();
+  no_slaves = false;
+  gui_shutdown_request = false;
+  reset_poll_descs(-1);
 }
 
 void ltr_int_change(const char *profile, int axis, int elem, float val) {
@@ -147,11 +193,12 @@ bool ltr_int_broadcast_pose(linuxtrack_full_pose_t &pose) {
   // pose.pose.raw_roll);
   for (i = slaves.begin(); i != slaves.end();) {
     res = ltr_int_send_data(i->second, &pose);
-    if (res == -EPIPE) {
-      ltr_int_log_message("Slave @socket %d left!\n", i->second);
-      close(i->second);
-      i->second = -1;
-      slaves.erase(i++);
+    if (res < 0) {
+      int fd = i->second;
+      ltr_int_log_message("Pose broadcast to slave @socket %d failed (%d)\n",
+                          fd, res);
+      close(fd);
+      i = slaves.erase(i);
       checkSlaves = true;
     } else {
       ++i;
@@ -224,8 +271,6 @@ void ltr_int_wakeup_cmd() { ltr_int_wakeup(); }
 
 void ltr_int_recenter_cmd() { ltr_int_recenter(); }
 
-static bool gui_shutdown_request = false;
-
 size_t ltr_int_request_shutdown() {
   // size_t res = slaves.size();
   // if(res == 0){
@@ -233,11 +278,6 @@ size_t ltr_int_request_shutdown() {
   //}
   return 0;
 }
-
-struct pollfd *descs = nullptr;
-size_t max_len = 0;
-size_t current_len = 0;
-nfds_t numfd = 0;
 
 bool add_poll_desc(int fd) {
   ltr_int_log_message("Adding fd %d\n", fd);
@@ -282,8 +322,12 @@ bool remove_poll_desc() {
   // ltr_int_log_message("Watched descriptors before garbage collection.\n");
   // print_descs();
   for (i = 0; i < current_len; ++i) {
-    if (descs[i].revents & POLLHUP) {
+    if ((descs[i].fd < 0) || (descs[i].revents & (POLLHUP | POLLERR | POLLNVAL))) {
       ltr_int_log_message("Removing hanged fd %d\n", descs[i].fd);
+      if (descs[i].fd >= 0) {
+        unregister_slave_fd(descs[i].fd);
+        close(descs[i].fd);
+      }
       if (i < (current_len - 1)) {
         descs[i] = descs[current_len - 1];
       } else {
@@ -380,8 +424,9 @@ int ltr_int_master_main_loop(int socket) {
                 descs[i].fd = -1;
               }
             } else if (x == 0) {
-              // close_conn = true;
-              // descs[i].fd = -1;
+              ltr_int_log_message("Peer closed fd %d\n", descs[i].fd);
+              close_conn = true;
+              descs[i].fd = -1;
             } else {
               // ltr_int_log_message("Received a message from slave (%d)!!!\n",
               // msg.cmd);
@@ -406,9 +451,11 @@ int ltr_int_master_main_loop(int socket) {
             }
           }
         }
-        if (descs[i].revents & POLLHUP) {
-          ltr_int_log_message("Hangup at fd %d\n", descs[i].fd);
+        if (descs[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+          ltr_int_log_message("Hangup/error at fd %d (revents=%d)\n",
+                              descs[i].fd, descs[i].revents);
           close_conn = true;
+          descs[i].fd = -1;
         }
       }
     }
@@ -433,7 +480,7 @@ bool ltr_int_master(bool standalone) {
   current_pose.pose.counter = 0;
   current_pose.pose.status = STOPPED;
   current_pose.blobs = 0;
-  gui_shutdown_request = false;
+  reset_master_runtime_state();
   int socket;
 
   save_prefs = standalone;
@@ -488,6 +535,7 @@ bool ltr_int_master(bool standalone) {
   ltr_int_log_message("Master closing socket %d\n", socket);
   close(socket);
   unlink(ltr_int_master_socket_name());
+  reset_master_runtime_state();
   ltr_int_gui_lock_clean();
   int cntr = 10;
   while ((ltr_int_get_tracking_state() != STOPPED) && (cntr > 0)) {

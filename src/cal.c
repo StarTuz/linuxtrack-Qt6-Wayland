@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
+#include <time.h>
 
 #include "cal.h"
 #include "utils.h"
@@ -35,6 +36,24 @@ static void *libhandle = NULL;
 static enum ltr_request_t request = RUN;
 static linuxtrack_state_type ltr_int_cal_device_state = STOPPED;
 static bool new_request_received = false;
+static pthread_mutex_t iface_mx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t iface_cv = PTHREAD_COND_INITIALIZER;
+
+typedef enum {
+  IFACE_STOPPED,
+  IFACE_STARTING,
+  IFACE_READY
+} iface_state_t;
+
+static iface_state_t iface_state = IFACE_STOPPED;
+
+static void set_iface_state(iface_state_t new_state)
+{
+  pthread_mutex_lock(&iface_mx);
+  iface_state = new_state;
+  pthread_cond_broadcast(&iface_cv);
+  pthread_mutex_unlock(&iface_mx);
+}
 
 /************************/
 /* function definitions */
@@ -43,6 +62,7 @@ int ltr_int_cal_run(struct camera_control_block *ccb, frame_callback_fun cbk)
 {
   char *libname = NULL;
   assert(ccb != NULL);
+  set_iface_state(IFACE_STARTING);
   ltr_int_cal_set_state(INITIALIZING);
   switch (ccb->device.category) {
     case tir:
@@ -82,8 +102,10 @@ int ltr_int_cal_run(struct camera_control_block *ccb, frame_callback_fun cbk)
 
   ltr_int_log_message("Loading library '%s'\n", libname);
   if((libhandle = ltr_int_load_library(libname, functions)) == NULL){
+    set_iface_state(IFACE_STOPPED);
     return -1;
   }
+  set_iface_state(IFACE_READY);
   assert(iface.device_run != NULL);
   if(request != PAUSE){
     ltr_int_change_state(RUN);
@@ -92,14 +114,32 @@ int ltr_int_cal_run(struct camera_control_block *ccb, frame_callback_fun cbk)
   int res = (iface.device_run)(ccb, cbk);
   //Runloop blocks until shutdown is called
   ltr_int_unload_library(libhandle, functions);
+  libhandle = NULL;
+  set_iface_state(IFACE_STOPPED);
   return res;
 }
 
 int ltr_int_cal_shutdown()
 {
   ltr_int_change_state(SHUTDOWN);
+  pthread_mutex_lock(&iface_mx);
+  if (iface_state == IFACE_STARTING) {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += 2;
+    while (iface_state == IFACE_STARTING) {
+      if (pthread_cond_timedwait(&iface_cv, &iface_mx, &ts) != 0) {
+        break;
+      }
+    }
+  }
+  bool ready = (iface_state == IFACE_READY) && (iface.device_shutdown != NULL);
+  pthread_mutex_unlock(&iface_mx);
   if(iface.device_shutdown == NULL){
     ltr_int_log_message("Calling shutdown without initializing first!\n");
+    if (!ready) {
+      set_iface_state(IFACE_STOPPED);
+    }
     return -1;
   }
   ltr_int_log_message("Closing!\n");
@@ -213,5 +253,4 @@ void ltr_int_frame_print(struct frame_type f)
   /* FIXME: print something for pixels? */
   printf("-- end frame --\n");
 }
-
 
