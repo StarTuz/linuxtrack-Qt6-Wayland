@@ -1,0 +1,335 @@
+# Linuxtrack macOS Roadmap
+
+**Date:** 2026-03-11  
+**Status:** Phase 0 complete, later phases planning only  
+**Scope:** Experimental future platform bring-up after current Linux stabilization work
+
+---
+
+## 1. Goal
+
+Bring Linuxtrack to modern macOS without destabilizing the Linux product.
+
+This is not a maintenance task. The existing macOS code in the tree is historical and should be treated as reference material, not as a supported implementation.
+
+The first real target should be:
+
+- Qt GUI on macOS
+- webcam and face tracking
+- experimental packaging for Intel and Apple Silicon Macs
+
+TrackIR hardware and X-Plane plugin support should be planned as later gates, not assumed.
+
+---
+
+## 2. Current State
+
+There are still macOS remnants in the repository:
+
+- `src/mac/`
+- `src/macwebcam_driver.c`
+- `src/macwii_driver.c`
+- `src/osc_server_mac/`
+- macOS-specific Qt preference panes under `src/qt_gui/`
+
+However:
+
+- modern CMake does not build a supported macOS application path
+- the old camera path uses QTKit-era code and should not be revived as-is
+- there is no current macOS CI
+- there is no modern macOS packaging, signing, or notarization path
+
+Conclusion:
+
+- the shared tracking core is reusable
+- the macOS platform layer is effectively a new bring-up
+
+---
+
+## 3. Guardrails
+
+These rules exist to avoid breaking Linux while macOS work is in progress.
+
+1. All macOS work stays behind a dedicated CMake option such as `BUILD_MAC_EXPERIMENTAL`, default `OFF`.
+2. Shared-core refactors must land with regression tests before any mac-only feature depends on them.
+3. No Linux behavior changes are allowed without Linux regression coverage.
+4. New macOS code should live behind narrow platform interfaces instead of spreading `#ifdef APPLE` through shared tracking logic.
+5. No macOS release artifacts should be published from the normal release path until dedicated macOS CI is green.
+
+---
+
+## 4. Delivery Phases
+
+### Phase 0: Containment
+
+**Status:** COMPLETE (2026-03-11)
+
+Purpose:
+
+- make room for macOS work without affecting the existing Linux build graph
+
+Implementation:
+
+- add `BUILD_MAC_EXPERIMENTAL`
+- isolate old macOS sources from normal Linux targets
+- define explicit platform seams for camera input, device enumeration, and packaging
+
+Required tests:
+
+- Linux compile still works with macOS option disabled
+- existing CTest suite still passes unchanged
+
+Exit criteria:
+
+- Linux build graph is identical when `BUILD_MAC_EXPERIMENTAL=OFF`
+- mac-specific GUI scaffolding is excluded from the default Linux `ltr_gui` target
+
+Completed in repo:
+
+- added `BUILD_MAC_EXPERIMENTAL` in the top-level CMake configuration
+- moved mac-specific Qt GUI sources, forms, and headers behind `APPLE AND BUILD_MAC_EXPERIMENTAL`
+- changed `device_setup.cpp` to use `LTR_MAC_EXPERIMENTAL` instead of assuming all Darwin-targeted code belongs in the default build
+
+Verification run:
+
+- `cmake -S . -B build_phase0_verify`
+- `cmake --build build_phase0_verify --target ltr_gui -j"$(nproc)"`
+- `cmake --build build_phase0_verify --target test_lal test_webcam_info test_image_process test_wc_driver_prefs -j"$(nproc)"`
+- `ctest --test-dir build_phase0_verify --output-on-failure`
+
+### Phase 1: Shared-Core Hardening
+
+Purpose:
+
+- ensure the tracking pipeline is testable without hardware and portable across platforms
+
+Implementation:
+
+- separate frame-source code from blob extraction and pose solving
+- separate platform device enumeration from preferences and UI logic
+- keep filters, pose solving, image processing, and config parsing platform-neutral
+
+Required regression tests:
+
+- shared blob extraction semantics
+- 3-point pose invariants
+- face-derived translation and smoothing behavior
+- config defaulting and clamping for `MacWebcam` and `MacWebcam-face`
+
+Recommended harnesses:
+
+- synthetic blob-frame fixtures
+- recorded pose and landmark replay inputs
+- preference round-trip tests
+
+Exit criteria:
+
+- core tracking tests run without real hardware
+- Linux webcam and TrackIR behavior is unchanged
+
+### Phase 2: macOS App Shell
+
+Purpose:
+
+- get a macOS application bundle to build and launch without promising working tracking yet
+
+Implementation:
+
+- modern CMake app target for macOS
+- Qt GUI build on macOS
+- app bundle metadata and `Info.plist`
+- camera permission plumbing
+- separate experimental workflow for macOS builds
+
+Required tests:
+
+- compile-only CI job on macOS
+- app-launch smoke test
+- settings load/save smoke test
+- bundle content verification
+
+Exit criteria:
+
+- `.app` launches on a tester machine
+- preferences persist
+- Linux CI remains unaffected
+
+### Phase 3: Webcam and Face Tracking
+
+Purpose:
+
+- deliver the first real end-to-end tracking feature on macOS
+
+Implementation:
+
+- replace the old QTKit capture path with a modern macOS capture layer
+- adapt frames into the existing shared image and face tracking pipeline
+- reuse the current Linux-side smoothing and face pose improvements where possible
+
+Required regression tests:
+
+- frame timestamp monotonicity
+- dropped-frame handling
+- pixel format conversion into the shared grayscale/blob path
+- macOS webcam preference mapping
+
+Recommended harnesses:
+
+- replay of captured macOS webcam frames into the shared processing path
+- deterministic face-pose sample playback for smoothing checks
+
+Manual validation matrix:
+
+- Intel Mac
+- Apple Silicon Mac
+- built-in camera
+- at least one USB camera if available
+
+Exit criteria:
+
+- stable preview and 3D view with webcam input on both architectures
+
+### Phase 4: X-Plane Plugin on macOS
+
+Purpose:
+
+- support the most likely real user demand from the X-Plane community
+
+Implementation:
+
+- add a macOS X-Plane plugin target
+- package the plugin in the correct X-Plane directory layout
+- ensure correct binary architecture for Intel and Apple Silicon builds
+
+Required tests:
+
+- compile-only plugin job
+- plugin artifact layout verification
+- fake X-Plane directory installation test
+
+Manual validation:
+
+- X-Plane loads the plugin
+- pose updates arrive from the macOS app
+
+Exit criteria:
+
+- webcam-driven tracking works in X-Plane on a tester Mac
+
+### Phase 5: TrackIR on macOS
+
+Purpose:
+
+- evaluate TrackIR hardware support only after the macOS app, webcam tracking, and X-Plane path are already stable
+
+Implementation:
+
+- add a dedicated macOS TrackIR device layer
+- keep USB/HID access separate from Linux TrackIR paths
+- do not assume current historical code is viable
+
+Required regression tests:
+
+- packet parser tests using captured device data
+- pose-solver replay tests from recorded blob streams
+- no-device startup and shutdown tests
+
+Recommended harnesses:
+
+- raw packet capture logs from the tester machine
+- blob replay into the existing 3-point solver
+
+Manual validation:
+
+- camera/blob view works
+- 3D pose works
+- reconnect does not wedge the app
+
+Exit criteria:
+
+- TrackIR works on at least one real macOS tester machine
+
+### Phase 6: Packaging and Support
+
+Purpose:
+
+- make the experimental macOS support installable enough for external testers
+
+Implementation:
+
+- signed `.app`
+- `.dmg` or `.pkg`
+- document architecture and feature support matrix
+- consider notarization if outside-testing expands
+
+Required tests:
+
+- bundle verification
+- installer smoke test
+- architecture inspection
+
+Exit criteria:
+
+- tester receives a repeatable installable artifact
+
+---
+
+## 5. Feature Priority
+
+Recommended order of practical value:
+
+1. macOS app bundle
+2. webcam and face tracking
+3. X-Plane plugin support
+4. TrackIR hardware support
+
+This is intentionally not ordered by forum demand. TrackIR on macOS is the riskiest technical path and should not be the first deliverable.
+
+---
+
+## 6. Risk Register
+
+### High Risk
+
+- historical macOS camera code is obsolete
+- TrackIR hardware support may require substantial new device-access work
+- Apple Silicon and Intel both need validation
+
+### Medium Risk
+
+- X-Plane plugin architecture and packaging differences
+- macOS bundle/signing/notarization workflow
+
+### Low Risk
+
+- shared-core tracking math reuse
+- preference parsing and configuration plumbing
+- Qt GUI preference panes already present in the tree
+
+---
+
+## 7. Recommended Starting Work
+
+Do not start with device code first.
+
+Start with:
+
+1. `BUILD_MAC_EXPERIMENTAL` and build-graph isolation
+2. additional shared regression tests for pose, face translation, and mac device prefs
+3. a compile-only macOS CI job
+
+Only after those are in place should the project touch real macOS capture code.
+
+---
+
+## 8. Tester Expectations
+
+The current external tester should be treated as a day-zero guinea pig, not as a supported user.
+
+The first communication when testing starts should be explicit that:
+
+- early macOS builds are expected to fail
+- first builds will likely support webcam before TrackIR
+- X-Plane support may lag behind the first macOS GUI build
+
+That expectation is correct and should remain in place until at least Phase 4 is complete.

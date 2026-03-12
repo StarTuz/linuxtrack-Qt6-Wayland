@@ -34,6 +34,15 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - **Slider ranges tuned:** Common smoothing, One Euro smoothness, webcam face smoothing, and detailed-axis controls now land in a more useful part of their range.
 - **Release path repaired:** `1.3.7` also restores the release AppImage path after packaging changes by fixing icon lookup, rebuilding the X-Plane plugin in tagged releases, and removing CI's dependency on downloading Catch2 at runtime.
 
+## 📍 Future Platform Work
+
+macOS support is not currently maintained. There is historical macOS code in the tree, but bringing it back should be treated as a staged platform bring-up, not a small compatibility fix. The current implementation plan lives in [doc/MACOS_ROADMAP.md](doc/MACOS_ROADMAP.md) and intentionally prioritizes:
+
+- build isolation from Linux
+- shared-core regression coverage
+- webcam and face tracking before TrackIR hardware
+- X-Plane support before any claim of broad macOS parity
+
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
 
 ### Udev Rules (Required for USB Access)

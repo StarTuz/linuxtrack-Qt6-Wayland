@@ -15,7 +15,6 @@ set(LTR_GUI_HEADERS
     scurve.h scview.h wiimote_prefs.h tracker.h plugin_install.h 
     profile_setup.h profile_selector.h guardian.h xplugin.h wine_warn.h 
     extractor.h hashing.h downloading.h wine_launcher.h 
-    macps3eye_prefs.h macwebcam_info.h macps3eyeft_prefs.h 
     help_viewer.h prefix_discovery.h prefix_discovery_dialog.h
     webcam_prefs.h webcam_info.h webcam_ft_prefs.h joy_prefs.h
     udp_bridge.h udp_settings.h
@@ -27,7 +26,7 @@ set(LTR_GUI_FORMS
     logview.ui wii_setup.ui tir_setup.ui 
     cap_edit.ui clip_edit.ui single_edit.ui model_edit.ui 
     device_setup.ui profile_setup.ui profile_selector.ui cap_tweaking.ui clip_tweaking.ui 
-    extractor.ui progress.ui xplugin.ui wine_warn.ui m_ps3eye_setup.ui m_ps3eye_ft_setup.ui 
+    extractor.ui progress.ui xplugin.ui wine_warn.ui
     prefix_discovery_dialog.ui
     l_wc_setup.ui l_wcft_setup.ui joy_setup.ui
     udp_settings.ui
@@ -44,7 +43,6 @@ set(LTR_GUI_SOURCES
     plugin_install.cpp profile_setup.cpp 
     profile_selector.cpp xplugin.cpp wine_warn.cpp progress.cpp 
     extractor.cpp hashing.cpp downloading.cpp wine_launcher.cpp 
-    macps3eye_prefs.cpp macwebcam_info.cpp macps3eyeft_prefs.cpp 
     help_viewer.cpp prefix_discovery.cpp 
     prefix_discovery_dialog.cpp
     webcam_info.cpp webcam_prefs.cpp webcam_ft_prefs.cpp joy_prefs.cpp
@@ -59,6 +57,29 @@ set(LTR_GUI_SOURCES
     ../extract.c
     ../digest.c
 )
+
+if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+    list(APPEND LTR_GUI_HEADERS
+        macps3eye_prefs.h
+        macps3eyeft_prefs.h
+        macwebcam_info.h
+        macwebcam_prefs.h
+        macwebcamft_prefs.h
+    )
+    list(APPEND LTR_GUI_FORMS
+        m_ps3eye_setup.ui
+        m_ps3eye_ft_setup.ui
+        m_wc_setup.ui
+        m_wcft_setup.ui
+    )
+    list(APPEND LTR_GUI_SOURCES
+        macps3eye_prefs.cpp
+        macps3eyeft_prefs.cpp
+        macwebcam_info.cpp
+        macwebcam_prefs.cpp
+        macwebcamft_prefs.cpp
+    )
+endif()
 
 # Resources
 set(LTR_GUI_RESOURCES ltr_rc.qrc)
@@ -80,6 +101,10 @@ target_compile_definitions(ltr_gui PRIVATE
     QT_NO_CAST_FROM_ASCII
     QT_NO_CAST_TO_ASCII
 )
+
+if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+    target_compile_definitions(ltr_gui PRIVATE LTR_MAC_EXPERIMENTAL)
+endif()
 
 target_link_libraries(ltr_gui PRIVATE 
     Qt6::Widgets 

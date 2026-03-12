@@ -15,6 +15,9 @@ set(CMAKE_C_STANDARD 11)
 option(BUILD_GUI "Build Qt GUI" ON)
 option(BUILD_MICKEY "Build Mickey mouse emulator" ON)
 option(BUILD_WINE_BRIDGE "Build Wine bridge (requires winegcc)" ON)
+option(BUILD_MAC_EXPERIMENTAL
+       "Enable experimental macOS-specific build scaffolding"
+       OFF)
 if(UNIX AND NOT APPLE)
     option(LINUXTRACK_INSTALL_STANDARD_INTEGRATION
            "Install desktop files, wrappers, AppStream metadata, and udev rules into standard system paths"
@@ -147,6 +150,11 @@ check_function_exists(strerror HAVE_STRERROR)
 if(APPLE)
     set(HAS_DARWIN 1)
     add_definitions(-DAPL=1 -DIBM=0 -DLIN=0)
+    if(BUILD_MAC_EXPERIMENTAL)
+        message(STATUS "Experimental macOS build scaffolding enabled")
+    else()
+        message(STATUS "macOS experimental scaffolding disabled; Linuxtrack remains Linux-first")
+    endif()
 else()
     set(HAS_LINUX 1)
     add_definitions(-DAPL=0 -DIBM=0 -DLIN=1)

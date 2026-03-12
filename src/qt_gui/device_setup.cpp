@@ -3,16 +3,17 @@
 #endif
 
 #include "device_setup.h"
-#ifdef DARWIN
+#ifdef LTR_MAC_EXPERIMENTAL
 #include "macwebcam_prefs.h"
 #include "macwebcamft_prefs.h"
-#else
+#include "macps3eye_prefs.h"
+#include "macps3eyeft_prefs.h"
+#endif
+#ifndef LTR_MAC_EXPERIMENTAL
 #include "webcam_prefs.h"
 #include "webcam_ft_prefs.h"
 #include "joy_prefs.h"
 #endif
-#include "macps3eye_prefs.h"
-#include "macps3eyeft_prefs.h"
 #include "tir_prefs.h"
 #include "wiimote_prefs.h"
 #include "help_view.h"
@@ -103,7 +104,7 @@ void DeviceSetup::on_DeviceSelector_activated(int index)
   }
   QVariant v = ui.DeviceSelector->itemData(index);
   PrefsLink pl = v.value<PrefsLink>();
-#ifndef DARWIN
+#ifndef LTR_MAC_EXPERIMENTAL
   if(pl.deviceType == WEBCAM){
     devPrefs = new WebcamPrefs(pl.ID, this);
     emit deviceTypeChanged(pl.deviceType, QString::fromUtf8("Webcam"));
@@ -116,7 +117,8 @@ void DeviceSetup::on_DeviceSelector_activated(int index)
     devPrefs = new JoyPrefs(pl.ID, this);
     emit deviceTypeChanged(pl.deviceType, QString::fromUtf8("Joystick"));
   }else
-#else
+#endif
+#ifdef LTR_MAC_EXPERIMENTAL
   if(pl.deviceType == MACWEBCAM){
     devPrefs = new MacWebcamPrefs(pl.ID, this);
     emit deviceTypeChanged(pl.deviceType, QString::fromUtf8("Webcam"));
@@ -126,6 +128,7 @@ void DeviceSetup::on_DeviceSelector_activated(int index)
     emit deviceTypeChanged(pl.deviceType, QString::fromUtf8("Webcam Face Tracker"));
   }else
 #endif
+#ifdef LTR_MAC_EXPERIMENTAL
   if(pl.deviceType == MACPS3EYE){
     devPrefs = new MacP3ePrefs(pl.ID, this);
     emit deviceTypeChanged(pl.deviceType, QString::fromUtf8("PS3Eye"));
@@ -134,6 +137,7 @@ void DeviceSetup::on_DeviceSelector_activated(int index)
     devPrefs = new MacP3eFtPrefs(pl.ID, this);
     emit deviceTypeChanged(pl.deviceType, QString::fromUtf8("PS3Eye Face Tracker"));
   }else
+#endif
   if(pl.deviceType == WIIMOTE){
     devPrefs = new WiimotePrefs(pl.ID, this);
     emit deviceTypeChanged(pl.deviceType, QString::fromUtf8("Wiimote"));
@@ -167,9 +171,9 @@ void DeviceSetup::refresh()
   bool res = false;
   res |= WiimotePrefs::AddAvailableDevices(*(ui.DeviceSelector));
   res |= TirPrefs::AddAvailableDevices(*(ui.DeviceSelector));
+#ifdef LTR_MAC_EXPERIMENTAL
   res |= MacP3ePrefs::AddAvailableDevices(*(ui.DeviceSelector));
   res |= MacP3eFtPrefs::AddAvailableDevices(*(ui.DeviceSelector));
-#ifdef DARWIN
   res |= MacWebcamFtPrefs::AddAvailableDevices(*(ui.DeviceSelector));
   res |= MacWebcamPrefs::AddAvailableDevices(*(ui.DeviceSelector));
 #else

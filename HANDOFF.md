@@ -247,6 +247,9 @@ The project now compiles successfully on modern Linux with:
   - Removed the obsolete Catch2 download steps from CI/release workflows because the amalgamated Catch2 sources are already vendored in `src/tests/catch2/`.
   - Updated workflow actions to current Node 24-compatible lines and opted workflows into Node 24 execution to address GitHub's Node 20 deprecation warnings.
 
+- **macOS Bring-up Planning (2026-03-11):** Added [doc/MACOS_ROADMAP.md](/home/startux/Code/linuxtrackfixed/linuxtrack/doc/MACOS_ROADMAP.md), a phased implementation plan for future macOS work. The plan keeps macOS behind an experimental build gate, requires shared-core regression coverage before platform-specific changes, and explicitly stages the work as: app shell, webcam/face tracking, X-Plane plugin support, then TrackIR hardware support.
+- **macOS Bring-up Phase 0 (2026-03-11):** Implemented the initial containment gate for future macOS work. Added `BUILD_MAC_EXPERIMENTAL` to [CMakeLists.txt](/home/startux/Code/linuxtrackfixed/linuxtrack/CMakeLists.txt), moved historical mac-specific Qt GUI sources/forms behind `APPLE AND BUILD_MAC_EXPERIMENTAL` in [src/qt_gui/CMakeLists.txt](/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/CMakeLists.txt), and switched [device_setup.cpp](/home/startux/Code/linuxtrackfixed/linuxtrack/src/qt_gui/device_setup.cpp) to compile mac-specific preference panels only when `LTR_MAC_EXPERIMENTAL` is defined. Verified with a fresh Linux configure, `ltr_gui` build, and the existing four CTest targets.
+
 ---
 
 ## 3. Changes Made
