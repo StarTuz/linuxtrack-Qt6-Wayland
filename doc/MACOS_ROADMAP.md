@@ -197,6 +197,7 @@ Completed so far:
 - aligned generated data-path configuration with the experimental app bundle layout by pointing `Linuxtrack_DATA_DIR` at `Linuxtrack.app/Contents/Resources/linuxtrack` on `APPLE AND BUILD_MAC_EXPERIMENTAL`, so `LTR_DATA_PATH` and `pathconfig.h` no longer describe a Linux `share/linuxtrack` tree for mac installs
 - taught `ltr_int_get_app_path()` in `src/utils.c` to derive bundle-relative paths from the current executable on Darwin via `_NSGetExecutablePath`, so low-level data/library lookups can fall back to the app bundle even before `~/.config/linuxtrack/linuxtrack1.conf` exists
 - added `ltr_int_get_helper_path()` in `src/utils.c` / `src/utils.h` so mac helper binaries can resolve from `Contents/Resources/linuxtrack/helper` first and only then fall back to the old `../helper` layout; switched the legacy mac webcam driver and Qt webcam enumerator to use that helper-path abstraction
+- added `PrefProxy::getHelperPath()` in `src/qt_gui/ltr_gui_prefs.cpp` and switched the extractor UI away from `getDataPath("/../../helper/...")` so `cabextract` now follows the same bundle/helper resolution rules as the rest of the experimental app shell
 
 Verification run:
 

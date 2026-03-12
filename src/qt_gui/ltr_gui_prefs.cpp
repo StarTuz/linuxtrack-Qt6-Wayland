@@ -688,6 +688,16 @@ QString PrefProxy::getExecutablePath(QString file) {
                          true);
 }
 
+QString PrefProxy::getHelperPath(QString file) {
+  return findRuntimeFile(file,
+                         QStringList()
+                             << QString::fromUtf8("../Resources/linuxtrack/helper")
+                             << QString::fromUtf8("../helper")
+                             << QString::fromUtf8("../../helper")
+                             << QString::fromUtf8("helper"),
+                         true);
+}
+
 QString PrefProxy::getLibPath(QString file) {
   char *path = ltr_int_get_lib_path(file.toUtf8().constData());
   QString res = QString::fromUtf8(path);

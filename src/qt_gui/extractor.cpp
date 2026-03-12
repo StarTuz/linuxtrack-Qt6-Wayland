@@ -413,7 +413,7 @@ void Mfc42uExtractor::cabextractFinished(int exitCode,
     stage = 1;
     QString file = winePrefix + QString::fromUtf8("/vcredist.exe");
     progress(QString::fromUtf8("Extracting %1").arg(file));
-    QString c = PREF.getDataPath(QString::fromUtf8("/../../helper/cabextract"));
+    QString c = PREF.getHelperPath(QString::fromUtf8("cabextract"));
     QStringList args;
     args << file;
     cabextract->start(c, args);
@@ -490,7 +490,7 @@ void Mfc42uExtractor::commenceExtraction(QString file) {
   progress(QString::fromUtf8("Starting cabextract to extract '%1' in '%2'.")
                .arg(file)
                .arg(winePrefix));
-  QString c = PREF.getDataPath(QString::fromUtf8("/../../helper/cabextract"));
+  QString c = PREF.getHelperPath(QString::fromUtf8("cabextract"));
   cabextract->setWorkingDirectory(winePrefix);
   QStringList args;
   args << file;
