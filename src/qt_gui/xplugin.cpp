@@ -209,25 +209,13 @@ void XPluginInstall::on_BrowseXPlane_pressed() {
   // Robust search for the source plugin file
   QString sourceFile;
   QString pluginBase = QString::fromUtf8("xlinuxtrack9.so");
-  QString appDir = QApplication::applicationDirPath();
-
-  QStringList srcDirs;
-  srcDirs << appDir + QString::fromUtf8("/../lib/linuxtrack")
-          << appDir + QString::fromUtf8("/../lib")
-          << QString::fromUtf8("/opt/linuxtrack/lib/linuxtrack")
-          << QString::fromUtf8("/opt/linuxtrack/lib");
-
-  // Also check source build directories
-  srcDirs << appDir + QString::fromUtf8("/../../src")
-          << appDir + QString::fromUtf8("/../src");
-
-  foreach (const QString &dir, srcDirs) {
-    QString candidate = dir + QString::fromUtf8("/") + pluginBase;
-    if (QFile::exists(candidate)) {
-      sourceFile = candidate;
-      break;
-    }
-  }
+  sourceFile = PrefProxy::findRuntimeFile(
+      pluginBase,
+      QStringList()
+          << QString::fromUtf8("../lib/linuxtrack")
+          << QString::fromUtf8("../lib")
+          << QString::fromUtf8("../../src")
+          << QString::fromUtf8("../src"));
 
   if (sourceFile.isEmpty()) {
     sourceFile = PrefProxy::getLibPath(QString::fromUtf8("xlinuxtrack9"));

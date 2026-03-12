@@ -4,6 +4,7 @@
 
 #include "udp_settings.h"
 #include "ui_udp_settings.h"
+#include "ltr_gui_prefs.h"
 #include "prefix_discovery_dialog.h"
 #include <QSettings>
 #include <QMessageBox>
@@ -160,16 +161,18 @@ void UdpSettings::onInstallWineClicked()
     QDir().mkpath(destDir32);
     
     // Find the source DLLs (from install location or build directory)
-    QString libDir = QString::fromLatin1("/opt/linuxtrack/lib/linuxtrack");
-    if (!QFile::exists(libDir + QString::fromLatin1("/NPClient64UDP.dll.so"))) {
-        // Try build directory
-        libDir = QString::fromLatin1("/home/startux/Code/linuxtrackfixed/linuxtrack/build_local/src/wine_bridge");
-    }
-    
     bool success = true;
     
     // Copy 64-bit DLL to Program Files
-    QString src64 = libDir + QString::fromLatin1("/NPClient64UDP.dll.so");
+    QString src64 = PrefProxy::findRuntimeFile(
+        QString::fromLatin1("NPClient64UDP.dll.so"),
+        QStringList()
+            << QString::fromLatin1("../lib/linuxtrack")
+            << QString::fromLatin1("../lib")
+            << QString::fromLatin1("../../src/wine_bridge/client")
+            << QString::fromLatin1("../../src/wine_bridge")
+            << QString::fromLatin1("../../wine_bridge/client")
+            << QString::fromLatin1("../../wine_bridge"));
     QString dst64 = destDir64 + QString::fromLatin1("/NPClient64.dll");
     if (QFile::exists(src64)) {
         QFile::remove(dst64);
@@ -177,7 +180,15 @@ void UdpSettings::onInstallWineClicked()
     }
     
     // Copy 32-bit DLL to both directories (games may look in either)
-    QString src32 = libDir + QString::fromLatin1("/NPClientUDP.dll.so");
+    QString src32 = PrefProxy::findRuntimeFile(
+        QString::fromLatin1("NPClientUDP.dll.so"),
+        QStringList()
+            << QString::fromLatin1("../lib/linuxtrack")
+            << QString::fromLatin1("../lib")
+            << QString::fromLatin1("../../src/wine_bridge/client")
+            << QString::fromLatin1("../../src/wine_bridge")
+            << QString::fromLatin1("../../wine_bridge/client")
+            << QString::fromLatin1("../../wine_bridge"));
     if (QFile::exists(src32)) {
         // Program Files (for 64-bit loader looking for 32-bit compat)
         QString dst32_64 = destDir64 + QString::fromLatin1("/NPClient.dll");
@@ -191,7 +202,15 @@ void UdpSettings::onInstallWineClicked()
     }
     
     // Copy hotkey utility to 64-bit dir
-    QString srcHotkey = libDir + QString::fromLatin1("/ltr_wine_hotkeys.exe");
+    QString srcHotkey = PrefProxy::findRuntimeFile(
+        QString::fromLatin1("ltr_wine_hotkeys.exe"),
+        QStringList()
+            << QString::fromLatin1("../lib/linuxtrack")
+            << QString::fromLatin1("../lib")
+            << QString::fromLatin1("../../src/wine_bridge/controller")
+            << QString::fromLatin1("../../src/wine_bridge")
+            << QString::fromLatin1("../../wine_bridge/controller")
+            << QString::fromLatin1("../../wine_bridge"));
     QString dstHotkey = destDir64 + QString::fromLatin1("/ltr_wine_hotkeys.exe");
     if (QFile::exists(srcHotkey)) {
         QFile::remove(dstHotkey);
@@ -227,10 +246,13 @@ void UdpSettings::onInstallWineClicked()
     }
     
     // Method 2: Also try wine regedit as fallback (for regular Wine prefixes)
-    QString regFile = QString::fromLatin1("/opt/linuxtrack/share/linuxtrack/ltr_udp.reg");
-    if (!QFile::exists(regFile)) {
-        regFile = QString::fromLatin1("/home/startux/Code/linuxtrackfixed/linuxtrack/ltr_udp.reg");
-    }
+    QString regFile = PrefProxy::findRuntimeFile(
+        QString::fromLatin1("ltr_udp.reg"),
+        QStringList()
+            << QString::fromLatin1("../Resources/linuxtrack")
+            << QString::fromLatin1("../share/linuxtrack")
+            << QString::fromLatin1("../../..")
+            << QString::fromLatin1(".."));
     
     if (QFile::exists(regFile)) {
         QProcess proc;
@@ -429,5 +451,3 @@ void UdpSettings::updateStatus()
 }
 
 #include "moc_udp_settings.cpp"
-
-

@@ -488,35 +488,8 @@ void LinuxtrackGui::startHotkeyDaemon() {
             });
   }
 
-  // Find ltr_hotkeyd in various locations
-  QString exePath;
-
-  // 1. Check APPDIR (AppImage environment)
-  QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
-  if (!appDir.isEmpty()) {
-    QString appImagePath = appDir + QString::fromLatin1("/usr/bin/ltr_hotkeyd");
-    if (QFile::exists(appImagePath)) {
-      exePath = appImagePath;
-    }
-  }
-
-  // 2. Check installed location
-  if (exePath.isEmpty()) {
-    QString installPath =
-        QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkeyd");
-    if (QFile::exists(installPath)) {
-      exePath = installPath;
-    }
-  }
-
-  // 3. Check alongside ltr_gui
-  if (exePath.isEmpty()) {
-    QString siblingPath = QCoreApplication::applicationDirPath() +
-                          QString::fromLatin1("/ltr_hotkeyd");
-    if (QFile::exists(siblingPath)) {
-      exePath = siblingPath;
-    }
-  }
+  QString exePath =
+      PrefProxy::getExecutablePath(QString::fromLatin1("ltr_hotkeyd"));
 
   if (!exePath.isEmpty()) {
     qDebug() << "Starting ltr_hotkeyd from:" << exePath;
@@ -538,33 +511,8 @@ void LinuxtrackGui::on_NativeHotkeysConfigButton_pressed() {
   QProcess *guiProcess = new QProcess(this);
   connect(guiProcess, &QProcess::finished, guiProcess, &QObject::deleteLater);
 
-  // Try to find the GUI executable
-  QString exePath;
-  QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
-
-  if (!appDir.isEmpty()) {
-    QString appImagePath =
-        appDir + QString::fromLatin1("/usr/bin/ltr_hotkey_gui");
-    if (QFile::exists(appImagePath)) {
-      exePath = appImagePath;
-    }
-  }
-
-  if (exePath.isEmpty()) {
-    QString installPath =
-        QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkey_gui");
-    if (QFile::exists(installPath)) {
-      exePath = installPath;
-    }
-  }
-
-  if (exePath.isEmpty()) {
-    QString siblingPath = QCoreApplication::applicationDirPath() +
-                          QString::fromLatin1("/ltr_hotkey_gui");
-    if (QFile::exists(siblingPath)) {
-      exePath = siblingPath;
-    }
-  }
+  QString exePath =
+      PrefProxy::getExecutablePath(QString::fromLatin1("ltr_hotkey_gui"));
 
   if (!exePath.isEmpty()) {
     guiProcess->start(exePath, QStringList());

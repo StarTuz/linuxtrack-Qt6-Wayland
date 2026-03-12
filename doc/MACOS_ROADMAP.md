@@ -189,11 +189,20 @@ Completed so far:
 - taught `PrefProxy::getDataPath()` to resolve bundle-relative `Contents/Resources/linuxtrack` assets first on macOS so help files, default prefs, and extractor metadata can work from the app bundle instead of assuming a Linux-style `share/linuxtrack` layout
 - embedded the GUI data files, `linuxtrack1.conf`, `sources_mac.txt`, and Qt help files into the experimental mac bundle resource tree so later smoke tests can run against a self-contained app layout
 - updated install rules so experimental mac builds install the bundle as an app while Linux continues to install `ltr_gui` into `bin/`
+- isolated obvious Linux-only defaults from the experimental mac configure path by force-disabling Mickey and the Wine bridge under `APPLE AND BUILD_MAC_EXPERIMENTAL`, skipping Linux desktop metadata installs on macOS, and keeping Linux-only hotkey/plugin subdirectories out of the mac target graph
+- added `scripts/configure_macos_experimental.sh` as the canonical Phase 2 configure entry point for future mac testers; it enables `BUILD_MAC_EXPERIMENTAL`, disables known non-mac targets, turns off the neural tracker for the app-shell phase, and uses a repo-local staging prefix instead of `/opt/linuxtrack`
+- added `PrefProxy::findRuntimeFile()` / `getExecutablePath()` and switched several GUI helper flows (`ltr_udp`, hotkey daemons, Wine bridge injection, and X-Plane plugin lookup) away from hardcoded `/opt/linuxtrack` paths so they can resolve artifacts from an app bundle, AppImage, install tree, or development build layout
 
 Verification run:
 
 - `cmake -S . -B build_phase0_verify`
 - `cmake --build build_phase0_verify --target ltr_gui -j"$(nproc)"`
+
+Suggested experimental mac configure flow:
+
+- `scripts/configure_macos_experimental.sh`
+- `cmake --build build_macos_experimental --target ltr_gui -j"$(sysctl -n hw.ncpu)"`
+- `cmake --install build_macos_experimental`
 
 ### Phase 3: Webcam and Face Tracking
 

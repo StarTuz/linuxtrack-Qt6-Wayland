@@ -3,6 +3,7 @@
  */
 
 #include "udp_bridge.h"
+#include "ltr_gui_prefs.h"
 #include <QByteArray>
 #include <QFile>
 #include <cstring>
@@ -96,11 +97,7 @@ void UdpBridge::start()
     }
     
     // Find ltr_udp binary
-    QString ltrUdpPath = QString::fromLatin1("/opt/linuxtrack/bin/ltr_udp");
-    if (!QFile::exists(ltrUdpPath)) {
-        // Try build directory  
-        ltrUdpPath = QString::fromLatin1("/home/startux/Code/linuxtrackfixed/linuxtrack/build_local/src/ltr_udp");
-    }
+    QString ltrUdpPath = PrefProxy::getExecutablePath(QString::fromLatin1("ltr_udp"));
     
     if (QFile::exists(ltrUdpPath)) {
         ltrUdpProcess->start(ltrUdpPath, args);

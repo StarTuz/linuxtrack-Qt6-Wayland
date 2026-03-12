@@ -154,36 +154,19 @@ void PluginInstall::installLinuxtrackWine() {
                {"Controller.exe.so", "Controller.exe", "controller"},
                {nullptr, nullptr, nullptr}};
 
-  // Build a list of potential source directories
-  QStringList srcDirs;
-  QString appDir = QApplication::applicationDirPath();
-  srcDirs << appDir + QString::fromUtf8("/../lib/linuxtrack")
-          << appDir + QString::fromUtf8("/../lib")
-          << QString::fromUtf8("/opt/linuxtrack/lib/linuxtrack")
-          << QString::fromUtf8("/opt/linuxtrack/lib")
-          << appDir + QString::fromUtf8("/../share/linuxtrack");
-
-  // Also check the source build directories (for development and CMake
-  // structure)
-  srcDirs << appDir + QString::fromUtf8("/../wine_bridge")
-          << appDir + QString::fromUtf8("/../../src/wine_bridge")
-          << appDir + QString::fromUtf8("/../../wine_bridge")
-          << appDir + QString::fromUtf8("/../../wine_bridge/client")
-          << appDir + QString::fromUtf8("/../../wine_bridge/ft_client")
-          << appDir + QString::fromUtf8("/../../wine_bridge/controller");
-
   for (int i = 0; files[i].src != nullptr; ++i) {
-    QString srcPath;
-
-    // Try to find the source file in various locations
-    for (const QString &dir : srcDirs) {
-      QString candidate =
-          dir + QString::fromUtf8("/") + QString::fromUtf8(files[i].src);
-      if (QFile::exists(candidate)) {
-        srcPath = candidate;
-        break;
-      }
-    }
+    QString srcPath = PrefProxy::findRuntimeFile(
+        QString::fromUtf8(files[i].src),
+        QStringList()
+            << QString::fromUtf8("../lib/linuxtrack")
+            << QString::fromUtf8("../lib")
+            << QString::fromUtf8("../share/linuxtrack")
+            << QString::fromUtf8("../wine_bridge")
+            << QString::fromUtf8("../../src/wine_bridge")
+            << QString::fromUtf8("../../wine_bridge")
+            << QString::fromUtf8("../../wine_bridge/client")
+            << QString::fromUtf8("../../wine_bridge/ft_client")
+            << QString::fromUtf8("../../wine_bridge/controller"));
 
     // Also try getLibPath as fallback
     if (srcPath.isEmpty()) {

@@ -173,7 +173,7 @@ target_include_directories(ltr_udp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ..)
 target_link_libraries(ltr_udp ${LTR_LIBPTHREAD} ${LTR_LIBDL})
 
 # ltr_hotkeyd (Global hotkey daemon for native games - X11/Wayland)
-if(X11_FOUND)
+if(X11_FOUND AND NOT APPLE)
     add_executable(ltr_hotkeyd ltr_hotkeyd.c linuxtrack.c)
     target_include_directories(ltr_hotkeyd PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ..)
     target_link_libraries(ltr_hotkeyd ${X11_LIBRARIES} ${LTR_LIBPTHREAD} ${LTR_LIBDL})
@@ -193,14 +193,16 @@ if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
 
-# Native Hotkey GUI
-add_subdirectory(ltr_hotkey_gui)
+if(NOT APPLE)
+    # Native Hotkey GUI
+    add_subdirectory(ltr_hotkey_gui)
 
-# SCS Plugin (ETS2/ATS Native Head Tracking)
-add_subdirectory(scs_plugin)
+    # SCS Plugin (ETS2/ATS Native Head Tracking)
+    add_subdirectory(scs_plugin)
 
-# Native NPClient (TrackIR emulation for Linux games)
-add_subdirectory(npclient_linux)
+    # Native NPClient (TrackIR emulation for Linux games)
+    add_subdirectory(npclient_linux)
+endif()
 
 # --- Installation ---
 

@@ -18,6 +18,16 @@ option(BUILD_WINE_BRIDGE "Build Wine bridge (requires winegcc)" ON)
 option(BUILD_MAC_EXPERIMENTAL
        "Enable experimental macOS-specific build scaffolding"
        OFF)
+if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+    if(BUILD_MICKEY)
+        message(STATUS "Disabling Mickey for the experimental macOS build")
+        set(BUILD_MICKEY OFF CACHE BOOL "Build Mickey mouse emulator" FORCE)
+    endif()
+    if(BUILD_WINE_BRIDGE)
+        message(STATUS "Disabling Wine bridge for the experimental macOS build")
+        set(BUILD_WINE_BRIDGE OFF CACHE BOOL "Build Wine bridge (requires winegcc)" FORCE)
+    endif()
+endif()
 if(UNIX AND NOT APPLE)
     option(LINUXTRACK_INSTALL_STANDARD_INTEGRATION
            "Install desktop files, wrappers, AppStream metadata, and udev rules into standard system paths"
@@ -75,7 +85,7 @@ if(BUILD_GUI OR BUILD_MICKEY)
 endif()
 
 # X11 for Mickey
-if(BUILD_MICKEY)
+if(BUILD_MICKEY AND UNIX AND NOT APPLE)
     find_package(X11 REQUIRED)
 endif()
 
@@ -230,16 +240,18 @@ endif()
 
 # Installation of global files
 install(FILES README README.devel README.xplane doc/README.ltr_pipe DESTINATION share/doc/linuxtrack)
-install(FILES src/linuxtrack.desktop src/linuxtrack-wii.desktop
-        DESTINATION "${LINUXTRACK_SYSTEM_APPLICATIONS_DIR}")
-install(FILES src/linuxtrack.svg src/linuxtrack-wii.svg
-        DESTINATION "${LINUXTRACK_SYSTEM_ICON_SCALABLE_DIR}")
-install(FILES src/linuxtrack.png src/linuxtrack-wii.png
-        DESTINATION "${LINUXTRACK_SYSTEM_ICON_48_DIR}")
-install(FILES src/linuxtrack.xpm src/linuxtrack-wii.xpm
-        DESTINATION "${LINUXTRACK_SYSTEM_PIXMAPS_DIR}")
-install(FILES packaging/linuxtrack.metainfo.xml
-        DESTINATION "${LINUXTRACK_SYSTEM_METAINFODIR}")
+if(NOT APPLE)
+    install(FILES src/linuxtrack.desktop src/linuxtrack-wii.desktop
+            DESTINATION "${LINUXTRACK_SYSTEM_APPLICATIONS_DIR}")
+    install(FILES src/linuxtrack.svg src/linuxtrack-wii.svg
+            DESTINATION "${LINUXTRACK_SYSTEM_ICON_SCALABLE_DIR}")
+    install(FILES src/linuxtrack.png src/linuxtrack-wii.png
+            DESTINATION "${LINUXTRACK_SYSTEM_ICON_48_DIR}")
+    install(FILES src/linuxtrack.xpm src/linuxtrack-wii.xpm
+            DESTINATION "${LINUXTRACK_SYSTEM_PIXMAPS_DIR}")
+    install(FILES packaging/linuxtrack.metainfo.xml
+            DESTINATION "${LINUXTRACK_SYSTEM_METAINFODIR}")
+endif()
 if(LINUXTRACK_INSTALL_STANDARD_INTEGRATION)
     install(FILES src/99-TIR.rules src/99-Mickey.rules
             DESTINATION "${LINUXTRACK_SYSTEM_UDEV_RULES_DIR}")

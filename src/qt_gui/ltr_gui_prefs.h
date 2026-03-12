@@ -54,7 +54,10 @@ class PrefProxy{
   bool makeRsrcDir();
   bool copyDefaultPrefs();
   void announceModelChange();
+  static QString findRuntimeFile(QString file, const QStringList &relativeDirs,
+                                 bool searchPath = false);
   static QString getDataPath(QString file);
+  static QString getExecutablePath(QString file);
   static QString getLibPath(QString file);
   static QString getRsrcDirPath();
   void getSectionList(QStringList &list);

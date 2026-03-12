@@ -12,6 +12,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QStandardPaths>
 #include <QStringList>
 #include <vector>
 #include <iostream>
@@ -585,6 +586,50 @@ bool PrefProxy::savePrefs() {
   return res;
 }
 
+QString PrefProxy::findRuntimeFile(QString file,
+                                   const QStringList &relativeDirs,
+                                   bool searchPath) {
+  QFileInfo fileInfo(file);
+  if (fileInfo.isAbsolute()) {
+    return fileInfo.exists() ? fileInfo.absoluteFilePath() : QString();
+  }
+
+  QString normalizedFile = file;
+  while (normalizedFile.startsWith(QChar::fromLatin1('/'))) {
+    normalizedFile.remove(0, 1);
+  }
+
+  QStringList roots;
+  QString appDirEnv = QString::fromLocal8Bit(qgetenv("APPDIR"));
+  if (!appDirEnv.isEmpty()) {
+    roots << appDirEnv;
+  }
+  roots << QApplication::applicationDirPath();
+
+  for (const QString &root : roots) {
+    QDir dir(root);
+    for (const QString &relativeDir : relativeDirs) {
+      QString candidate = relativeDir.isEmpty()
+                              ? dir.absoluteFilePath(normalizedFile)
+                              : dir.absoluteFilePath(relativeDir +
+                                                     QString::fromUtf8("/") +
+                                                     normalizedFile);
+      if (QFileInfo::exists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  if (searchPath) {
+    QString pathHit = QStandardPaths::findExecutable(normalizedFile);
+    if (!pathHit.isEmpty()) {
+      return pathHit;
+    }
+  }
+
+  return QString();
+}
+
 QString PrefProxy::getDataPath(QString file) {
   QString appPath = QApplication::applicationDirPath();
   QString appDirEnv = QString::fromLocal8Bit(qgetenv("APPDIR"));
@@ -628,6 +673,19 @@ QString PrefProxy::getDataPath(QString file) {
     return appPath + QString::fromUtf8("/../Resources/linuxtrack/") + file;
   #endif
   */
+}
+
+QString PrefProxy::getExecutablePath(QString file) {
+  return findRuntimeFile(file,
+                         QStringList()
+                             << QString::fromUtf8("usr/bin")
+                             << QString::fromUtf8("")
+                             << QString::fromUtf8("..")
+                             << QString::fromUtf8("../bin")
+                             << QString::fromUtf8("../../src")
+                             << QString::fromUtf8("../../bin")
+                             << QString::fromUtf8("../Resources/linuxtrack/bin"),
+                         true);
 }
 
 QString PrefProxy::getLibPath(QString file) {
