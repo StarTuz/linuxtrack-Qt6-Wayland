@@ -93,7 +93,11 @@ static struct func_defs_t functions[] = {
     {(char *)NULL, NULL, 0}};
 
 static const char *lib_locations[] = {
+#ifdef DARWIN
+    "@executable_path/../Frameworks/liblinuxtrack.dylib",
+    "@loader_path/../Frameworks/liblinuxtrack.dylib", "@rpath/liblinuxtrack.dylib",
     "/Frameworks/liblinuxtrack.dylib",
+#endif
     /* Local prefix paths (standard) */
     "/lib/linuxtrack/liblinuxtrack32.so.0",
     "/lib/linuxtrack/liblinuxtrack32.so", "/lib/linuxtrack/liblinuxtrack.so.0",
@@ -350,6 +354,19 @@ static void *linuxtrack_find_library(linuxtrack_state_type *problem) {
       return handle;
     }
   }
+
+#ifdef DARWIN
+  int i = 0;
+  while (lib_locations[i] != NULL) {
+    if (lib_locations[i][0] == '@') {
+      if ((handle = linuxtrack_try_library(lib_locations[i++])) != NULL) {
+        return handle;
+      }
+      continue;
+    }
+    break;
+  }
+#endif
 
   prefix = linuxtrack_get_prefix();
   if (prefix == NULL) {

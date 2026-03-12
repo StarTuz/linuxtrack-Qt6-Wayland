@@ -387,44 +387,8 @@ void UdpSettings::onStartStopClicked()
                 });
             }
             
-            // Find ltr_hotkeyd in various locations
-            QString exePath;
-            
-            // 1. Check APPDIR (AppImage environment)
-            QString appDir = QString::fromLocal8Bit(qgetenv("APPDIR"));
-            if (!appDir.isEmpty()) {
-                QString appImagePath = appDir + QString::fromLatin1("/usr/bin/ltr_hotkeyd");
-                if (QFile::exists(appImagePath)) {
-                    exePath = appImagePath;
-                }
-            }
-            
-            // 2. Check installed location
-            if (exePath.isEmpty()) {
-                QString installPath = QString::fromLatin1("/opt/linuxtrack/bin/ltr_hotkeyd");
-                if (QFile::exists(installPath)) {
-                    exePath = installPath;
-                }
-            }
-            
-            // 3. Check alongside ltr_gui (build directory or /usr/bin)
-            if (exePath.isEmpty()) {
-                QString siblingPath = QCoreApplication::applicationDirPath() + QString::fromLatin1("/ltr_hotkeyd");
-                if (QFile::exists(siblingPath)) {
-                    exePath = siblingPath;
-                }
-            }
-            
-            // 4. Check PATH
-            if (exePath.isEmpty()) {
-                QString pathLookup = QString::fromLatin1("ltr_hotkeyd");
-                // Check if it exists in PATH by trying to find it
-                QProcess which;
-                which.start(QString::fromLatin1("which"), QStringList() << pathLookup);
-                if (which.waitForFinished(1000) && which.exitCode() == 0) {
-                    exePath = QString::fromLocal8Bit(which.readAllStandardOutput().trimmed());
-                }
-            }
+            QString exePath =
+                PrefProxy::getExecutablePath(QString::fromLatin1("ltr_hotkeyd"));
             
             if (!exePath.isEmpty()) {
                 qDebug() << "Starting ltr_hotkeyd from:" << exePath;
