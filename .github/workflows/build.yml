@@ -39,12 +39,6 @@ jobs:
             qt6-base-dev qt6-tools-dev qt6-tools-dev-tools \
             libgl1-mesa-dev libglu1-mesa-dev libx11-dev qt6-l10n-tools libxkbcommon-dev
 
-      - name: Download Catch2 for tests
-        run: |
-          mkdir -p src/tests/catch2
-          wget -q https://github.com/catchorg/Catch2/releases/download/v3.4.0/catch_amalgamated.hpp -O src/tests/catch2/catch_amalgamated.hpp
-          wget -q https://github.com/catchorg/Catch2/releases/download/v3.4.0/catch_amalgamated.cpp -O src/tests/catch2/catch_amalgamated.cpp
-
       - name: Build 32-bit Wine Bridge (Pass 1)
         run: |
           sudo apt-get install -y wine32-tools libwine-dev:i386
@@ -230,12 +224,6 @@ jobs:
             lib32-freetype2 lib32-fontconfig lib32-attr \
             lib32-glibc lib32-gcc-libs \
             mingw-w64-gcc
-
-      - name: Download Catch2 for tests
-        run: |
-          mkdir -p src/tests/catch2
-          wget -q https://github.com/catchorg/Catch2/releases/download/v3.4.0/catch_amalgamated.hpp -O src/tests/catch2/catch_amalgamated.hpp
-          wget -q https://github.com/catchorg/Catch2/releases/download/v3.4.0/catch_amalgamated.cpp -O src/tests/catch2/catch_amalgamated.cpp
 
       - name: Build
         run: |
