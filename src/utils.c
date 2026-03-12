@@ -22,6 +22,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef DARWIN
+#include <mach-o/dyld.h>
+#endif
+
 #include "utils.h"
 
 #define MAX_LOGS 10
@@ -286,15 +290,43 @@ char *ltr_int_get_ipc_path(const char *fname) {
 }
 
 char *ltr_int_get_app_path(const char *suffix) {
+#ifdef DARWIN
+  uint32_t exe_path_size = 0;
+  char *bundle_path = NULL;
+  if (_NSGetExecutablePath(NULL, &exe_path_size) != 0 && exe_path_size > 0) {
+    char *exe_path = ltr_int_my_malloc(exe_path_size);
+    if (_NSGetExecutablePath(exe_path, &exe_path_size) == 0) {
+      char *resolved = realpath(exe_path, NULL);
+      char *base = (resolved != NULL) ? resolved : exe_path;
+      char *last_slash = strrchr(base, '/');
+      if (last_slash != NULL) {
+        *last_slash = '\0';
+        bundle_path = ltr_int_my_strcat(base, suffix);
+      }
+      if (resolved != NULL) {
+        free(resolved);
+      }
+    }
+    free(exe_path);
+  }
+#endif
   char *fname = ltr_int_get_default_file_name(NULL);
   if (fname == NULL) {
+#ifdef DARWIN
+    return bundle_path;
+#else
     return NULL;
+#endif
   }
   FILE *f = fopen(fname, "r");
   if (f == NULL) {
     ltr_int_log_message("Can't open file '%s'!\n", fname);
     free(fname);
+#ifdef DARWIN
+    return bundle_path;
+#else
     return NULL;
+#endif
   }
 
   free(fname);
@@ -316,10 +348,17 @@ char *ltr_int_get_app_path(const char *suffix) {
   }
   fclose(f);
   if (found) {
+#ifdef DARWIN
+    free(bundle_path);
+#endif
     return ltr_int_my_strcat(val, suffix);
   }
   ltr_int_log_message("Couldn't find prefix!\n");
+#ifdef DARWIN
+  return bundle_path;
+#else
   return NULL;
+#endif
 }
 
 #ifndef DARWIN
@@ -347,6 +386,28 @@ char *ltr_int_get_data_path_prefix(const char *data, const char *prefix) {
   char *data_path = ltr_int_my_strcat(app_path, data);
   free(app_path);
   return data_path;
+}
+
+char *ltr_int_get_helper_path(const char *helper) {
+#ifdef DARWIN
+  char *bundle_helper_dir =
+      ltr_int_get_app_path("/../Resources/linuxtrack/helper/");
+  if (bundle_helper_dir != NULL) {
+    char *bundle_helper_path = ltr_int_my_strcat(bundle_helper_dir, helper);
+    free(bundle_helper_dir);
+    if (access(bundle_helper_path, F_OK) == 0) {
+      return bundle_helper_path;
+    }
+    free(bundle_helper_path);
+  }
+#endif
+  char *legacy_helper_dir = ltr_int_get_app_path("/../helper/");
+  if (legacy_helper_dir == NULL) {
+    return NULL;
+  }
+  char *helper_path = ltr_int_my_strcat(legacy_helper_dir, helper);
+  free(legacy_helper_dir);
+  return helper_path;
 }
 
 char *ltr_int_get_lib_path(const char *libname) {

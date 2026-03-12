@@ -105,7 +105,12 @@ find_package(FLEX REQUIRED)
 find_package(BISON REQUIRED)
 
 # Paths for installation and configuration
-set(Linuxtrack_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/linuxtrack")
+if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+    set(Linuxtrack_DATA_DIR
+        "${CMAKE_INSTALL_PREFIX}/Linuxtrack.app/Contents/Resources/linuxtrack")
+else()
+    set(Linuxtrack_DATA_DIR "${CMAKE_INSTALL_PREFIX}/share/linuxtrack")
+endif()
 set(Linuxtrack_HELP_DIR "${Linuxtrack_DATA_DIR}/help")
 add_definitions(-DLTR_DATA_PATH="${Linuxtrack_DATA_DIR}")
 

@@ -60,7 +60,7 @@ int ltr_int_tracker_init(struct camera_control_block *ccb)
   
   ltr_int_wc_get_resolution(&width, &height);
   
-  char *cap_path = ltr_int_get_app_path("/../helper/qt_cam");
+  char *cap_path = ltr_int_get_helper_path("qt_cam");
   char *cam_id = ltr_int_my_strdup(ltr_int_wc_get_id());
   char *cascade = NULL;
   if(ccb->device.category == mac_webcam_ft){
@@ -128,4 +128,3 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   }
   return 0;
 }
-
