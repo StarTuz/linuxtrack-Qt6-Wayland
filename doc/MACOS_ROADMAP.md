@@ -202,6 +202,7 @@ Completed so far:
 - taught `ltr_int_read_prefs()` in `src/pref.cpp` to fall back to the packaged `linuxtrack1.conf` from the install/bundle data path when the user config is missing, reducing first-run dependence on `~/.config/linuxtrack/linuxtrack1.conf` for non-GUI startup paths
 - updated `src/ltr_server1.c` diagnostics so startup/path validation reflects the newer install/bundle fallback model instead of assuming a missing user config is always the root cause
 - taught both `src/utils.c` and `src/linuxtrack.c` to honor `XDG_CONFIG_HOME` before falling back to `HOME/.config/linuxtrack`, reducing another Linux-specific home-layout assumption in shared config/runtime lookup
+- removed the remaining developer-machine fallback paths from `src/wine_bridge/client/rest.c`; the UDP Wine bridge now relies on the existing `HOME` / `USERPROFILE` / current-directory chain instead of silently probing `/home/startux/...`
 
 Verification run:
 

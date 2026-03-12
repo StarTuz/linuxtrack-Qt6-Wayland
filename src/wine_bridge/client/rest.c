@@ -102,14 +102,8 @@ bool game_data_get_desc(int id, game_desc_t *gd) {
 #endif
   if ((f = fopen(path1, "r")) == NULL) {
     udp_log("UDP Bridge ERROR: Can't open data file '%s'\n", path1);
-    /* Try a hardcoded path as fallback since Wine HOME can be weird */
-    const char *fallback = "/home/startux/.config/linuxtrack/tir_firmware/gamedata.txt";
-    if ((f = fopen(fallback, "r")) == NULL) {
-        udp_log("UDP Bridge ERROR: Fallback '%s' also failed\n", fallback);
-        free(path1);
-        return false;
-    }
-    udp_log("UDP Bridge: Using fallback path for gamedata.txt\n");
+    free(path1);
+    return false;
   } else {
     udp_log("UDP Bridge: Opened gamedata.txt at %s\n", path1);
   }
@@ -750,17 +744,8 @@ bool getSomeSeriousPoetry(char *verse1, char *verse2) {
     // udp_log("UDP Bridge: Signature 1 OK\n");
     fclose(f1);
   } else {
-    /* Fallback */
-    const char *fallback = "/home/startux/.config/linuxtrack/tir_firmware/poem1.txt";
-    f1 = fopen(fallback, "rb");
-    if(f1 != NULL){
-        fread(verse1, 1, 200, f1);
-        fclose(f1);
-        udp_log("UDP Bridge: Using fallback for poem1\n");
-    } else {
-        udp_log("UDP Bridge: Can't open dll signature ('%s')!\n", path1);
-        res = false;
-    }
+    udp_log("UDP Bridge: Can't open dll signature ('%s')!\n", path1);
+    res = false;
   }
   free(path1);
   FILE *f2 = fopen(path2, "rb");
@@ -772,17 +757,8 @@ bool getSomeSeriousPoetry(char *verse1, char *verse2) {
     }
     fclose(f2);
   } else {
-    /* Fallback */
-    const char *fallback = "/home/startux/.config/linuxtrack/tir_firmware/poem2.txt";
-    f2 = fopen(fallback, "rb");
-    if(f2 != NULL){
-        fread(verse2, 1, 200, f2);
-        fclose(f2);
-        udp_log("UDP Bridge: Using fallback for poem2\n");
-    } else {
-        udp_log("UDP Bridge: Cant open app signature('%s')!\n", path2);
-        res = false;
-    }
+    udp_log("UDP Bridge: Cant open app signature('%s')!\n", path2);
+    res = false;
   }
   free(path2);
   return res;
