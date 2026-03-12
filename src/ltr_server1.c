@@ -25,12 +25,19 @@ static void validate_paths(void) {
     fprintf(stderr, "\n");
     fprintf(
         stderr,
-        "This usually means the configuration file is missing or invalid.\n");
-    fprintf(stderr, "Expected config: ~/.config/linuxtrack/linuxtrack1.conf\n");
+        "Linuxtrack could not resolve its runtime library location from the\n");
+    fprintf(stderr,
+            "current install/bundle layout or the user configuration.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Solutions:\n");
-    fprintf(stderr, "  1. Run ltr_gui to create/update configuration\n");
-    fprintf(stderr, "  2. Reinstall linuxtrack\n");
+    fprintf(stderr,
+            "  1. Run ltr_gui once so linuxtrack can save/update preferences\n");
+    fprintf(stderr,
+            "  2. Reinstall linuxtrack or rebuild the experimental app shell\n");
+    fprintf(stderr,
+            "  3. If testing manually, verify the bundle/install contains the\n");
+    fprintf(stderr,
+            "     expected libraries and resources next to the executable\n");
     fprintf(stderr, "\n");
     // Don't exit - let it try to continue, the actual load will fail with more
     // info
@@ -50,17 +57,18 @@ static void validate_paths(void) {
     fprintf(stderr, "Expected: %s\n", lib_path);
     fprintf(stderr, "\n");
     fprintf(stderr,
-            "This binary was installed/configured for a different location.\n");
+            "This binary resolved a library path that does not exist.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Solutions:\n");
     fprintf(stderr,
-            "  1. Run ltr_gui from the correct installation, save settings\n");
+            "  1. Run ltr_gui from the same install/bundle and save settings\n");
     fprintf(stderr, "  2. Reinstall linuxtrack to the expected location\n");
     fprintf(stderr,
-            "  3. Set LD_LIBRARY_PATH to include the library directory\n");
+            "  3. On Linux, set LD_LIBRARY_PATH to include the library directory\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "For debugging, check:\n");
-    fprintf(stderr, "  - Config file: ~/.config/linuxtrack/linuxtrack1.conf\n");
+    fprintf(stderr,
+            "  - User config: ~/.config/linuxtrack/linuxtrack1.conf\n");
     fprintf(stderr, "  - Log file: /tmp/linuxtrack*.log\n");
     fprintf(stderr, "\n");
     // Don't exit - let it try to continue for non-critical paths

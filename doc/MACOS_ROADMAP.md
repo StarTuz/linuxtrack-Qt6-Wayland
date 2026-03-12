@@ -200,6 +200,7 @@ Completed so far:
 - added `PrefProxy::getHelperPath()` in `src/qt_gui/ltr_gui_prefs.cpp` and switched the extractor UI away from `getDataPath("/../../helper/...")` so `cabextract` now follows the same bundle/helper resolution rules as the rest of the experimental app shell
 - replaced the legacy hardcoded `/tmp/xxx` mmap path in `src/macwebcam_driver.c` with `ltr_int_get_ipc_path("macwebcam_capture.mmap")`, so the old mac webcam helper now uses linuxtrack-managed runtime state instead of a global temp filename
 - taught `ltr_int_read_prefs()` in `src/pref.cpp` to fall back to the packaged `linuxtrack1.conf` from the install/bundle data path when the user config is missing, reducing first-run dependence on `~/.config/linuxtrack/linuxtrack1.conf` for non-GUI startup paths
+- updated `src/ltr_server1.c` diagnostics so startup/path validation reflects the newer install/bundle fallback model instead of assuming a missing user config is always the root cause
 
 Verification run:
 
