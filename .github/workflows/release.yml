@@ -53,6 +53,28 @@ jobs:
           sudo apt-get remove -y wine32-tools libwine-dev:i386
           sudo apt-get autoremove -y
 
+      - name: Install X-Plane SDK headers
+        run: |
+          wget -q https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK430.zip -O xpsdk.zip
+          unzip -q xpsdk.zip -d xpsdk_tmp
+          XPLM_HEADER=$(find xpsdk_tmp -name "XPLMPlugin.h" | head -1)
+          WIDGETS_HEADER=$(find xpsdk_tmp -name "XPWidgets.h" | head -1)
+          if [ -z "$XPLM_HEADER" ]; then
+            echo "ERROR: XPLMPlugin.h not found in SDK zip. Contents:"
+            find xpsdk_tmp -name "*.h" | head -20
+            exit 1
+          fi
+          XPLM_DIR=$(dirname "$XPLM_HEADER")
+          WIDGETS_DIR=$(dirname "$WIDGETS_HEADER")
+          echo "XPLM headers found at: $XPLM_DIR"
+          echo "Widget headers found at: $WIDGETS_DIR"
+          sudo mkdir -p /usr/include/xplane_sdk/XPLM
+          sudo mkdir -p /usr/include/xplane_sdk/Widgets
+          sudo cp "$XPLM_DIR"/*.h /usr/include/xplane_sdk/XPLM/
+          sudo cp "$WIDGETS_DIR"/*.h /usr/include/xplane_sdk/Widgets/
+          echo "Installed XPLM headers:"
+          ls /usr/include/xplane_sdk/XPLM/ | head -5
+
       - name: Build Main System (Pass 2)
         run: |
           sudo apt-get install -y wine64-tools libwine-dev
