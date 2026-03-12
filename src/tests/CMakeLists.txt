@@ -56,6 +56,44 @@ target_include_directories(test_image_process PRIVATE
 add_test(NAME test_image_process COMMAND test_image_process)
 
 # -------------------------------------------------------------------------
+# test_pref_global — shared device/pref semantics used by Linux and macOS
+# -------------------------------------------------------------------------
+set(PREF_GLOBAL_TEST_SOURCES
+    test_pref_global.cpp
+    ../pref_global.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_pref_global ${PREF_GLOBAL_TEST_SOURCES})
+
+target_include_directories(test_pref_global PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_pref_global COMMAND test_pref_global)
+
+# -------------------------------------------------------------------------
+# test_tracking — shared pose routing and failure invariants
+# -------------------------------------------------------------------------
+set(TRACKING_TEST_SOURCES
+    test_tracking.cpp
+    stubs_utils.cpp
+    ../tracking.c
+    ../math_utils.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_tracking ${TRACKING_TEST_SOURCES})
+
+target_include_directories(test_tracking PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_tracking COMMAND test_tracking)
+
+# -------------------------------------------------------------------------
 # test_wc_driver_prefs — webcam face-tracker pref defaults and clamping
 # -------------------------------------------------------------------------
 set(WC_DRIVER_PREFS_TEST_SOURCES

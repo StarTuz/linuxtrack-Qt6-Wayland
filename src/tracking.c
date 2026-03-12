@@ -445,7 +445,7 @@ int ltr_int_update_pose(struct frame_type *frame)
   current_pose.blobs = frame->bloblist.num_blobs;
 
   pthread_mutex_unlock(&pose_mutex);
-  bool res = -1;
+  int res = -1;
   if(ltr_int_is_face() && frame->bloblist.num_blobs >= 3){
     res = update_absolute_pose(frame);
   }else if(ltr_int_is_single_point()){

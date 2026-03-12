@@ -99,6 +99,8 @@ Verification run:
 
 ### Phase 1: Shared-Core Hardening
 
+**Status:** IN PROGRESS (2026-03-11)
+
 Purpose:
 
 - ensure the tracking pipeline is testable without hardware and portable across platforms
@@ -126,6 +128,21 @@ Exit criteria:
 
 - core tracking tests run without real hardware
 - Linux webcam and TrackIR behavior is unchanged
+
+Completed so far:
+
+- added `test_pref_global` to lock down device-category mapping for `MacWebcam`, `MacWebcam-face`, `Ps3Eye`, and `Ps3Eye-face`
+- added `test_tracking` to lock down shared `tracking.c` behavior for:
+  - single-point face `tz` estimation from face-size changes
+  - face-tracker routing to the absolute-pose path when 3 blobs are present
+  - 3-point solver failure not advancing the pose counter
+- extended `test_wc_driver_prefs` so `MacWebcam-face` shares the same camera FOV defaults and clamping behavior as `Webcam-face`
+- fixed a real shared-core bug in `src/tracking.c` where `ltr_int_update_pose()` stored its result in a `bool`, collapsing `-1` failure/discard returns into `1`
+
+Verification run:
+
+- `cmake --build build_phase0_verify --target test_pref_global test_tracking test_wc_driver_prefs -j"$(nproc)"`
+- `ctest --test-dir build_phase0_verify --output-on-failure`
 
 ### Phase 2: macOS App Shell
 

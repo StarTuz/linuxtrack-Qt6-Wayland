@@ -27,6 +27,7 @@ char *dup_cstr(const std::string &value) {
 
 void reset_prefs(const char *device_type) {
   prefs.clear();
+  device_section = device_type;
   prefs[device_section]["Capture-device"] = device_type;
 }
 
@@ -131,6 +132,19 @@ TEST_CASE("face tracker camera fov honors saved overrides", "[wc_prefs]") {
 
   REQUIRE(ltr_int_wc_init_prefs());
   REQUIRE(ltr_int_wc_get_camera_fov() == Catch::Approx(72.5f));
+}
+
+TEST_CASE("mac face tracker camera fov uses the same defaults and clamping",
+          "[wc_prefs]") {
+  reset_prefs("MacWebcam-face");
+
+  REQUIRE(ltr_int_wc_init_prefs());
+  REQUIRE(ltr_int_wc_get_camera_fov() == Catch::Approx(56.0f));
+
+  REQUIRE(ltr_int_wc_set_camera_fov(145.0f));
+  REQUIRE(ltr_int_wc_get_camera_fov() == Catch::Approx(140.0f));
+  REQUIRE(get_pref_float("MacWebcam-face", "Camera-fov") ==
+          Catch::Approx(140.0f));
 }
 
 TEST_CASE("face tracker camera fov setter clamps to supported range",
