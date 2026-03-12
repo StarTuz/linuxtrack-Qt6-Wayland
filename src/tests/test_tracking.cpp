@@ -276,6 +276,33 @@ TEST_CASE("camera orientation helper normalizes an entire bloblist",
   CHECK(bloblist.blobs[1].y == Catch::Approx(-30.0f));
 }
 
+TEST_CASE("frame snapshot helper copies resolution and blob data",
+          "[tracking]") {
+  linuxtrack_full_pose_t pose{};
+  for (float &entry : pose.blob_list) {
+    entry = 99.0f;
+  }
+
+  auto frame = make_frame(
+      800, 600, 8000,
+      {{1.0f, 2.0f, 10}, {3.0f, 4.0f, 20}});
+
+  ltr_int_snapshot_frame_to_pose(&frame.frame, &pose);
+
+  CHECK(pose.pose.resolution_x == 800);
+  CHECK(pose.pose.resolution_y == 600);
+  CHECK(pose.blobs == 2);
+  CHECK(pose.blob_list[0] == Catch::Approx(1.0f));
+  CHECK(pose.blob_list[1] == Catch::Approx(2.0f));
+  CHECK(pose.blob_list[2] == Catch::Approx(10.0f));
+  CHECK(pose.blob_list[3] == Catch::Approx(3.0f));
+  CHECK(pose.blob_list[4] == Catch::Approx(4.0f));
+  CHECK(pose.blob_list[5] == Catch::Approx(20.0f));
+  CHECK(pose.blob_list[6] == Catch::Approx(0.0f));
+  CHECK(pose.blob_list[7] == Catch::Approx(0.0f));
+  CHECK(pose.blob_list[8] == Catch::Approx(0.0f));
+}
+
 TEST_CASE("behind orientation flips shared 3-point pose signs", "[tracking]") {
   reset_tracking_stubs();
   g_orientation = ORIENT_FROM_BEHIND;

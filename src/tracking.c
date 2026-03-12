@@ -139,6 +139,23 @@ ltr_pose_route_t ltr_int_select_pose_route(bool is_face,
   return LTR_POSE_ROUTE_THREE_POINT;
 }
 
+void ltr_int_snapshot_frame_to_pose(const struct frame_type *frame,
+                                    linuxtrack_full_pose_t *pose)
+{
+  unsigned int i;
+  pose->pose.resolution_x = frame->width;
+  pose->pose.resolution_y = frame->height;
+  for(i = 0; i < MAX_BLOBS * BLOB_ELEMENTS; ++i){
+    pose->blob_list[i] = 0.0f;
+  }
+  for(i = 0; i < frame->bloblist.num_blobs; ++i){
+    pose->blob_list[i * BLOB_ELEMENTS] = frame->bloblist.blobs[i].x;
+    pose->blob_list[i * BLOB_ELEMENTS + 1] = frame->bloblist.blobs[i].y;
+    pose->blob_list[i * BLOB_ELEMENTS + 2] = frame->bloblist.blobs[i].score;
+  }
+  pose->blobs = frame->bloblist.num_blobs;
+}
+
 static int update_pose_1pt(struct frame_type *frame)
 {
   static float c_x = 0.0f;
@@ -446,22 +463,10 @@ int ltr_int_update_pose(struct frame_type *frame)
     ltr_int_check_pose();
     recenter = true;
   }
-  unsigned int i;
   ltr_int_normalize_bloblist_for_camera_orientation(frame->bloblist, orientation);
   ltr_int_pose_sort_blobs(frame->bloblist);
   pthread_mutex_lock(&pose_mutex);
-  current_pose.pose.resolution_x = frame->width;
-  current_pose.pose.resolution_y = frame->height;
-  for(i = 0; i < MAX_BLOBS * BLOB_ELEMENTS; ++i){
-    current_pose.blob_list[i] = 0.0;
-  }
-  for(i = 0; i < frame->bloblist.num_blobs; ++i){
-    current_pose.blob_list[i * BLOB_ELEMENTS] = frame->bloblist.blobs[i].x;
-    current_pose.blob_list[i * BLOB_ELEMENTS + 1] = frame->bloblist.blobs[i].y;
-    current_pose.blob_list[i * BLOB_ELEMENTS + 2] = frame->bloblist.blobs[i].score;
-  }
-  current_pose.blobs = frame->bloblist.num_blobs;
-
+  ltr_int_snapshot_frame_to_pose(frame, &current_pose);
   pthread_mutex_unlock(&pose_mutex);
   int res = -1;
   switch(ltr_int_select_pose_route(ltr_int_is_face(), ltr_int_is_single_point(),

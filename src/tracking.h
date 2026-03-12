@@ -40,6 +40,8 @@ ltr_pose_route_t ltr_int_select_pose_route(bool is_face,
                                            bool is_single_point,
                                            bool is_absolute,
                                            unsigned int blob_count);
+void ltr_int_snapshot_frame_to_pose(const struct frame_type *frame,
+                                    linuxtrack_full_pose_t *pose);
 /*
 double ltr_int_nonlinfilt(double x, 
               double y_minus_1,
