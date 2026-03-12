@@ -193,6 +193,7 @@ Completed so far:
 - added `scripts/configure_macos_experimental.sh` as the canonical Phase 2 configure entry point for future mac testers; it enables `BUILD_MAC_EXPERIMENTAL`, disables known non-mac targets, turns off the neural tracker for the app-shell phase, and uses a repo-local staging prefix instead of `/opt/linuxtrack`
 - added `PrefProxy::findRuntimeFile()` / `getExecutablePath()` and switched several GUI helper flows (`ltr_udp`, hotkey daemons, Wine bridge injection, and X-Plane plugin lookup) away from hardcoded `/opt/linuxtrack` paths so they can resolve artifacts from an app bundle, AppImage, install tree, or development build layout
 - removed the last GUI-side fixed `/opt/linuxtrack` hotkey lookup in `udp_settings.cpp` and added a Darwin-first fallback in `src/linuxtrack.c` so the public client loader tries `@executable_path`, `@loader_path`, and `@rpath` framework locations before relying on the legacy config-prefix search
+- made the top-level install defaults less Linux-specific for the experimental mac path: `CMAKE_INSTALL_PREFIX` now defaults to a repo-local staging directory on `APPLE AND BUILD_MAC_EXPERIMENTAL`, and install RPATHs now use `@loader_path`-style bundle/library locations on macOS while Linux keeps the existing `/opt` + `$ORIGIN` behavior
 
 Verification run:
 

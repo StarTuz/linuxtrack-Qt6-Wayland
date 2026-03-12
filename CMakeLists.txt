@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(LinuxTrack VERSION 1.3.7 LANGUAGES C CXX)
 
-# Default installation prefix
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "/opt/linuxtrack" CACHE PATH "Default install path" FORCE)
-endif()
-
 # Set C++ Standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,6 +29,16 @@ if(UNIX AND NOT APPLE)
            ON)
 else()
     set(LINUXTRACK_INSTALL_STANDARD_INTEGRATION OFF)
+endif()
+
+# Default installation prefix
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+        set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/stage_macos_experimental"
+            CACHE PATH "Default install path" FORCE)
+    else()
+        set(CMAKE_INSTALL_PREFIX "/opt/linuxtrack" CACHE PATH "Default install path" FORCE)
+    endif()
 endif()
 
 # Project version (legacy compatibility)
@@ -190,16 +195,21 @@ endif()
 include_directories(${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/src)
 
 # RPATH settings for installation
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/linuxtrack:${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+if(APPLE)
+    set(CMAKE_INSTALL_RPATH
+        "@loader_path/../Frameworks;@loader_path/../lib/linuxtrack;@loader_path/../lib")
+else()
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/linuxtrack:${CMAKE_INSTALL_PREFIX}/lib")
 
-# Wait, we want $ORIGIN based RPATH for relocatability sometimes, 
-# but for /opt/linuxtrack absolute paths are fine too since that's the fixed prefix.
-# However, to be modern:
-file(RELATIVE_PATH REL_LIB_PATH "${CMAKE_INSTALL_PREFIX}/bin" "${CMAKE_INSTALL_PREFIX}/lib/linuxtrack")
-list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/${REL_LIB_PATH}")
-file(RELATIVE_PATH REL_LIB_PATH2 "${CMAKE_INSTALL_PREFIX}/bin" "${CMAKE_INSTALL_PREFIX}/lib")
-list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/${REL_LIB_PATH2}")
+    # Wait, we want $ORIGIN based RPATH for relocatability sometimes,
+    # but for /opt/linuxtrack absolute paths are fine too since that's the fixed prefix.
+    # However, to be modern:
+    file(RELATIVE_PATH REL_LIB_PATH "${CMAKE_INSTALL_PREFIX}/bin" "${CMAKE_INSTALL_PREFIX}/lib/linuxtrack")
+    list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/${REL_LIB_PATH}")
+    file(RELATIVE_PATH REL_LIB_PATH2 "${CMAKE_INSTALL_PREFIX}/bin" "${CMAKE_INSTALL_PREFIX}/lib")
+    list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/${REL_LIB_PATH2}")
+endif()
 
 # Enable CTest support
 include(CTest)
