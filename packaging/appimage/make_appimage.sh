@@ -52,6 +52,15 @@ if [ ! -f "$APP_DIR/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg" ] && [ 
     cp src/$APP_NAME.svg "$APP_DIR/usr/share/icons/hicolor/scalable/apps/"
 fi
 
+ICON_FILE="$APP_DIR/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg"
+if [ ! -f "$ICON_FILE" ]; then
+    ICON_FILE="$APP_DIR/usr/share/pixmaps/$APP_NAME.svg"
+fi
+if [ ! -f "$ICON_FILE" ]; then
+    echo "Error: Could not locate AppImage icon for $APP_NAME."
+    exit 1
+fi
+
 cp packaging/appimage/AppRun "$APP_DIR/AppRun"
 chmod +x "$APP_DIR/AppRun"
 
@@ -135,7 +144,7 @@ echo "--> Running linuxdeploy to bundle dependencies..."
 set +e  # Don't exit on error - strip failures are recoverable
 "$LINUXDEPLOY" --appdir "$APP_DIR" \
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
-    --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
+    --icon-file "$ICON_FILE" \
     $LIBRARY_FLAGS \
     --exclude-library libfbclient.so.2 \
     --exclude-library liboci.so \
@@ -172,8 +181,8 @@ echo "--> linuxdeploy failed (likely strip errors), falling back to appimagetool
 
 # Setup AppDir for appimagetool
 cp "$APP_DIR/usr/share/applications/$APP_NAME.desktop" "$APP_DIR/"
-cp "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" "$APP_DIR/"
-ln -sf "$APP_NAME.svg" "$APP_DIR/.DirIcon"
+cp "$ICON_FILE" "$APP_DIR/"
+ln -sf "$(basename "$ICON_FILE")" "$APP_DIR/.DirIcon"
 
 # 4b. Explicitly bundle Qt6 platform plugins (CRITICAL fallback for modern distros)
 # linuxdeploy-plugin-qt often fails to bundle these when strip fails

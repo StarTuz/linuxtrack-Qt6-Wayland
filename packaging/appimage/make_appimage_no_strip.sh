@@ -52,6 +52,15 @@ if [ ! -f "$APP_DIR/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg" ] && [ 
     cp src/$APP_NAME.svg "$APP_DIR/usr/share/icons/hicolor/scalable/apps/"
 fi
 
+ICON_FILE="$APP_DIR/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg"
+if [ ! -f "$ICON_FILE" ]; then
+    ICON_FILE="$APP_DIR/usr/share/pixmaps/$APP_NAME.svg"
+fi
+if [ ! -f "$ICON_FILE" ]; then
+    echo "Error: Could not locate AppImage icon for $APP_NAME."
+    exit 1
+fi
+
 # Copy custom AppRun script that sets environment before Qt loads
 echo "--> Installing custom AppRun script..."
 cp packaging/appimage/AppRun "$APP_DIR/AppRun"
@@ -106,7 +115,7 @@ export EXTRA_QT_PLUGINS="platformthemes/libqgtk3.so;iconengines"
 
 NO_STRIP=1 "$LINUXDEPLOY" --appdir "$APP_DIR" \
     --desktop-file "$APP_DIR/usr/share/applications/$APP_NAME.desktop" \
-    --icon-file "$APP_DIR/usr/share/pixmaps/$APP_NAME.svg" \
+    --icon-file "$ICON_FILE" \
     --plugin qt \
     --output appimage
 
