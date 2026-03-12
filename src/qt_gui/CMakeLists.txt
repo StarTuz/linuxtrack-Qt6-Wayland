@@ -83,8 +83,62 @@ endif()
 
 # Resources
 set(LTR_GUI_RESOURCES ltr_rc.qrc)
+set(LTR_GUI_DATA_FILES
+    sparow_opaq.obj
+    sparow_glass.obj
+    xm8_detail.png
+    sources.txt
+    spec.txt
+    sphere.obj
+    sphere.png
+    sources_mfc.txt
+    win7.reg
+)
+set(LTR_GUI_HELP_FILES help.qhc help.qch)
 
-add_executable(ltr_gui ${LTR_GUI_SOURCES} ${LTR_GUI_FORMS} ${LTR_GUI_RESOURCES})
+if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+    set(LTR_GUI_BUNDLE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/linuxtrack.icns)
+    set_source_files_properties(${LTR_GUI_BUNDLE_ICON} PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources
+    )
+    set(LTR_GUI_BUNDLE_RESOURCES
+        ${CMAKE_SOURCE_DIR}/src/linuxtrack1.conf
+        ${CMAKE_CURRENT_SOURCE_DIR}/sources_mac.txt
+    )
+    foreach(resource_file IN LISTS LTR_GUI_DATA_FILES)
+        list(APPEND LTR_GUI_BUNDLE_RESOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/${resource_file}
+        )
+    endforeach()
+    foreach(help_file IN LISTS LTR_GUI_HELP_FILES)
+        list(APPEND LTR_GUI_BUNDLE_HELP_RESOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/${help_file}
+        )
+    endforeach()
+    set_source_files_properties(${LTR_GUI_BUNDLE_RESOURCES} PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources/linuxtrack
+    )
+    set_source_files_properties(${LTR_GUI_BUNDLE_HELP_RESOURCES} PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources/linuxtrack/help/ltr_gui
+    )
+    set(MACOS_BUNDLE_DISPLAY_NAME "Linuxtrack")
+    set(MACOS_BUNDLE_EXECUTABLE "Linuxtrack")
+    set(MACOS_BUNDLE_ICON_FILE "linuxtrack.icns")
+    set(MACOS_BUNDLE_IDENTIFIER "org.linuxtrack.ltr_gui.experimental")
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in
+        ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
+        @ONLY
+    )
+    add_executable(ltr_gui MACOSX_BUNDLE
+        ${LTR_GUI_SOURCES} ${LTR_GUI_FORMS} ${LTR_GUI_RESOURCES}
+        ${LTR_GUI_BUNDLE_ICON}
+        ${LTR_GUI_BUNDLE_RESOURCES}
+        ${LTR_GUI_BUNDLE_HELP_RESOURCES}
+    )
+else()
+    add_executable(ltr_gui ${LTR_GUI_SOURCES} ${LTR_GUI_FORMS} ${LTR_GUI_RESOURCES})
+endif()
 
 target_include_directories(ltr_gui PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR} 
@@ -104,6 +158,15 @@ target_compile_definitions(ltr_gui PRIVATE
 
 if(APPLE AND BUILD_MAC_EXPERIMENTAL)
     target_compile_definitions(ltr_gui PRIVATE LTR_MAC_EXPERIMENTAL)
+    set_target_properties(ltr_gui PROPERTIES
+        OUTPUT_NAME Linuxtrack
+        MACOSX_BUNDLE_BUNDLE_NAME Linuxtrack
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.linuxtrack.ltr_gui.experimental
+        MACOSX_BUNDLE_ICON_FILE linuxtrack.icns
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    )
 endif()
 
 target_link_libraries(ltr_gui PRIVATE 
@@ -122,14 +185,31 @@ target_link_libraries(ltr_gui PRIVATE
 )
 
 # Install executable
-install(TARGETS ltr_gui DESTINATION bin)
+if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+    install(TARGETS ltr_gui
+        BUNDLE DESTINATION .
+        RUNTIME DESTINATION bin
+    )
+else()
+    install(TARGETS ltr_gui DESTINATION bin)
+endif()
 
 # Install data files (as per .pro file)
-set(LTR_GUI_DATA_FILES
-    sparow_opaq.obj sparow_glass.obj xm8_detail.png sources.txt spec.txt 
-    sphere.obj sphere.png sources_mfc.txt win7.reg
-)
-install(FILES ${LTR_GUI_DATA_FILES} DESTINATION share/linuxtrack)
+if(APPLE AND BUILD_MAC_EXPERIMENTAL)
+    install(FILES
+        ${CMAKE_SOURCE_DIR}/src/linuxtrack1.conf
+        ${CMAKE_CURRENT_SOURCE_DIR}/sources_mac.txt
+        DESTINATION Linuxtrack.app/Contents/Resources/linuxtrack
+    )
+    install(FILES ${LTR_GUI_DATA_FILES}
+        DESTINATION Linuxtrack.app/Contents/Resources/linuxtrack
+    )
+    install(FILES ${LTR_GUI_HELP_FILES}
+        DESTINATION Linuxtrack.app/Contents/Resources/linuxtrack/help/ltr_gui
+    )
+else()
+    install(FILES ${LTR_GUI_DATA_FILES} DESTINATION share/linuxtrack)
 
-# Install help files
-install(FILES help.qhc help.qch DESTINATION share/linuxtrack/help/ltr_gui)
+    # Install help files
+    install(FILES ${LTR_GUI_HELP_FILES} DESTINATION share/linuxtrack/help/ltr_gui)
+endif()

@@ -10,6 +10,7 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QStringList>
 #include <vector>
@@ -587,6 +588,19 @@ bool PrefProxy::savePrefs() {
 QString PrefProxy::getDataPath(QString file) {
   QString appPath = QApplication::applicationDirPath();
   QString appDirEnv = QString::fromLocal8Bit(qgetenv("APPDIR"));
+  QString normalizedFile = file;
+  while (normalizedFile.startsWith(QChar::fromLatin1('/'))) {
+    normalizedFile.remove(0, 1);
+  }
+
+#ifdef DARWIN
+  QString bundlePath =
+      QDir(appPath).absoluteFilePath(QString::fromUtf8("../Resources/linuxtrack/") +
+                                     normalizedFile);
+  if (QFileInfo::exists(bundlePath)) {
+    return bundlePath;
+  }
+#endif
 
   // If running from AppImage, prioritize internal share/linuxtrack folder
   // Check via isAppImage flag OR explicit APPDIR environment variable
@@ -594,14 +608,14 @@ QString PrefProxy::getDataPath(QString file) {
     QString baseDir = !appDirEnv.isEmpty()
                           ? appDirEnv + QString::fromUtf8("/usr/bin")
                           : appPath;
-    QString internalPath =
-        baseDir + QString::fromUtf8("/../share/linuxtrack/") + file;
+    QString internalPath = QDir(baseDir).absoluteFilePath(
+        QString::fromUtf8("../share/linuxtrack/") + normalizedFile);
     if (QFile::exists(internalPath)) {
       return internalPath;
     }
   }
 
-  char *path = ltr_int_get_data_path_prefix(file.toUtf8().constData(),
+  char *path = ltr_int_get_data_path_prefix(normalizedFile.toUtf8().constData(),
                                             appPath.toUtf8().constData());
   QString res = QString::fromUtf8(path);
   free(path);

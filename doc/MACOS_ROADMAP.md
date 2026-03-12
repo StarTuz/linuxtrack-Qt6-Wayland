@@ -1,7 +1,7 @@
 # Linuxtrack macOS Roadmap
 
 **Date:** 2026-03-11  
-**Status:** Phase 0 complete, later phases planning only  
+**Status:** Phase 0-1 complete, Phase 2 in progress
 **Scope:** Experimental future platform bring-up after current Linux stabilization work
 
 ---
@@ -154,6 +154,8 @@ Verification run:
 
 ### Phase 2: macOS App Shell
 
+**Status:** IN PROGRESS (2026-03-12)
+
 Purpose:
 
 - get a macOS application bundle to build and launch without promising working tracking yet
@@ -178,6 +180,20 @@ Exit criteria:
 - `.app` launches on a tester machine
 - preferences persist
 - Linux CI remains unaffected
+
+Completed so far:
+
+- `src/qt_gui/CMakeLists.txt` now builds `ltr_gui` as a `MACOSX_BUNDLE` when `APPLE AND BUILD_MAC_EXPERIMENTAL`, while leaving Linux as the existing plain executable target
+- added `src/qt_gui/Info.plist.in` so the experimental mac app has explicit bundle metadata, versioning, icon, and camera-permission text under CMake instead of relying on the old autotools-era mac scaffolding
+- attached the existing `src/qt_gui/linuxtrack.icns` to the mac bundle resources and switched the experimental mac output name to `Linuxtrack.app`
+- taught `PrefProxy::getDataPath()` to resolve bundle-relative `Contents/Resources/linuxtrack` assets first on macOS so help files, default prefs, and extractor metadata can work from the app bundle instead of assuming a Linux-style `share/linuxtrack` layout
+- embedded the GUI data files, `linuxtrack1.conf`, `sources_mac.txt`, and Qt help files into the experimental mac bundle resource tree so later smoke tests can run against a self-contained app layout
+- updated install rules so experimental mac builds install the bundle as an app while Linux continues to install `ltr_gui` into `bin/`
+
+Verification run:
+
+- `cmake -S . -B build_phase0_verify`
+- `cmake --build build_phase0_verify --target ltr_gui -j"$(nproc)"`
 
 ### Phase 3: Webcam and Face Tracking
 

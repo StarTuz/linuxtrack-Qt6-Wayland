@@ -25,6 +25,12 @@ int main(int argc, char *argv[]) {
   QSurfaceFormat::setDefaultFormat(format);
 
   QApplication app(argc, argv);
+  QCoreApplication::setOrganizationName(QString::fromUtf8("linuxtrack"));
+  QCoreApplication::setOrganizationDomain(
+      QString::fromUtf8("linuxtrack.org"));
+  QCoreApplication::setApplicationName(QString::fromUtf8("ltr_gui"));
+  QCoreApplication::setApplicationVersion(
+      QString::fromUtf8(PACKAGE_VERSION));
 
   // Command-line argument parsing
   QCommandLineParser parser;
