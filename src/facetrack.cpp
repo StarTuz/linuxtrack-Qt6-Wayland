@@ -397,6 +397,7 @@ void *ltr_int_detector_thread(void *) {
 
 bool ltr_int_init_face_detect() {
   cv::setNumThreads(1);
+  bool neural_detector_active = false;
 #ifdef HAVE_ONNXRUNTIME
   char *localizer_path = ltr_int_get_data_path("models/head-localizer.onnx");
   char *posenet_big =
@@ -416,6 +417,7 @@ bool ltr_int_init_face_detect() {
     if (nn_tracker->init(localizer_path, posenet_path)) {
       nn_tracker->set_fov(ltr_int_wc_get_camera_fov());
       use_neuralnet = true;
+      neural_detector_active = true;
       ltr_int_log_message("Neural webcam tracker initialized.\n");
     } else {
       nn_tracker.reset();
@@ -427,13 +429,14 @@ bool ltr_int_init_face_detect() {
 #endif
 
   const char *cascade_path = ltr_int_wc_get_cascade();
-  if (!use_neuralnet && cascade_path == nullptr) {
+  if (!neural_detector_active && cascade_path == nullptr) {
     ltr_int_log_message("Cascade path not specified!\n");
     return false;
   }
 
   const char *suffix = (cascade_path != nullptr) ? strrchr(cascade_path, '.') : nullptr;
-  if (!use_neuralnet && (suffix != nullptr) && (strcasecmp(suffix, ".onnx") == 0)) {
+  if (!neural_detector_active && (suffix != nullptr) &&
+      (strcasecmp(suffix, ".onnx") == 0)) {
     try {
       yunet = cv::FaceDetectorYN::create(
           cascade_path, "", cv::Size(320, 320),
@@ -446,7 +449,7 @@ bool ltr_int_init_face_detect() {
                           cascade_path, e.what());
       return false;
     }
-  } else if (!use_neuralnet) {
+  } else if (!neural_detector_active) {
     cascade = new cv::CascadeClassifier();
     if (!cascade->load(cascade_path)) {
       ltr_int_log_message("Could't load cascade '%s'!\n", cascade_path);
