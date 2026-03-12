@@ -229,7 +229,7 @@ char *ltr_int_my_strcat(const char *str1, const char *str2) {
 
 char *ltr_int_get_default_file_name(const char *fname) {
   char *home = getenv("HOME");
-  char *pref_dir = ".config/linuxtrack";
+  char *xdg_config_home = getenv("XDG_CONFIG_HOME");
   if (home == NULL) {
     ltr_int_log_message("Please set HOME variable!\n");
     return NULL;
@@ -238,7 +238,12 @@ char *ltr_int_get_default_file_name(const char *fname) {
     fname = pref_file;
   }
   char *pref_path = NULL;
-  if (asprintf(&pref_path, "%s/%s/%s", home, pref_dir, fname) != -1) {
+  if ((xdg_config_home != NULL) && (xdg_config_home[0] != '\0')) {
+    if (asprintf(&pref_path, "%s/linuxtrack/%s", xdg_config_home, fname) != -1) {
+      return pref_path;
+    }
+  }
+  if (asprintf(&pref_path, "%s/.config/linuxtrack/%s", home, fname) != -1) {
     return pref_path;
   } else {
     return NULL;
@@ -265,8 +270,25 @@ char *ltr_int_get_ipc_path(const char *fname) {
     }
   }
 
-  // Strategy 2: ~/.config/linuxtrack/run (Fallback, definitely shared)
+  // Strategy 2: XDG config runtime fallback (definitely shared)
   char *home = getenv("HOME");
+  char *xdg_config_home = getenv("XDG_CONFIG_HOME");
+  if ((xdg_config_home != NULL) && (xdg_config_home[0] != '\0')) {
+    struct stat st;
+    char *dir_path = NULL;
+    if (asprintf(&dir_path, "%s/linuxtrack/run", xdg_config_home) != -1) {
+       if (stat(dir_path, &st) == -1) {
+         mkdir(dir_path, 0700);
+       }
+       if (asprintf(&ipc_path, "%s/%s", dir_path, fname) != -1) {
+         free(dir_path);
+         return ipc_path;
+       }
+       free(dir_path);
+    }
+  }
+
+  // Strategy 3: ~/.config/linuxtrack/run (Fallback, definitely shared)
   if (home != NULL) {
     struct stat st;
     char *dir_path = NULL;
@@ -282,7 +304,7 @@ char *ltr_int_get_ipc_path(const char *fname) {
     }
   }
 
-  // Strategy 3: /tmp (Legacy fallback, broken in containers)
+  // Strategy 4: /tmp (Legacy fallback, broken in containers)
   if (asprintf(&ipc_path, "/tmp/%s", fname) != -1) {
     return ipc_path;
   }

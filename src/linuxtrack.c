@@ -271,8 +271,8 @@ static void *linuxtrack_try_library(const char *path) {
 char *linuxtrack_get_prefix() {
   char *prefix = NULL;
   char *home = getenv("HOME");
-  char *cfg = (char *)"/.config/linuxtrack/linuxtrack1.conf";
-  char *fname;
+  char *xdg_config_home = getenv("XDG_CONFIG_HOME");
+  char *fname = NULL;
   FILE *f;
   char *line;
   char *val, *key;
@@ -281,10 +281,20 @@ char *linuxtrack_get_prefix() {
     linuxtrack_log("Please set HOME variable!\n");
     return NULL;
   }
-  fname = construct_name(home, cfg, "");
-  if ((f = fopen(fname, "r")) == NULL) {
-    free(fname);
-    return NULL;
+  if ((xdg_config_home != NULL) && (xdg_config_home[0] != '\0')) {
+    fname = construct_name(xdg_config_home, "/linuxtrack/linuxtrack1.conf", "");
+    f = fopen(fname, "r");
+    if (f == NULL) {
+      free(fname);
+      fname = NULL;
+    }
+  }
+  if (fname == NULL) {
+    fname = construct_name(home, "/.config/linuxtrack/linuxtrack1.conf", "");
+    if ((f = fopen(fname, "r")) == NULL) {
+      free(fname);
+      return NULL;
+    }
   }
   free(fname);
   line = (char *)malloc(4096);
