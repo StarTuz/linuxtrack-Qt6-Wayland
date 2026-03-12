@@ -62,19 +62,30 @@ int ltr_int_tracker_init(struct camera_control_block *ccb)
   
   char *cap_path = ltr_int_get_helper_path("qt_cam");
   char *cam_id = ltr_int_my_strdup(ltr_int_wc_get_id());
+  char *capture_path = ltr_int_get_ipc_path("macwebcam_capture.mmap");
   char *cascade = NULL;
   if(ccb->device.category == mac_webcam_ft){
     if(ltr_int_wc_get_cascade() == NULL){
 	  ltr_int_log_message("No cascade specified!\n");
+      free(cap_path);
+      free(cam_id);
+      free(capture_path);
 	  return -1;
 	}
     cascade = ltr_int_my_strdup(ltr_int_wc_get_cascade());
   }
-  if(!init_capture(cap_path, cam_id,  width, height, "/tmp/xxx", cascade)){
+  if((capture_path == NULL) ||
+     !init_capture(cap_path, cam_id, width, height, capture_path, cascade)){
     free(cap_path);
+    free(capture_path);
+    free(cam_id);
+    if(cascade != NULL){
+      free(cascade);
+    }
     return 1;
   }
   free(cap_path);
+  free(capture_path);
   free(cam_id);
   if(cascade != NULL){
     free(cascade);

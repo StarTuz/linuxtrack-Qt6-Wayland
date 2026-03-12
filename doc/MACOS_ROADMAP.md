@@ -198,6 +198,7 @@ Completed so far:
 - taught `ltr_int_get_app_path()` in `src/utils.c` to derive bundle-relative paths from the current executable on Darwin via `_NSGetExecutablePath`, so low-level data/library lookups can fall back to the app bundle even before `~/.config/linuxtrack/linuxtrack1.conf` exists
 - added `ltr_int_get_helper_path()` in `src/utils.c` / `src/utils.h` so mac helper binaries can resolve from `Contents/Resources/linuxtrack/helper` first and only then fall back to the old `../helper` layout; switched the legacy mac webcam driver and Qt webcam enumerator to use that helper-path abstraction
 - added `PrefProxy::getHelperPath()` in `src/qt_gui/ltr_gui_prefs.cpp` and switched the extractor UI away from `getDataPath("/../../helper/...")` so `cabextract` now follows the same bundle/helper resolution rules as the rest of the experimental app shell
+- replaced the legacy hardcoded `/tmp/xxx` mmap path in `src/macwebcam_driver.c` with `ltr_int_get_ipc_path("macwebcam_capture.mmap")`, so the old mac webcam helper now uses linuxtrack-managed runtime state instead of a global temp filename
 
 Verification run:
 
