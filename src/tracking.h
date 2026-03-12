@@ -19,6 +19,12 @@ extern "C" {
 enum ORIENTATION {ORIENT_NOP = 0, ORIENT_FLIP_X = 1, ORIENT_FLIP_Y = 2, 
                    ORIENT_XCHG_XY = 4, ORIENT_FROM_BEHIND = 8};
 
+typedef enum {
+  LTR_POSE_ROUTE_SINGLE_POINT = 0,
+  LTR_POSE_ROUTE_ABSOLUTE = 1,
+  LTR_POSE_ROUTE_THREE_POINT = 2
+} ltr_pose_route_t;
+
 
 //extern linuxtrack_pose_t ltr_int_orig_pose;
 
@@ -30,6 +36,10 @@ bool ltr_int_postprocess_axes(ltr_axes_t axes, linuxtrack_pose_t *pose, linuxtra
 void ltr_int_rotate_camera_point(float *x, float *y, int cam_orientation);
 void ltr_int_normalize_bloblist_for_camera_orientation(struct bloblist_type bl,
                                                        int cam_orientation);
+ltr_pose_route_t ltr_int_select_pose_route(bool is_face,
+                                           bool is_single_point,
+                                           bool is_absolute,
+                                           unsigned int blob_count);
 /*
 double ltr_int_nonlinfilt(double x, 
               double y_minus_1,

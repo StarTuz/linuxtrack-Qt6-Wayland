@@ -141,6 +141,7 @@ Completed so far:
   - camera-orientation normalization before 3-point pose solving
   - `ORIENT_FROM_BEHIND` sign handling for solved 3-point pose values
 - extracted camera-orientation normalization into explicit shared helpers in `src/tracking.h` / `src/tracking.c` so future frame sources can reuse the same semantics without duplicating private tracking internals
+- extracted pose-route selection into an explicit shared helper in `src/tracking.h` / `src/tracking.c` so the decision between single-point, absolute, and 3-point updates is testable and no longer buried as ad hoc branching inside `ltr_int_update_pose()`
 - extended `test_wc_driver_prefs` so `MacWebcam-face` shares the same camera FOV defaults and clamping behavior as `Webcam-face`
 - fixed a real shared-core bug in `src/tracking.c` where `ltr_int_update_pose()` stored its result in a `bool`, collapsing `-1` failure/discard returns into `1`
 

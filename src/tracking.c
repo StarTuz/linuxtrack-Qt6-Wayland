@@ -122,6 +122,23 @@ void ltr_int_normalize_bloblist_for_camera_orientation(struct bloblist_type bl,
   }
 }
 
+ltr_pose_route_t ltr_int_select_pose_route(bool is_face,
+                                           bool is_single_point,
+                                           bool is_absolute,
+                                           unsigned int blob_count)
+{
+  if(is_face && (blob_count >= 3)){
+    return LTR_POSE_ROUTE_ABSOLUTE;
+  }
+  if(is_single_point){
+    return LTR_POSE_ROUTE_SINGLE_POINT;
+  }
+  if(is_absolute){
+    return LTR_POSE_ROUTE_ABSOLUTE;
+  }
+  return LTR_POSE_ROUTE_THREE_POINT;
+}
+
 static int update_pose_1pt(struct frame_type *frame)
 {
   static float c_x = 0.0f;
@@ -447,14 +464,18 @@ int ltr_int_update_pose(struct frame_type *frame)
 
   pthread_mutex_unlock(&pose_mutex);
   int res = -1;
-  if(ltr_int_is_face() && frame->bloblist.num_blobs >= 3){
-    res = update_absolute_pose(frame);
-  }else if(ltr_int_is_single_point()){
+  switch(ltr_int_select_pose_route(ltr_int_is_face(), ltr_int_is_single_point(),
+                                   ltr_int_is_absolute(), frame->bloblist.num_blobs)){
+  case LTR_POSE_ROUTE_SINGLE_POINT:
     res = update_pose_1pt(frame);
-  }else if(ltr_int_is_absolute()){
+    break;
+  case LTR_POSE_ROUTE_ABSOLUTE:
     res = update_absolute_pose(frame);
-  }else{
+    break;
+  case LTR_POSE_ROUTE_THREE_POINT:
+  default:
     res = update_pose_3pt(frame);
+    break;
   }
   if(res == 0){
     ++counter_d;

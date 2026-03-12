@@ -187,6 +187,19 @@ TEST_CASE("face tracking with three blobs uses absolute pose path, not 3pt solve
   CHECK(full_pose.abs_pose.abs_tz == Catch::Approx(60.0f));
 }
 
+TEST_CASE("pose route helper matches shared routing semantics", "[tracking]") {
+  CHECK(ltr_int_select_pose_route(true, false, false, 3) ==
+        LTR_POSE_ROUTE_ABSOLUTE);
+  CHECK(ltr_int_select_pose_route(true, false, false, 2) ==
+        LTR_POSE_ROUTE_THREE_POINT);
+  CHECK(ltr_int_select_pose_route(false, true, false, 1) ==
+        LTR_POSE_ROUTE_SINGLE_POINT);
+  CHECK(ltr_int_select_pose_route(false, false, true, 3) ==
+        LTR_POSE_ROUTE_ABSOLUTE);
+  CHECK(ltr_int_select_pose_route(false, false, false, 3) ==
+        LTR_POSE_ROUTE_THREE_POINT);
+}
+
 TEST_CASE("3-point tracking failure does not advance pose counter", "[tracking]") {
   reset_tracking_stubs();
   g_pose_process_ok = false;
