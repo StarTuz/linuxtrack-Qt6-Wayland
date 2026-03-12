@@ -16,10 +16,13 @@ bool g_face = false;
 bool g_absolute = false;
 bool g_pose_process_ok = true;
 bool g_do_tr_align = false;
+int g_orientation = 0;
 int g_pose_process_calls = 0;
 
 linuxtrack_pose_t g_stub_pose{};
 linuxtrack_abs_pose_t g_stub_abs_pose{};
+bloblist_type g_last_pose_blobs{};
+blob_type g_last_pose_blob_storage[3]{};
 
 void reset_tracking_stubs() {
   g_model_changed = true;
@@ -28,9 +31,16 @@ void reset_tracking_stubs() {
   g_absolute = false;
   g_pose_process_ok = true;
   g_do_tr_align = false;
+  g_orientation = 0;
   g_pose_process_calls = 0;
   g_stub_pose = {};
   g_stub_abs_pose = {};
+  g_last_pose_blobs.num_blobs = 0;
+  g_last_pose_blobs.expected_blobs = 3;
+  g_last_pose_blobs.blobs = g_last_pose_blob_storage;
+  for (blob_type &blob : g_last_pose_blob_storage) {
+    blob = {};
+  }
 }
 
 struct owned_frame {
@@ -76,15 +86,19 @@ bool ltr_int_get_model_setup(reflector_model_type *rm) {
 
 bool ltr_int_pose_init(struct reflector_model_type /*rm*/) { return true; }
 
-int ltr_int_get_orientation() { return 0; }
+int ltr_int_get_orientation() { return g_orientation; }
 
 void ltr_int_pose_sort_blobs(struct bloblist_type /*bl*/) {}
 
-bool ltr_int_pose_process_blobs(struct bloblist_type /*blobs*/,
+bool ltr_int_pose_process_blobs(struct bloblist_type blobs,
                                 linuxtrack_pose_t *pose,
                                 linuxtrack_abs_pose_t *abs_pose,
                                 bool /*centering*/) {
   ++g_pose_process_calls;
+  g_last_pose_blobs.num_blobs = blobs.num_blobs;
+  for (unsigned int i = 0; i < blobs.num_blobs && i < 3; ++i) {
+    g_last_pose_blob_storage[i] = blobs.blobs[i];
+  }
   if (!g_pose_process_ok) {
     return false;
   }
@@ -193,6 +207,57 @@ TEST_CASE("3-point tracking failure does not advance pose counter", "[tracking]"
 
   CHECK(g_pose_process_calls == 1);
   CHECK(after.pose.counter == before.pose.counter);
+}
+
+TEST_CASE("camera orientation is normalized before 3-point pose solving",
+          "[tracking]") {
+  reset_tracking_stubs();
+  g_orientation = ORIENT_XCHG_XY | ORIENT_FLIP_X;
+
+  REQUIRE(ltr_int_init_tracking());
+
+  auto frame = make_frame(
+      640, 480, 6000,
+      {{10.0f, 20.0f, 10}, {-30.0f, 40.0f, 20}, {50.0f, -60.0f, 30}});
+
+  REQUIRE(ltr_int_update_pose(&frame.frame) == -1);
+  REQUIRE(g_pose_process_calls == 1);
+  REQUIRE(g_last_pose_blobs.num_blobs == 3);
+
+  CHECK(g_last_pose_blobs.blobs[0].x == Catch::Approx(-20.0f));
+  CHECK(g_last_pose_blobs.blobs[0].y == Catch::Approx(10.0f));
+  CHECK(g_last_pose_blobs.blobs[1].x == Catch::Approx(-40.0f));
+  CHECK(g_last_pose_blobs.blobs[1].y == Catch::Approx(-30.0f));
+  CHECK(g_last_pose_blobs.blobs[2].x == Catch::Approx(60.0f));
+  CHECK(g_last_pose_blobs.blobs[2].y == Catch::Approx(50.0f));
+}
+
+TEST_CASE("behind orientation flips shared 3-point pose signs", "[tracking]") {
+  reset_tracking_stubs();
+  g_orientation = ORIENT_FROM_BEHIND;
+  g_stub_pose.raw_pitch = 1.0f;
+  g_stub_pose.raw_yaw = 2.0f;
+  g_stub_pose.raw_roll = 3.0f;
+  g_stub_pose.raw_tx = 4.0f;
+  g_stub_pose.raw_ty = 5.0f;
+  g_stub_pose.raw_tz = 6.0f;
+
+  REQUIRE(ltr_int_init_tracking());
+
+  auto frame = make_frame(
+      640, 480, 7000,
+      {{-10.0f, 15.0f, 10}, {0.0f, -15.0f, 20}, {12.0f, 18.0f, 30}});
+
+  REQUIRE(ltr_int_update_pose(&frame.frame) == -1);
+
+  linuxtrack_full_pose_t pose{};
+  REQUIRE(ltr_int_tracking_get_pose(&pose) == 0);
+  CHECK(pose.pose.raw_pitch == Catch::Approx(-1.0f));
+  CHECK(pose.pose.raw_yaw == Catch::Approx(2.0f));
+  CHECK(pose.pose.raw_roll == Catch::Approx(-3.0f));
+  CHECK(pose.pose.raw_tx == Catch::Approx(-4.0f));
+  CHECK(pose.pose.raw_ty == Catch::Approx(5.0f));
+  CHECK(pose.pose.raw_tz == Catch::Approx(-6.0f));
 }
 
 TEST_CASE("postprocess passes translations through unchanged when alignment is disabled",
