@@ -86,11 +86,21 @@ bool ltr_int_read_prefs(const char *file, bool force_read) {
   ensure_init();
   if (!file) {
     char *pfile = ltr_int_get_default_file_name(nullptr);
-    if (!pfile)
-      return false;
-    bool res = modern_prefs_read(pfile, force_read);
-    free(pfile);
-    return res;
+    if (pfile) {
+      bool res = modern_prefs_read(pfile, force_read);
+      free(pfile);
+      if (res) {
+        return true;
+      }
+    }
+
+    char *packaged = ltr_int_get_data_path("linuxtrack1.conf");
+    if (packaged) {
+      bool res = modern_prefs_read(packaged, force_read);
+      free(packaged);
+      return res;
+    }
+    return false;
   }
   return modern_prefs_read(file, force_read) != 0;
 }

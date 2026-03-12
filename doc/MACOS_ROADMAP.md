@@ -199,6 +199,7 @@ Completed so far:
 - added `ltr_int_get_helper_path()` in `src/utils.c` / `src/utils.h` so mac helper binaries can resolve from `Contents/Resources/linuxtrack/helper` first and only then fall back to the old `../helper` layout; switched the legacy mac webcam driver and Qt webcam enumerator to use that helper-path abstraction
 - added `PrefProxy::getHelperPath()` in `src/qt_gui/ltr_gui_prefs.cpp` and switched the extractor UI away from `getDataPath("/../../helper/...")` so `cabextract` now follows the same bundle/helper resolution rules as the rest of the experimental app shell
 - replaced the legacy hardcoded `/tmp/xxx` mmap path in `src/macwebcam_driver.c` with `ltr_int_get_ipc_path("macwebcam_capture.mmap")`, so the old mac webcam helper now uses linuxtrack-managed runtime state instead of a global temp filename
+- taught `ltr_int_read_prefs()` in `src/pref.cpp` to fall back to the packaged `linuxtrack1.conf` from the install/bundle data path when the user config is missing, reducing first-run dependence on `~/.config/linuxtrack/linuxtrack1.conf` for non-GUI startup paths
 
 Verification run:
 
