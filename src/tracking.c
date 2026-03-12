@@ -97,7 +97,7 @@ int ltr_int_recenter_tracking()
 
 static pthread_mutex_t pose_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static void ltr_int_rotate_camera(float *x, float *y, int cam_orientation)
+void ltr_int_rotate_camera_point(float *x, float *y, int cam_orientation)
 {
   float tmp_x;
   float tmp_y;
@@ -113,11 +113,12 @@ static void ltr_int_rotate_camera(float *x, float *y, int cam_orientation)
 }
 
 
-static void ltr_int_remove_camera_rotation(struct bloblist_type bl)
+void ltr_int_normalize_bloblist_for_camera_orientation(struct bloblist_type bl,
+                                                       int cam_orientation)
 {
   unsigned int i;
   for(i = 0; i < bl.num_blobs; ++i){
-    ltr_int_rotate_camera(&(bl.blobs[i].x), &(bl.blobs[i].y), orientation);
+    ltr_int_rotate_camera_point(&(bl.blobs[i].x), &(bl.blobs[i].y), cam_orientation);
   }
 }
 
@@ -429,7 +430,7 @@ int ltr_int_update_pose(struct frame_type *frame)
     recenter = true;
   }
   unsigned int i;
-  ltr_int_remove_camera_rotation(frame->bloblist);
+  ltr_int_normalize_bloblist_for_camera_orientation(frame->bloblist, orientation);
   ltr_int_pose_sort_blobs(frame->bloblist);
   pthread_mutex_lock(&pose_mutex);
   current_pose.pose.resolution_x = frame->width;

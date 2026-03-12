@@ -27,6 +27,9 @@ int ltr_int_update_pose(struct frame_type *frame);
 int ltr_int_recenter_tracking();
 int ltr_int_tracking_get_pose(linuxtrack_full_pose_t *pose);
 bool ltr_int_postprocess_axes(ltr_axes_t axes, linuxtrack_pose_t *pose, linuxtrack_pose_t *unfiltered);
+void ltr_int_rotate_camera_point(float *x, float *y, int cam_orientation);
+void ltr_int_normalize_bloblist_for_camera_orientation(struct bloblist_type bl,
+                                                       int cam_orientation);
 /*
 double ltr_int_nonlinfilt(double x, 
               double y_minus_1,

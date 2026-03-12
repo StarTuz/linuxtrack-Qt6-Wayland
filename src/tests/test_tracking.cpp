@@ -232,6 +232,37 @@ TEST_CASE("camera orientation is normalized before 3-point pose solving",
   CHECK(g_last_pose_blobs.blobs[2].y == Catch::Approx(50.0f));
 }
 
+TEST_CASE("camera orientation helper rotates a single point consistently",
+          "[tracking]") {
+  float x = 10.0f;
+  float y = 20.0f;
+
+  ltr_int_rotate_camera_point(&x, &y, ORIENT_XCHG_XY | ORIENT_FLIP_X);
+
+  CHECK(x == Catch::Approx(-20.0f));
+  CHECK(y == Catch::Approx(10.0f));
+}
+
+TEST_CASE("camera orientation helper normalizes an entire bloblist",
+          "[tracking]") {
+  blob_type blobs[2] = {
+      {10.0f, 20.0f, 1},
+      {-30.0f, 40.0f, 2},
+  };
+  bloblist_type bloblist{};
+  bloblist.num_blobs = 2;
+  bloblist.expected_blobs = 2;
+  bloblist.blobs = blobs;
+
+  ltr_int_normalize_bloblist_for_camera_orientation(
+      bloblist, ORIENT_XCHG_XY | ORIENT_FLIP_X);
+
+  CHECK(bloblist.blobs[0].x == Catch::Approx(-20.0f));
+  CHECK(bloblist.blobs[0].y == Catch::Approx(10.0f));
+  CHECK(bloblist.blobs[1].x == Catch::Approx(-40.0f));
+  CHECK(bloblist.blobs[1].y == Catch::Approx(-30.0f));
+}
+
 TEST_CASE("behind orientation flips shared 3-point pose signs", "[tracking]") {
   reset_tracking_stubs();
   g_orientation = ORIENT_FROM_BEHIND;
