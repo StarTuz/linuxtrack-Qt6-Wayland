@@ -10,7 +10,7 @@ jobs:
     name: Test on Ubuntu 22.04
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install test dependencies
         run: |
@@ -52,7 +52,7 @@ jobs:
       image: archlinux:latest
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install dependencies
         run: |
@@ -85,7 +85,7 @@ jobs:
       image: fedora:latest
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install dependencies
         run: |

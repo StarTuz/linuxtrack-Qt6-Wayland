@@ -15,7 +15,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -101,15 +101,21 @@ jobs:
           bash packaging/appimage/make_appimage.sh
           mv Linuxtrack-x86_64.AppImage Linuxtrack-${{ github.ref_name }}-x86_64.AppImage
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            Linuxtrack-*-x86_64.AppImage
-            build_pkg/*.deb
-            build_pkg/*.rpm
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+      - name: Create or update GitHub Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" \
+              Linuxtrack-*-x86_64.AppImage \
+              build_pkg/*.deb \
+              build_pkg/*.rpm \
+              --clobber
+          else
+            gh release create "${{ github.ref_name }}" \
+              Linuxtrack-*-x86_64.AppImage \
+              build_pkg/*.deb \
+              build_pkg/*.rpm \
+              --generate-notes \
+              --latest
+          fi
