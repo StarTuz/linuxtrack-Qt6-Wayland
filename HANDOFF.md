@@ -1,6 +1,6 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-03-11
+**Last Updated:** 2026-03-12
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
@@ -239,6 +239,13 @@ The project now compiles successfully on modern Linux with:
 - **Webcam Face Tracking: Forward Translation Gain:** Added a Z-only gain so webcam face tracking has a stronger forward/back feel without changing X/Y motion semantics.
 
 - **Qt GUI Slider Audit:** Tuned the common smoothing mapping, corrected the One Euro `Smoothness` slider direction so moving right actually means smoother, fixed detailed-axis deadzone/sensitivity refresh bugs, and reworked the webcam face smoothing slider curve so the useful range is not pushed to the far right.
+
+- **Release Pipeline Follow-up Fixes (2026-03-12):**
+  - Fixed a release-only facetracker regression where `src/facetrack.cpp` referenced `use_neuralnet` outside `#ifdef HAVE_ONNXRUNTIME`, breaking non-ONNX builds in CI.
+  - Repaired the AppImage packaging scripts so they resolve the installed Linuxtrack icon from the hicolor tree first and only fall back to `share/pixmaps` if needed.
+  - Restored X-Plane plugin support in tagged releases by adding the X-Plane SDK header installation step to `.github/workflows/release.yml`, matching the normal CI build path.
+  - Removed the obsolete Catch2 download steps from CI/release workflows because the amalgamated Catch2 sources are already vendored in `src/tests/catch2/`.
+  - Updated workflow actions to current Node 24-compatible lines and opted workflows into Node 24 execution to address GitHub's Node 20 deprecation warnings.
 
 ---
 

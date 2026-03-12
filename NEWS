@@ -11,3 +11,11 @@ Linuxtrack 1.3.7 (2026-03-11)
   translation.
 - Tuned several GUI tracking sliders so their useful range is less bunched and
   the labels match the actual smoothing behavior.
+- Fixed the non-ONNX facetracker build so release jobs without ONNX support do
+  not fail in `facetrack.cpp`.
+- Repaired the AppImage/release path after the packaging work: the AppImage
+  scripts now resolve the installed icon path dynamically, the release workflow
+  installs X-Plane SDK headers so `xlinuxtrack9.so` is built into release
+  artifacts again, and CI now uses the vendored Catch2 test sources.
+- Updated GitHub Actions workflow dependencies to current Node 24-compatible
+  lines and opted the workflows into Node 24 execution for JavaScript actions.

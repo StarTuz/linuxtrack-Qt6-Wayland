@@ -32,6 +32,7 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - **Regression test added:** Shared blob extraction now has automated coverage to catch webcam changes that would alter TrackIR semantics.
 - **Webcam face tracking improved:** Neural webcam tracking now has a configurable camera FOV, steadier pose filtering, correct translation scale, and stronger forward/back response.
 - **Slider ranges tuned:** Common smoothing, One Euro smoothness, webcam face smoothing, and detailed-axis controls now land in a more useful part of their range.
+- **Release path repaired:** `1.3.7` also restores the release AppImage path after packaging changes by fixing icon lookup, rebuilding the X-Plane plugin in tagged releases, and removing CI's dependency on downloading Catch2 at runtime.
 
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
 
