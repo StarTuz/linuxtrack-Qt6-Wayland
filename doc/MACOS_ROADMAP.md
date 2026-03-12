@@ -136,6 +136,8 @@ Completed so far:
   - single-point face `tz` estimation from face-size changes
   - face-tracker routing to the absolute-pose path when 3 blobs are present
   - 3-point solver failure not advancing the pose counter
+  - translation passthrough vs. alignment in `ltr_int_postprocess_axes()`
+  - rejection of non-finite axis values before filtering/alignment
 - extended `test_wc_driver_prefs` so `MacWebcam-face` shares the same camera FOV defaults and clamping behavior as `Webcam-face`
 - fixed a real shared-core bug in `src/tracking.c` where `ltr_int_update_pose()` stored its result in a `bool`, collapsing `-1` failure/discard returns into `1`
 

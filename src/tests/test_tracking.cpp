@@ -15,6 +15,7 @@ bool g_single_point = false;
 bool g_face = false;
 bool g_absolute = false;
 bool g_pose_process_ok = true;
+bool g_do_tr_align = false;
 int g_pose_process_calls = 0;
 
 linuxtrack_pose_t g_stub_pose{};
@@ -26,6 +27,7 @@ void reset_tracking_stubs() {
   g_face = false;
   g_absolute = false;
   g_pose_process_ok = true;
+  g_do_tr_align = false;
   g_pose_process_calls = 0;
   g_stub_pose = {};
   g_stub_abs_pose = {};
@@ -113,7 +115,7 @@ float ltr_int_filter_axis(ltr_axes_t /*axes*/, enum axis_t /*id*/, float x,
   return x;
 }
 
-bool ltr_int_do_tr_align() { return false; }
+bool ltr_int_do_tr_align() { return g_do_tr_align; }
 
 } // extern "C"
 
@@ -191,4 +193,70 @@ TEST_CASE("3-point tracking failure does not advance pose counter", "[tracking]"
 
   CHECK(g_pose_process_calls == 1);
   CHECK(after.pose.counter == before.pose.counter);
+}
+
+TEST_CASE("postprocess passes translations through unchanged when alignment is disabled",
+          "[tracking]") {
+  reset_tracking_stubs();
+
+  linuxtrack_pose_t raw_pose{};
+  raw_pose.raw_pitch = 0.0f;
+  raw_pose.raw_yaw = 0.0f;
+  raw_pose.raw_roll = 0.0f;
+  raw_pose.raw_tx = 10.0f;
+  raw_pose.raw_ty = -20.0f;
+  raw_pose.raw_tz = 30.0f;
+
+  linuxtrack_pose_t filtered_pose = raw_pose;
+  linuxtrack_pose_t unfiltered{};
+
+  REQUIRE(ltr_int_postprocess_axes(nullptr, &filtered_pose, &unfiltered));
+  CHECK(unfiltered.tx == Catch::Approx(10.0f));
+  CHECK(unfiltered.ty == Catch::Approx(-20.0f));
+  CHECK(unfiltered.tz == Catch::Approx(30.0f));
+  CHECK(filtered_pose.tx == Catch::Approx(10.0f));
+  CHECK(filtered_pose.ty == Catch::Approx(-20.0f));
+  CHECK(filtered_pose.tz == Catch::Approx(30.0f));
+}
+
+TEST_CASE("postprocess rotates translations when alignment is enabled",
+          "[tracking]") {
+  reset_tracking_stubs();
+  g_do_tr_align = true;
+
+  linuxtrack_pose_t raw_pose{};
+  raw_pose.raw_pitch = 0.0f;
+  raw_pose.raw_yaw = 90.0f;
+  raw_pose.raw_roll = 0.0f;
+  raw_pose.raw_tx = 0.0f;
+  raw_pose.raw_ty = 0.0f;
+  raw_pose.raw_tz = 10.0f;
+
+  linuxtrack_pose_t filtered_pose = raw_pose;
+  linuxtrack_pose_t unfiltered{};
+
+  REQUIRE(ltr_int_postprocess_axes(nullptr, &filtered_pose, &unfiltered));
+  CHECK(unfiltered.tx == Catch::Approx(10.0f).margin(0.001));
+  CHECK(unfiltered.ty == Catch::Approx(0.0f).margin(0.001));
+  CHECK(unfiltered.tz == Catch::Approx(0.0f).margin(0.001));
+  CHECK(filtered_pose.tx == Catch::Approx(10.0f).margin(0.001));
+  CHECK(filtered_pose.ty == Catch::Approx(0.0f).margin(0.001));
+  CHECK(filtered_pose.tz == Catch::Approx(0.0f).margin(0.001));
+}
+
+TEST_CASE("postprocess rejects non-finite axis values", "[tracking]") {
+  reset_tracking_stubs();
+
+  linuxtrack_pose_t raw_pose{};
+  raw_pose.raw_pitch = NAN;
+  raw_pose.raw_yaw = 0.0f;
+  raw_pose.raw_roll = 0.0f;
+  raw_pose.raw_tx = 0.0f;
+  raw_pose.raw_ty = 0.0f;
+  raw_pose.raw_tz = 0.0f;
+
+  linuxtrack_pose_t filtered_pose = raw_pose;
+  linuxtrack_pose_t unfiltered{};
+
+  REQUIRE_FALSE(ltr_int_postprocess_axes(nullptr, &filtered_pose, &unfiltered));
 }
