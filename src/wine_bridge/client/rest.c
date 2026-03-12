@@ -70,36 +70,63 @@ static ssize_t my_getline(char **lineptr, size_t *n, FILE *f) {
 #endif
 }
 
-bool game_data_get_desc(int id, game_desc_t *gd) {
-  FILE *f = NULL;
+static char *linuxtrack_config_base(void) {
+#ifdef LINUXTRACK_MODERN
+  const char *app_name = "tuxtracks";
+#else
+  const char *app_name = "linuxtrack";
+#endif
+  char *xdg_config_home = getenv("XDG_CONFIG_HOME");
   char *home = getenv("HOME");
+  char *userprofile = getenv("USERPROFILE");
 
-  // Fix for Wine environment: getenv("HOME") can return NULL
-  if (home == NULL) {
-    printf("DEBUG: HOME is NULL, trying USERPROFILE...\n");
-    // Fallback for Wine environments where HOME is not set
-    home = getenv("USERPROFILE");
-    if (home == NULL) {
-      printf("DEBUG: USERPROFILE is NULL, using current directory\n");
-      // Final fallback to current directory
-      home = ".";
+  if ((xdg_config_home != NULL) && (xdg_config_home[0] != '\0')) {
+    size_t size = strlen(xdg_config_home) + strlen(app_name) + 3;
+    char *path = (char *)malloc(size);
+    if (path != NULL) {
+      snprintf(path, size, "%s/%s", xdg_config_home, app_name);
     }
+    return path;
   }
 
-  size_t path1_size = 200 + strlen(home);
-  char *path1 = (char *)malloc(path1_size);
-  if (path1 == NULL) {
-    printf("DEBUG: Memory allocation failed for path1!\n");
+  if ((home != NULL) && (home[0] != '\0')) {
+    size_t size = strlen(home) + strlen(app_name) + 11;
+    char *path = (char *)malloc(size);
+    if (path != NULL) {
+      snprintf(path, size, "%s/.config/%s", home, app_name);
+    }
+    return path;
+  }
+
+  if ((userprofile != NULL) && (userprofile[0] != '\0')) {
+    size_t size = strlen(userprofile) + strlen(app_name) + 3;
+    char *path = (char *)malloc(size);
+    if (path != NULL) {
+      snprintf(path, size, "%s/%s", userprofile, app_name);
+    }
+    return path;
+  }
+
+  return strdup(".");
+}
+
+bool game_data_get_desc(int id, game_desc_t *gd) {
+  FILE *f = NULL;
+  char *config_base = linuxtrack_config_base();
+  if (config_base == NULL) {
     return false;
   }
 
-#ifdef LINUXTRACK_MODERN
-  snprintf(path1, path1_size, "%s/.config/tuxtracks/tir_firmware/gamedata.txt",
-           home);
-#else
-  snprintf(path1, path1_size, "%s/.config/linuxtrack/tir_firmware/gamedata.txt",
-           home);
-#endif
+  size_t path1_size = 200 + strlen(config_base);
+  char *path1 = (char *)malloc(path1_size);
+  if (path1 == NULL) {
+    printf("DEBUG: Memory allocation failed for path1!\n");
+    free(config_base);
+    return false;
+  }
+
+  snprintf(path1, path1_size, "%s/tir_firmware/gamedata.txt", config_base);
+  free(config_base);
   if ((f = fopen(path1, "r")) == NULL) {
     udp_log("UDP Bridge ERROR: Can't open data file '%s'\n", path1);
     free(path1);
@@ -696,26 +723,18 @@ bool game_data_find_id_by_steam_appid(const char *steam_appid, int *out_id) {
 
 bool getSomeSeriousPoetry(char *verse1, char *verse2) {
   bool res = true;
-  char *home = getenv("HOME");
-
-  // Fix for Wine environment: getenv("HOME") can return NULL
-  if (home == NULL) {
-    printf("DEBUG: HOME is NULL, trying USERPROFILE...\n");
-    // Fallback for Wine environments where HOME is not set
-    home = getenv("USERPROFILE");
-    if (home == NULL) {
-      printf("DEBUG: USERPROFILE is NULL, using current directory\n");
-      // Final fallback to current directory
-      home = ".";
-    }
+  char *config_base = linuxtrack_config_base();
+  if (config_base == NULL) {
+    return false;
   }
 
-  size_t path_size = 200 + strlen(home);
+  size_t path_size = 200 + strlen(config_base);
   char *path1 = (char *)malloc(path_size);
   char *path2 = (char *)malloc(path_size);
 
   if (path1 == NULL || path2 == NULL) {
     printf("DEBUG: Memory allocation failed for path1 or path2!\n");
+    free(config_base);
     if (path1)
       free(path1);
     if (path2)
@@ -723,17 +742,9 @@ bool getSomeSeriousPoetry(char *verse1, char *verse2) {
     return false;
   }
 
-#ifdef LINUXTRACK_MODERN
-  snprintf(path1, path_size, "%s/.config/tuxtracks/tir_firmware/poem1.txt",
-           home);
-  snprintf(path2, path_size, "%s/.config/tuxtracks/tir_firmware/poem2.txt",
-           home);
-#else
-  snprintf(path1, path_size, "%s/.config/linuxtrack/tir_firmware/poem1.txt",
-           home);
-  snprintf(path2, path_size, "%s/.config/linuxtrack/tir_firmware/poem2.txt",
-           home);
-#endif
+  snprintf(path1, path_size, "%s/tir_firmware/poem1.txt", config_base);
+  snprintf(path2, path_size, "%s/tir_firmware/poem2.txt", config_base);
+  free(config_base);
   FILE *f1 = fopen(path1, "rb");
   memset(verse1, 0, 200);
   if (f1 != NULL) {

@@ -154,7 +154,7 @@ Verification run:
 
 ### Phase 2: macOS App Shell
 
-**Status:** IN PROGRESS (2026-03-12)
+**Status:** COMPLETE (2026-03-12, repository-side)
 
 Purpose:
 
@@ -203,17 +203,26 @@ Completed so far:
 - updated `src/ltr_server1.c` diagnostics so startup/path validation reflects the newer install/bundle fallback model instead of assuming a missing user config is always the root cause
 - taught both `src/utils.c` and `src/linuxtrack.c` to honor `XDG_CONFIG_HOME` before falling back to `HOME/.config/linuxtrack`, reducing another Linux-specific home-layout assumption in shared config/runtime lookup
 - removed the remaining developer-machine fallback paths from `src/wine_bridge/client/rest.c`; the UDP Wine bridge now relies on the existing `HOME` / `USERPROFILE` / current-directory chain instead of silently probing `/home/startux/...`
+- normalized the Wine bridge client config-base lookup in `src/wine_bridge/client/rest.c` and `src/wine_bridge/client/check_data.c` so those helpers now prefer `XDG_CONFIG_HOME`, then `HOME`, then `USERPROFILE`, instead of hardcoding `HOME/.config/linuxtrack` directly
+- added `scripts/verify_macos_bundle_layout.sh` to validate the expected `Linuxtrack.app` layout after install, covering the bundle executable, `Info.plist`, icon, default config, selected resource assets, and bundled Qt help files
 
 Verification run:
 
 - `cmake -S . -B build_phase0_verify`
 - `cmake --build build_phase0_verify --target ltr_gui -j"$(nproc)"`
+- `bash -n scripts/verify_macos_bundle_layout.sh`
+- `scripts/verify_macos_bundle_layout.sh /path/to/staged/install/root`
 
 Suggested experimental mac configure flow:
 
 - `scripts/configure_macos_experimental.sh`
 - `cmake --build build_macos_experimental --target ltr_gui -j"$(sysctl -n hw.ncpu)"`
 - `cmake --install build_macos_experimental`
+- `scripts/verify_macos_bundle_layout.sh stage_macos_experimental`
+
+Residual risk:
+
+- repository-side Phase 2 app-shell work is complete, but a real macOS launch/persistence smoke test has still not been executed in this Linux environment
 
 ### Phase 3: Webcam and Face Tracking
 
