@@ -103,7 +103,7 @@ jobs:
           cpack -G RPM
 
       - name: Upload native packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Linuxtrack-Native-Packages
           path: |
@@ -122,7 +122,7 @@ jobs:
           mv *.AppImage Linuxtrack-latest-x86_64.AppImage
 
       - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Linuxtrack-AppImage
           path: Linuxtrack-latest-x86_64.AppImage
@@ -141,7 +141,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download AppImage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: Linuxtrack-AppImage
 
@@ -169,7 +169,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download AppImage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: Linuxtrack-AppImage
 
