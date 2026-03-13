@@ -260,6 +260,8 @@ Completed so far:
 - added a small mac-facing in-memory provider scaffold in `src/mac_capture_stub.c` so future experimental mac work has a concrete provider implementation for synthetic or recorded grayscale frames before real camera APIs are wired in
 - added regression coverage for the stub provider lifecycle, including initialization, single-frame delivery, and face-tracking frame submission
 - started wiring the legacy mac webcam path onto the shared gray-frame replay seam for preview/processed-buffer population, while still leaving helper-supplied blobs as the current source of truth
+- tightened the shared replay helper so provider-driven capture paths can operate with only one caller buffer available, which makes the legacy mac helper path and future provider-backed adapters easier to plug in
+- moved the legacy mac webcam path one step closer to the provider contract by routing helper frames through a local grayscale provider callback instead of constructing replay inputs inline
 
 Required regression tests:
 

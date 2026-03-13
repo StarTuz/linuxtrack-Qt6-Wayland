@@ -22,8 +22,14 @@ int ltr_int_replay_gray_capture_frame(const ltr_gray_capture_frame *input,
                                 input->expected_blobs);
   preview_buf = ltr_int_get_preview_buffer(frame, preview_fallback);
   processing_buf = ltr_int_get_tracking_buffer(frame, tracking_fallback);
-  if ((preview_buf == NULL) || (processing_buf == NULL)) {
+  if ((preview_buf == NULL) && (processing_buf == NULL)) {
     return -1;
+  }
+  if (preview_buf == NULL) {
+    preview_buf = processing_buf;
+  }
+  if (processing_buf == NULL) {
+    processing_buf = preview_buf;
   }
 
   memcpy(preview_buf, input->gray_bitmap, pixel_count);

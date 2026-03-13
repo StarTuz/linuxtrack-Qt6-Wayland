@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "cal.h"
+#include "capture_provider.h"
 #include "capture_replay.h"
 #include <com_proc.h>
 #include "ipc_utils.h"
@@ -13,6 +14,46 @@ char *args[] = {"./qt_cam", "-c", "Live! Cam Optia", "-x", "352", "-y", "288", "
 static int width;
 static int height;
 static struct mmap_s mmm;
+
+typedef struct {
+  const struct camera_control_block *ccb;
+} mac_gray_provider_ctx;
+
+static mac_gray_provider_ctx gray_provider_ctx = {
+  .ccb = NULL
+};
+
+static int next_gray_frame(void *ctx, ltr_gray_capture_frame *frame)
+{
+  mac_gray_provider_ctx *provider_ctx = (mac_gray_provider_ctx *)ctx;
+
+  if((provider_ctx == NULL) || (provider_ctx->ccb == NULL) || (frame == NULL)){
+    return -1;
+  }
+  if(!ltr_int_getFrameFlag(&mmm)){
+    return 0;
+  }
+
+  frame->gray_bitmap = ltr_int_getFramePtr(&mmm);
+  frame->width = width;
+  frame->height = height;
+  frame->expected_blobs = MAX_BLOBS;
+  frame->threshold = (unsigned int)ltr_int_wc_get_threshold();
+  frame->min_blob_pixels = ltr_int_wc_get_min_blob();
+  frame->max_blob_pixels = ltr_int_wc_get_max_blob();
+  frame->flip = false;
+  frame->face_tracking = (provider_ctx->ccb->device.category == mac_webcam_ft);
+  return 1;
+}
+
+static const ltr_gray_capture_provider_vtable gray_provider_vtable = {
+  .next_frame = next_gray_frame
+};
+
+static ltr_gray_capture_provider gray_provider = {
+  .vtable = &gray_provider_vtable,
+  .ctx = &gray_provider_ctx
+};
 
 
 static bool init_capture(char *prog, char *camera, int w, int h, char *fileName, char *cascade)
@@ -53,33 +94,23 @@ static bool read_img_processing_prefs()
   return true;
 }
 
-static void update_frame_from_gray_helper(const struct camera_control_block *ccb,
-                                          struct frame_type *frame)
+static void update_frame_from_gray_helper(struct frame_type *frame)
 {
-  ltr_gray_capture_frame input;
+  bool helper_frame_acquired = false;
 
-  if((frame == NULL) || ((frame->bitmap == NULL) && (frame->bitmap_processed == NULL))){
+  if(frame == NULL){
     return;
   }
-
-  input.gray_bitmap = ltr_int_getFramePtr(&mmm);
-  input.width = width;
-  input.height = height;
-  input.expected_blobs = frame->bloblist.num_blobs;
-  input.threshold = (unsigned int)ltr_int_wc_get_threshold();
-  input.min_blob_pixels = ltr_int_wc_get_min_blob();
-  input.max_blob_pixels = ltr_int_wc_get_max_blob();
-  input.flip = false;
-  input.face_tracking = (ccb->device.category == mac_webcam_ft);
-
-  if((frame->bitmap_processed != NULL) || input.face_tracking){
-    if(ltr_int_replay_gray_capture_frame(&input, frame, NULL, NULL) == 0){
-      return;
-    }
+  if(ltr_int_provider_get_frame(&gray_provider, frame, frame->bitmap,
+                                frame->bitmap_processed,
+                                &helper_frame_acquired) == 0 &&
+     helper_frame_acquired){
+    ltr_int_resetFrameFlag(&mmm);
+    return;
   }
-
-  if(frame->bitmap != NULL){
-    memcpy(frame->bitmap, input.gray_bitmap, frame->width * frame->height);
+  if(ltr_int_getFrameFlag(&mmm) && (frame->bitmap != NULL)){
+    memcpy(frame->bitmap, ltr_int_getFramePtr(&mmm), frame->width * frame->height);
+    ltr_int_resetFrameFlag(&mmm);
   }
 }
 
@@ -122,6 +153,7 @@ int ltr_int_tracker_init(struct camera_control_block *ccb)
     free(cascade);
   }
   read_img_processing_prefs();
+  gray_provider_ctx.ccb = ccb;
   ltr_int_resetFrameFlag(&mmm);
   return 0;
 }
@@ -152,10 +184,7 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   frame->width = width;
   frame->height = height;
   read_img_processing_prefs();
-  if(ltr_int_getFrameFlag(&mmm)){
-    update_frame_from_gray_helper(ccb, frame);
-    ltr_int_resetFrameFlag(&mmm);
-  }
+  update_frame_from_gray_helper(frame);
   if(ltr_int_haveNewBlobs(&mmm)){
     frame->bloblist.num_blobs = ltr_int_getBlobs(&mmm, frame->bloblist.blobs, frame->bloblist.num_blobs);
     *frame_acquired = true;

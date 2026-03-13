@@ -134,3 +134,35 @@ TEST_CASE("gray capture replay preserves face frames for face processing",
   CHECK_FALSE(g_last_flip);
   CHECK(g_last_face_tracking);
 }
+
+TEST_CASE("gray capture replay can use a single fallback buffer",
+          "[capture_replay]") {
+  reset_capture_replay_stubs();
+  const unsigned char gray_bitmap[] = {10, 42, 43, 255};
+  unsigned char shared_buffer[4] = {};
+  blob_type blobs[3] = {};
+  frame_type frame{};
+  frame.bloblist.blobs = blobs;
+  frame.bloblist.expected_blobs = 3;
+
+  ltr_gray_capture_frame input{
+      .gray_bitmap = gray_bitmap,
+      .width = 2,
+      .height = 2,
+      .expected_blobs = 3,
+      .threshold = 42,
+      .min_blob_pixels = 10,
+      .max_blob_pixels = 20,
+      .flip = false,
+      .face_tracking = false,
+  };
+
+  REQUIRE(ltr_int_replay_gray_capture_frame(&input, &frame, shared_buffer,
+                                            nullptr) == 0);
+
+  CHECK(shared_buffer[0] == 0);
+  CHECK(shared_buffer[1] == 0);
+  CHECK(shared_buffer[2] == 43);
+  CHECK(shared_buffer[3] == 255);
+  CHECK(g_last_image.bitmap == shared_buffer);
+}
