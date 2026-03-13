@@ -95,6 +95,24 @@ target_include_directories(test_capture_replay PRIVATE
 add_test(NAME test_capture_replay COMMAND test_capture_replay)
 
 # -------------------------------------------------------------------------
+# test_capture_provider — callback/vtable seam for grayscale providers
+# -------------------------------------------------------------------------
+set(CAPTURE_PROVIDER_TEST_SOURCES
+    test_capture_provider.cpp
+    ../capture_provider.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_capture_provider ${CAPTURE_PROVIDER_TEST_SOURCES})
+
+target_include_directories(test_capture_provider PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_capture_provider COMMAND test_capture_provider)
+
+# -------------------------------------------------------------------------
 # test_frame_adapter — shared capture-to-grayscale conversion semantics
 # -------------------------------------------------------------------------
 set(FRAME_ADAPTER_TEST_SOURCES

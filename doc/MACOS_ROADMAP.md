@@ -255,6 +255,8 @@ Completed so far:
 - switched the Linux webcam path to use that shared routing helper for both blob and face-tracking processing
 - extracted a gray-frame replay/provider helper in `src/capture_replay.c` so future mac capture code and recorded-frame harnesses can feed already-grayscale images into the shared frame setup and processing path without relying on the legacy helper/mmap backend
 - added regression coverage for that replay/provider entry point, including thresholded non-face replay and passthrough face-tracking replay semantics
+- added a tiny grayscale capture-provider contract in `src/capture_provider.c` so future mac capture code can expose a `next_frame` callback/vtable instead of mirroring legacy driver structure
+- added regression coverage for the provider contract, including acquired-frame forwarding, no-frame propagation, and replay-failure propagation
 
 Required regression tests:
 

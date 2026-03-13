@@ -1001,11 +1001,10 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   int max_blob_pixels = wc_info.max_blob_pixels;
   ltr_int_scale_blob_limits_for_resolution(&img, &min_blob_pixels,
                                            &max_blob_pixels);
-  ltr_int_extract_blobs_from_gray_image(&img, &(f->bloblist),
-                                        min_blob_pixels, max_blob_pixels,
-                                        wc_info.flip);
+  ltr_int_process_gray_image(&img, &(f->bloblist), min_blob_pixels,
+                             max_blob_pixels, wc_info.flip, false);
 #else
-  ltr_int_face_detect(&img, &(f->bloblist));
+  ltr_int_process_gray_image(&img, &(f->bloblist), 0, 0, false, true);
 #endif
   update_frame_diagnostics(f);
   *frame_acquired = true;
