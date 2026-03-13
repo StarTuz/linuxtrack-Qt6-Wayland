@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "cal.h"
+#include "capture_replay.h"
 #include <com_proc.h>
 #include "ipc_utils.h"
 #include "wc_driver_prefs.h"
@@ -50,6 +51,36 @@ static bool read_img_processing_prefs()
   ltr_int_setOptLevel(&mmm, ltr_int_wc_get_optim_level());
   ltr_int_setEff(&mmm, ltr_int_wc_get_eff());
   return true;
+}
+
+static void update_frame_from_gray_helper(const struct camera_control_block *ccb,
+                                          struct frame_type *frame)
+{
+  ltr_gray_capture_frame input;
+
+  if((frame == NULL) || ((frame->bitmap == NULL) && (frame->bitmap_processed == NULL))){
+    return;
+  }
+
+  input.gray_bitmap = ltr_int_getFramePtr(&mmm);
+  input.width = width;
+  input.height = height;
+  input.expected_blobs = frame->bloblist.num_blobs;
+  input.threshold = (unsigned int)ltr_int_wc_get_threshold();
+  input.min_blob_pixels = ltr_int_wc_get_min_blob();
+  input.max_blob_pixels = ltr_int_wc_get_max_blob();
+  input.flip = false;
+  input.face_tracking = (ccb->device.category == mac_webcam_ft);
+
+  if((frame->bitmap_processed != NULL) || input.face_tracking){
+    if(ltr_int_replay_gray_capture_frame(&input, frame, NULL, NULL) == 0){
+      return;
+    }
+  }
+
+  if(frame->bitmap != NULL){
+    memcpy(frame->bitmap, input.gray_bitmap, frame->width * frame->height);
+  }
 }
 
 int ltr_int_tracker_init(struct camera_control_block *ccb)
@@ -118,14 +149,11 @@ int ltr_int_tracker_close()
 int ltr_int_tracker_get_frame(struct camera_control_block *ccb, 
 			      struct frame_type *frame, bool *frame_acquired)
 {
-  (void) ccb;
   frame->width = width;
   frame->height = height;
   read_img_processing_prefs();
   if(ltr_int_getFrameFlag(&mmm)){
-    if(frame->bitmap != NULL){
-      memcpy(frame->bitmap, ltr_int_getFramePtr(&mmm), frame->width * frame->height);
-    }
+    update_frame_from_gray_helper(ccb, frame);
     ltr_int_resetFrameFlag(&mmm);
   }
   if(ltr_int_haveNewBlobs(&mmm)){
