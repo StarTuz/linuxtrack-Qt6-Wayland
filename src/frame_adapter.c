@@ -4,6 +4,55 @@
 
 static const int c_FRAME_TS_WRAP_USECS = 1024 * 1000000;
 
+void ltr_int_prepare_capture_frame(struct frame_type *frame,
+                                   unsigned int width,
+                                   unsigned int height,
+                                   unsigned int expected_blobs) {
+  if (frame == NULL) {
+    return;
+  }
+  frame->bloblist.num_blobs = expected_blobs;
+  frame->width = width;
+  frame->height = height;
+  frame->camera_diag[0] = '\0';
+  frame->camera_diag2[0] = '\0';
+}
+
+unsigned char *ltr_int_get_preview_buffer(struct frame_type *frame,
+                                          unsigned char *fallback) {
+  if ((frame != NULL) && (frame->bitmap != NULL)) {
+    return frame->bitmap;
+  }
+  return fallback;
+}
+
+unsigned char *ltr_int_get_tracking_buffer(struct frame_type *frame,
+                                           unsigned char *fallback) {
+  if ((frame != NULL) && (frame->bitmap_processed != NULL)) {
+    return frame->bitmap_processed;
+  }
+  return fallback;
+}
+
+void ltr_int_threshold_gray_frame(const unsigned char *source_buf,
+                                  unsigned char *dest_buf,
+                                  unsigned int pixel_count,
+                                  unsigned int threshold) {
+  unsigned int cntr;
+
+  if ((source_buf == NULL) || (dest_buf == NULL)) {
+    return;
+  }
+
+  for (cntr = 0; cntr < pixel_count; ++cntr) {
+    if (source_buf[cntr] > threshold) {
+      dest_buf[cntr] = source_buf[cntr];
+    } else {
+      dest_buf[cntr] = 0;
+    }
+  }
+}
+
 uint32_t ltr_int_frame_fourcc(const char fourcc[4]) {
   return ((uint32_t)(unsigned char)fourcc[0]) |
          ((uint32_t)(unsigned char)fourcc[1] << 8) |

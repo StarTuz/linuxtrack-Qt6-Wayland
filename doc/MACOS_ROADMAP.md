@@ -247,6 +247,8 @@ Completed so far:
 - added `src/tests/test_frame_adapter.cpp` regression coverage for `YUYV`, `GREY`, `RGB3`, `BGR3`, and unsupported-format fallback semantics so future mac capture work can reuse a locked-down conversion layer
 - extracted shared frame-clock/finalization helpers so capture paths can apply consistent counter and timestamp policy before entering tracking, including duplicate-timestamp clamping and no-frame/drop behavior
 - switched `src/runloop.c` to use that shared frame finalization path instead of assigning `frame.counter` and `frame.usec` inline
+- extracted shared capture-frame preparation helpers for width/height/blob-count setup, preview/tracking buffer selection, and grayscale thresholding before blob/face processing
+- switched the Linux webcam driver to use those helpers instead of keeping capture-buffer handoff and thresholding logic local to `webcam_driver.c`
 
 Required regression tests:
 

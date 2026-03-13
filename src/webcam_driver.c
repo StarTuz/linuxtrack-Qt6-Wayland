@@ -93,14 +93,6 @@ static void reset_webcam_state(void) {
   wc_info.flip = false;
 }
 
-static void clear_frame_diagnostics(struct frame_type *f) {
-  if (f == NULL) {
-    return;
-  }
-  f->camera_diag[0] = '\0';
-  f->camera_diag2[0] = '\0';
-}
-
 static void update_frame_diagnostics(struct frame_type *f) {
   char requested_fourcc[5];
   char active_fourcc[5];
@@ -109,7 +101,7 @@ static void update_frame_diagnostics(struct frame_type *f) {
     return;
   }
 
-  clear_frame_diagnostics(f);
+  ltr_int_prepare_capture_frame(f, f->width, f->height, f->bloblist.num_blobs);
   ltr_int_fourcc_to_string(wc_info.requested_fourcc, requested_fourcc);
   ltr_int_fourcc_to_string(wc_info.fourcc, active_fourcc);
 
@@ -889,25 +881,11 @@ static void get_gray_image(unsigned char *source_buf, unsigned char *dest_buf,
   }
 }
 
-static void threshold_gray_image(unsigned char *source_buf,
-                                 unsigned char *dest_buf) {
-  unsigned int cntr;
-  for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
-    if (source_buf[cntr] > wc_info.threshold) {
-      dest_buf[cntr] = source_buf[cntr];
-    } else {
-      dest_buf[cntr] = 0;
-    }
-  }
-}
-
 int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
                               struct frame_type *f, bool *frame_acquired) {
   (void)ccb;
-  clear_frame_diagnostics(f);
-  f->bloblist.num_blobs = wc_info.expecting_blobs;
-  f->width = wc_info.w;
-  f->height = wc_info.h;
+  ltr_int_prepare_capture_frame(f, wc_info.w, wc_info.h,
+                                wc_info.expecting_blobs);
   struct v4l2_buffer buf;
   memset(&buf, 0, sizeof(buf));
   buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -980,16 +958,16 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   }
 
   unsigned char *source_buf = (buffers[buf.index]).start;
-  unsigned char *preview_buf =
-      (f->bitmap != NULL) ? f->bitmap : wc_info.bw_frame;
+  unsigned char *preview_buf = ltr_int_get_preview_buffer(f, wc_info.bw_frame);
   unsigned char *tracking_buf =
-      (f->bitmap_processed != NULL) ? f->bitmap_processed : wc_info.proc_frame;
+      ltr_int_get_tracking_buffer(f, wc_info.proc_frame);
   get_gray_image(source_buf, preview_buf, buf.bytesused);
   if (tracking_buf != NULL) {
 #ifdef OPENCV
     memcpy(tracking_buf, preview_buf, wc_info.w * wc_info.h);
 #else
-    threshold_gray_image(preview_buf, tracking_buf);
+    ltr_int_threshold_gray_frame(preview_buf, tracking_buf,
+                                 wc_info.w * wc_info.h, wc_info.threshold);
 #endif
   } else {
     tracking_buf = preview_buf;

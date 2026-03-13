@@ -27,6 +27,54 @@ TEST_CASE("fourcc helper round-trips printable tags", "[frame_adapter]") {
   CHECK(std::string(out) == "YUYV");
 }
 
+TEST_CASE("capture frame preparation resets metadata and diagnostics",
+          "[frame_adapter]") {
+  frame_type frame{};
+  frame.camera_diag[0] = 'x';
+  frame.camera_diag2[0] = 'y';
+
+  ltr_int_prepare_capture_frame(&frame, 640, 480, 3);
+
+  CHECK(frame.width == 640);
+  CHECK(frame.height == 480);
+  CHECK(frame.bloblist.num_blobs == 3);
+  CHECK(frame.camera_diag[0] == '\0');
+  CHECK(frame.camera_diag2[0] == '\0');
+}
+
+TEST_CASE("capture buffer helpers prefer frame-owned buffers", "[frame_adapter]") {
+  frame_type frame{};
+  unsigned char preview_fallback[4] = {1, 2, 3, 4};
+  unsigned char tracking_fallback[4] = {5, 6, 7, 8};
+  unsigned char preview_owned[4] = {9, 9, 9, 9};
+  unsigned char tracking_owned[4] = {7, 7, 7, 7};
+
+  CHECK(ltr_int_get_preview_buffer(&frame, preview_fallback) ==
+        preview_fallback);
+  CHECK(ltr_int_get_tracking_buffer(&frame, tracking_fallback) ==
+        tracking_fallback);
+
+  frame.bitmap = preview_owned;
+  frame.bitmap_processed = tracking_owned;
+
+  CHECK(ltr_int_get_preview_buffer(&frame, preview_fallback) == preview_owned);
+  CHECK(ltr_int_get_tracking_buffer(&frame, tracking_fallback) ==
+        tracking_owned);
+}
+
+TEST_CASE("threshold helper zeros pixels at or below threshold",
+          "[frame_adapter]") {
+  const unsigned char source[] = {10, 42, 43, 255};
+  unsigned char dest[4] = {1, 1, 1, 1};
+
+  ltr_int_threshold_gray_frame(source, dest, 4, 42);
+
+  CHECK(dest[0] == 0);
+  CHECK(dest[1] == 0);
+  CHECK(dest[2] == 43);
+  CHECK(dest[3] == 255);
+}
+
 TEST_CASE("YUYV conversion copies luma bytes into grayscale output",
           "[frame_adapter]") {
   const unsigned char source[] = {10, 200, 20, 201, 30, 202, 40, 203};

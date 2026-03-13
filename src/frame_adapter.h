@@ -16,6 +16,18 @@ typedef struct {
   bool initialized;
 } ltr_frame_clock_state;
 
+void ltr_int_prepare_capture_frame(struct frame_type *frame,
+                                   unsigned int width,
+                                   unsigned int height,
+                                   unsigned int expected_blobs);
+unsigned char *ltr_int_get_preview_buffer(struct frame_type *frame,
+                                          unsigned char *fallback);
+unsigned char *ltr_int_get_tracking_buffer(struct frame_type *frame,
+                                           unsigned char *fallback);
+void ltr_int_threshold_gray_frame(const unsigned char *source_buf,
+                                  unsigned char *dest_buf,
+                                  unsigned int pixel_count,
+                                  unsigned int threshold);
 uint32_t ltr_int_frame_fourcc(const char fourcc[4]);
 void ltr_int_fourcc_to_string(uint32_t fourcc, char out[5]);
 bool ltr_int_convert_frame_to_gray(uint32_t fourcc, unsigned int width,
