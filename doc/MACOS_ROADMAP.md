@@ -230,11 +230,21 @@ Purpose:
 
 - deliver the first real end-to-end tracking feature on macOS
 
+Status:
+
+- IN PROGRESS (2026-03-12)
+
 Implementation:
 
 - replace the old QTKit capture path with a modern macOS capture layer
 - adapt frames into the existing shared image and face tracking pipeline
 - reuse the current Linux-side smoothing and face pose improvements where possible
+
+Completed so far:
+
+- extracted a shared `src/frame_adapter.c` seam for raw pixel-format conversion into the existing grayscale tracking input path
+- switched the Linux webcam driver to use that shared adapter instead of keeping the conversion logic private to `webcam_driver.c`
+- added `src/tests/test_frame_adapter.cpp` regression coverage for `YUYV`, `GREY`, `RGB3`, `BGR3`, and unsupported-format fallback semantics so future mac capture work can reuse a locked-down conversion layer
 
 Required regression tests:
 

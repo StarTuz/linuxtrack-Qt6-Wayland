@@ -6,6 +6,7 @@
 #include "pref.h"
 #include "pref_global.h"
 #include "runloop.h"
+#include "frame_adapter.h"
 #include "utils.h"
 #include "wc_driver_prefs.h"
 #include "webcam_driver.h"
@@ -92,14 +93,6 @@ static void reset_webcam_state(void) {
   wc_info.flip = false;
 }
 
-static void fourcc_to_string(__u32 fourcc, char out[5]) {
-  out[0] = (char)(fourcc & 0xFF);
-  out[1] = (char)((fourcc >> 8) & 0xFF);
-  out[2] = (char)((fourcc >> 16) & 0xFF);
-  out[3] = (char)((fourcc >> 24) & 0xFF);
-  out[4] = '\0';
-}
-
 static void clear_frame_diagnostics(struct frame_type *f) {
   if (f == NULL) {
     return;
@@ -117,8 +110,8 @@ static void update_frame_diagnostics(struct frame_type *f) {
   }
 
   clear_frame_diagnostics(f);
-  fourcc_to_string(wc_info.requested_fourcc, requested_fourcc);
-  fourcc_to_string(wc_info.fourcc, active_fourcc);
+  ltr_int_fourcc_to_string(wc_info.requested_fourcc, requested_fourcc);
+  ltr_int_fourcc_to_string(wc_info.fourcc, active_fourcc);
 
   if (wc_info.requested_fourcc != 0) {
     snprintf(f->camera_diag, sizeof(f->camera_diag),
@@ -615,8 +608,8 @@ static bool set_capture_format(struct camera_control_block *ccb) {
   if (wc_info.fourcc != requested_fourcc) {
     char requested_str[5];
     char active_str[5];
-    fourcc_to_string(requested_fourcc, requested_str);
-    fourcc_to_string(wc_info.fourcc, active_str);
+    ltr_int_fourcc_to_string(requested_fourcc, requested_str);
+    ltr_int_fourcc_to_string(wc_info.fourcc, active_str);
     ltr_int_log_message("Driver adjusted pixel format from %s to %s.\n",
                         requested_str, active_str);
   }
@@ -887,52 +880,12 @@ int ltr_int_tracker_pause() {
 
 static void get_gray_image(unsigned char *source_buf, unsigned char *dest_buf,
                            unsigned int bytes_used) {
-  unsigned int cntr, cntr1;
-
-  if (wc_info.fourcc == *(__u32 *)"YUYV") {
-    for (cntr = cntr1 = 0; cntr < bytes_used; cntr += 2, ++cntr1) {
-      dest_buf[cntr1] = source_buf[cntr];
-    }
-  } else if ((wc_info.fourcc == *(__u32 *)"YU12") ||
-             (wc_info.fourcc == *(__u32 *)"YV12")) {
-    for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
-      dest_buf[cntr] = source_buf[cntr];
-    }
-  } else if (wc_info.fourcc == *(__u32 *)"RGB3") {
-    float y;
-    for (cntr = cntr1 = 0; cntr < bytes_used; cntr += 3, ++cntr1) {
-      // Y  =      (0.257 * R) + (0.504 * G) + (0.098 * B) + 16
-      y = 0.257 * ((float)source_buf[cntr]) +
-          0.504 * ((float)source_buf[cntr + 1]) +
-          0.098 * ((float)source_buf[cntr + 2]) + 16;
-      if (y > 255)
-        y = 255.0;
-      dest_buf[cntr1] = y;
-    }
-  } else if (wc_info.fourcc == *(__u32 *)"GREY") {
-    // 8-bit grayscale: each byte is already a Y value
-    for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
-      dest_buf[cntr] = source_buf[cntr];
-    }
-  } else if (wc_info.fourcc == *(__u32 *)"BGR3") {
-    float y;
-    for (cntr = cntr1 = 0; cntr < bytes_used; cntr += 3, ++cntr1) {
-      // Y  =      (0.257 * R) + (0.504 * G) + (0.098 * B) + 16
-      y = 0.257 * ((float)source_buf[cntr + 2]) +
-          0.504 * ((float)source_buf[cntr + 1]) +
-          0.098 * ((float)source_buf[cntr + 0]) + 16;
-      if (y > 255)
-        y = 255.0;
-      dest_buf[cntr1] = y;
-    }
-  } else {
+  if (!ltr_int_convert_frame_to_gray(wc_info.fourcc, wc_info.w, wc_info.h,
+                                     source_buf, bytes_used, dest_buf)) {
     char fourcc_str[5];
-    fourcc_to_string(wc_info.fourcc, fourcc_str);
+    ltr_int_fourcc_to_string(wc_info.fourcc, fourcc_str);
     ltr_int_log_message("Unhandled pixel format %s — frame will be black. "
                         "Check camera format configuration.\n", fourcc_str);
-    for (cntr = 0; cntr < (unsigned int)wc_info.w * wc_info.h; ++cntr) {
-      dest_buf[cntr] = 0;
-    }
   }
 }
 

@@ -56,6 +56,25 @@ target_include_directories(test_image_process PRIVATE
 add_test(NAME test_image_process COMMAND test_image_process)
 
 # -------------------------------------------------------------------------
+# test_frame_adapter — shared capture-to-grayscale conversion semantics
+# -------------------------------------------------------------------------
+set(FRAME_ADAPTER_TEST_SOURCES
+    test_frame_adapter.cpp
+    stubs_utils.cpp
+    ../frame_adapter.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_frame_adapter ${FRAME_ADAPTER_TEST_SOURCES})
+
+target_include_directories(test_frame_adapter PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_frame_adapter COMMAND test_frame_adapter)
+
+# -------------------------------------------------------------------------
 # test_pref_global — shared device/pref semantics used by Linux and macOS
 # -------------------------------------------------------------------------
 set(PREF_GLOBAL_TEST_SOURCES
