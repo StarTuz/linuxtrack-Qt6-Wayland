@@ -245,6 +245,8 @@ Completed so far:
 - extracted a shared `src/frame_adapter.c` seam for raw pixel-format conversion into the existing grayscale tracking input path
 - switched the Linux webcam driver to use that shared adapter instead of keeping the conversion logic private to `webcam_driver.c`
 - added `src/tests/test_frame_adapter.cpp` regression coverage for `YUYV`, `GREY`, `RGB3`, `BGR3`, and unsupported-format fallback semantics so future mac capture work can reuse a locked-down conversion layer
+- extracted shared frame-clock/finalization helpers so capture paths can apply consistent counter and timestamp policy before entering tracking, including duplicate-timestamp clamping and no-frame/drop behavior
+- switched `src/runloop.c` to use that shared frame finalization path instead of assigning `frame.counter` and `frame.usec` inline
 
 Required regression tests:
 

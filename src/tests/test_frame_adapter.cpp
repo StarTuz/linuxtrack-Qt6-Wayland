@@ -106,3 +106,63 @@ TEST_CASE("unsupported formats report failure and black out the frame",
   CHECK(dest[2] == 0);
   CHECK(dest[3] == 0);
 }
+
+TEST_CASE("frame clock stamps the first acquired frame",
+          "[frame_adapter]") {
+  frame_type frame{};
+  ltr_frame_clock_state state{};
+
+  ltr_int_reset_frame_clock(&state);
+
+  REQUIRE(ltr_int_finalize_capture_frame(&frame, &state, true, 1234));
+  CHECK(frame.counter == 1);
+  CHECK(frame.usec == 1234);
+}
+
+TEST_CASE("frame clock ignores dropped frames",
+          "[frame_adapter]") {
+  frame_type frame{};
+  ltr_frame_clock_state state{};
+
+  ltr_int_reset_frame_clock(&state);
+
+  CHECK_FALSE(ltr_int_finalize_capture_frame(&frame, &state, false, 1234));
+  CHECK(state.counter == 0);
+  CHECK_FALSE(state.initialized);
+
+  REQUIRE(ltr_int_finalize_capture_frame(&frame, &state, true, 2000));
+  CHECK(frame.counter == 1);
+  CHECK(frame.usec == 2000);
+}
+
+TEST_CASE("frame clock bumps duplicate and backward timestamps",
+          "[frame_adapter]") {
+  frame_type frame{};
+  ltr_frame_clock_state state{};
+
+  ltr_int_reset_frame_clock(&state);
+
+  REQUIRE(ltr_int_finalize_capture_frame(&frame, &state, true, 5000));
+  CHECK(frame.usec == 5000);
+  REQUIRE(ltr_int_finalize_capture_frame(&frame, &state, true, 5000));
+  CHECK(frame.counter == 2);
+  CHECK(frame.usec == 5001);
+  REQUIRE(ltr_int_finalize_capture_frame(&frame, &state, true, 4990));
+  CHECK(frame.counter == 3);
+  CHECK(frame.usec == 5002);
+}
+
+TEST_CASE("frame clock preserves wraparound-sized jumps",
+          "[frame_adapter]") {
+  frame_type frame{};
+  ltr_frame_clock_state state{};
+  const int wrap_usecs = 1024 * 1000000;
+
+  ltr_int_reset_frame_clock(&state);
+
+  REQUIRE(ltr_int_finalize_capture_frame(&frame, &state, true,
+                                         wrap_usecs - 5));
+  REQUIRE(ltr_int_finalize_capture_frame(&frame, &state, true, 3));
+  CHECK(frame.counter == 2);
+  CHECK(frame.usec == 3);
+}

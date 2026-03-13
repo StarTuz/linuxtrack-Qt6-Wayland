@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+static const int c_FRAME_TS_WRAP_USECS = 1024 * 1000000;
+
 uint32_t ltr_int_frame_fourcc(const char fourcc[4]) {
   return ((uint32_t)(unsigned char)fourcc[0]) |
          ((uint32_t)(unsigned char)fourcc[1] << 8) |
@@ -19,6 +21,29 @@ void ltr_int_fourcc_to_string(uint32_t fourcc, char out[5]) {
 
 static void zero_gray_frame(unsigned char *dest_buf, unsigned int pixel_count) {
   memset(dest_buf, 0, pixel_count);
+}
+
+static int next_frame_timestamp(const ltr_frame_clock_state *state,
+                                int capture_usec) {
+  int next_usec = capture_usec;
+
+  if ((state == NULL) || !state->initialized) {
+    return next_usec;
+  }
+
+  if (capture_usec > state->last_usec) {
+    return capture_usec;
+  }
+
+  if ((state->last_usec - capture_usec) > (c_FRAME_TS_WRAP_USECS / 2)) {
+    return capture_usec;
+  }
+
+  next_usec = state->last_usec + 1;
+  if (next_usec >= c_FRAME_TS_WRAP_USECS) {
+    next_usec -= c_FRAME_TS_WRAP_USECS;
+  }
+  return next_usec;
 }
 
 bool ltr_int_convert_frame_to_gray(uint32_t fourcc, unsigned int width,
@@ -71,5 +96,28 @@ bool ltr_int_convert_frame_to_gray(uint32_t fourcc, unsigned int width,
   if (out < pixel_count) {
     memset(dest_buf + out, 0, pixel_count - out);
   }
+  return true;
+}
+
+void ltr_int_reset_frame_clock(ltr_frame_clock_state *state) {
+  if (state == NULL) {
+    return;
+  }
+  state->counter = 0;
+  state->last_usec = 0;
+  state->initialized = false;
+}
+
+bool ltr_int_finalize_capture_frame(struct frame_type *frame,
+                                    ltr_frame_clock_state *state,
+                                    bool frame_acquired, int capture_usec) {
+  if ((frame == NULL) || (state == NULL) || !frame_acquired) {
+    return false;
+  }
+
+  frame->usec = next_frame_timestamp(state, capture_usec);
+  frame->counter = ++(state->counter);
+  state->last_usec = frame->usec;
+  state->initialized = true;
   return true;
 }

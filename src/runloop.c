@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include "cal.h"
+#include "frame_adapter.h"
 #include "utils.h"
 #include "runloop.h"
 #include "pref_global.h"
@@ -19,7 +20,8 @@ int ltr_int_rl_run(struct camera_control_block *ccb, frame_callback_fun cbk)
   int retval;
   enum ltr_request_t my_request;
   bool stop_flag = false;
-  unsigned int counter = 0;
+  ltr_frame_clock_state frame_clock;
+  ltr_int_reset_frame_clock(&frame_clock);
   ltr_int_cal_set_state(INITIALIZING);
   if(ltr_int_tracker_init(ccb) != 0){
     ltr_int_log_message("Problem initializing tracker!\n");
@@ -65,8 +67,8 @@ int ltr_int_rl_run(struct camera_control_block *ccb, frame_callback_fun cbk)
               stop_flag = true;
             }else{
               if(frame_acquired){
-                frame.counter = ++counter;
-                frame.usec = ltr_int_get_ts();
+                ltr_int_finalize_capture_frame(&frame, &frame_clock, true,
+                                               ltr_int_get_ts());
                 if((retval = cbk(ccb, &frame)) < 0){
                   ltr_int_log_message("Error processing frame! (rv = %d)\n", retval);
                   ltr_int_cal_set_state(err_PROCESSING_FRAME);
