@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #ifndef OPENCV
+#include "capture_process.h"
 #include "image_process.h"
 #else
 #include "facetrack.h"
@@ -1000,16 +1001,9 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
   int max_blob_pixels = wc_info.max_blob_pixels;
   ltr_int_scale_blob_limits_for_resolution(&img, &min_blob_pixels,
                                            &max_blob_pixels);
-  ltr_int_to_stripes(&img);
-  ltr_int_stripes_to_blobs(MAX_BLOBS, &(f->bloblist), min_blob_pixels,
-                           max_blob_pixels, &img);
-  if (wc_info.flip) {
-    unsigned int tmp;
-    for (tmp = 0; tmp < f->bloblist.num_blobs; ++tmp) {
-      f->bloblist.blobs[tmp].x *= -1;
-      f->bloblist.blobs[tmp].y *= -1;
-    }
-  }
+  ltr_int_extract_blobs_from_gray_image(&img, &(f->bloblist),
+                                        min_blob_pixels, max_blob_pixels,
+                                        wc_info.flip);
 #else
   ltr_int_face_detect(&img, &(f->bloblist));
 #endif

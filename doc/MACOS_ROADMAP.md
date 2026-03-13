@@ -249,6 +249,8 @@ Completed so far:
 - switched `src/runloop.c` to use that shared frame finalization path instead of assigning `frame.counter` and `frame.usec` inline
 - extracted shared capture-frame preparation helpers for width/height/blob-count setup, preview/tracking buffer selection, and grayscale thresholding before blob/face processing
 - switched the Linux webcam driver to use those helpers instead of keeping capture-buffer handoff and thresholding logic local to `webcam_driver.c`
+- extracted a shared grayscale-image-to-blob helper in `src/capture_process.c` so camera backends can reuse the same stripes/blob extraction and flip semantics instead of keeping that logic inside individual drivers
+- switched both the Linux webcam path and the legacy PS3Eye path to call that shared blob-extraction helper for non-face-tracking capture
 
 Required regression tests:
 

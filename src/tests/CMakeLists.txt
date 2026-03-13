@@ -41,6 +41,7 @@ add_test(NAME test_webcam_info COMMAND test_webcam_info)
 set(IMAGE_PROCESS_TEST_SOURCES
     test_image_process.cpp
     stubs_utils.cpp
+    ../capture_process.c
     ../image_process.c
     ../list.c
     catch2/catch_amalgamated.cpp

@@ -5,6 +5,7 @@ add_library(ltr SHARED
     modern_prefs.cpp modern_prefs.h mini_ini.h pref.hpp pref.h
     pref_global.c pref_global.h utils.c utils.h 
     frame_adapter.c frame_adapter.h
+    capture_process.c capture_process.h
     image_process.c image_process.h tracking.c tracking.h
     ltlib_int.c ltlib_int.h spline.c spline.h axis.c axis.h 
     wii_driver_prefs.c wii_driver_prefs.h tir_driver_prefs.c tir_driver_prefs.h 

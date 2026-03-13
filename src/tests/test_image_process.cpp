@@ -4,6 +4,7 @@
 
 extern "C" {
 #include "../cal.h"
+#include "../capture_process.h"
 #include "../image_process.h"
 }
 
@@ -51,4 +52,40 @@ TEST_CASE("shared blob extraction keeps caller thresholds unchanged for 640x480"
 
   REQUIRE(bloblist.num_blobs == 1);
   REQUIRE(bloblist.blobs[0].score == 300);
+}
+
+TEST_CASE("shared grayscale blob extraction preserves thresholds and applies flip") {
+  constexpr int kWidth = 640;
+  constexpr int kHeight = 480;
+  std::vector<unsigned char> bitmap(kWidth * kHeight, 0);
+
+  for (int y = 100; y < 115; ++y) {
+    for (int x = 200; x < 220; ++x) {
+      bitmap[(y * kWidth) + x] = 0xFF;
+    }
+  }
+
+  image_t img{
+      .w = kWidth,
+      .h = kHeight,
+      .bitmap = bitmap.data(),
+      .ratio = 1.0f,
+  };
+
+  blob_type blobs[3] = {};
+  bloblist_type bloblist{
+      .num_blobs = 0,
+      .expected_blobs = 3,
+      .blobs = blobs,
+  };
+
+  ltr_int_prepare_for_processing(kWidth, kHeight);
+  REQUIRE(ltr_int_extract_blobs_from_gray_image(&img, &bloblist, 120, 2500,
+                                                true) == 0);
+  ltr_int_cleanup_after_processing();
+
+  REQUIRE(bloblist.num_blobs == 1);
+  CHECK(bloblist.blobs[0].score == 300);
+  CHECK(bloblist.blobs[0].x < 0.0f);
+  CHECK(bloblist.blobs[0].y < 0.0f);
 }
