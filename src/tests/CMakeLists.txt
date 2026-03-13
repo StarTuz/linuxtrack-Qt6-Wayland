@@ -113,6 +113,24 @@ target_include_directories(test_capture_provider PRIVATE
 add_test(NAME test_capture_provider COMMAND test_capture_provider)
 
 # -------------------------------------------------------------------------
+# test_mac_capture_stub — mac-facing in-memory provider scaffold
+# -------------------------------------------------------------------------
+set(MAC_CAPTURE_STUB_TEST_SOURCES
+    test_mac_capture_stub.cpp
+    ../mac_capture_stub.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_mac_capture_stub ${MAC_CAPTURE_STUB_TEST_SOURCES})
+
+target_include_directories(test_mac_capture_stub PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_mac_capture_stub COMMAND test_mac_capture_stub)
+
+# -------------------------------------------------------------------------
 # test_frame_adapter — shared capture-to-grayscale conversion semantics
 # -------------------------------------------------------------------------
 set(FRAME_ADAPTER_TEST_SOURCES

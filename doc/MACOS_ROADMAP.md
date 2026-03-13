@@ -257,6 +257,8 @@ Completed so far:
 - added regression coverage for that replay/provider entry point, including thresholded non-face replay and passthrough face-tracking replay semantics
 - added a tiny grayscale capture-provider contract in `src/capture_provider.c` so future mac capture code can expose a `next_frame` callback/vtable instead of mirroring legacy driver structure
 - added regression coverage for the provider contract, including acquired-frame forwarding, no-frame propagation, and replay-failure propagation
+- added a small mac-facing in-memory provider scaffold in `src/mac_capture_stub.c` so future experimental mac work has a concrete provider implementation for synthetic or recorded grayscale frames before real camera APIs are wired in
+- added regression coverage for the stub provider lifecycle, including initialization, single-frame delivery, and face-tracking frame submission
 
 Required regression tests:
 
