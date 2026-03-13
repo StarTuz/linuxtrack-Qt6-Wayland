@@ -57,6 +57,44 @@ target_include_directories(test_image_process PRIVATE
 add_test(NAME test_image_process COMMAND test_image_process)
 
 # -------------------------------------------------------------------------
+# test_capture_process — shared gray-frame routing for blob/face processing
+# -------------------------------------------------------------------------
+set(CAPTURE_PROCESS_TEST_SOURCES
+    test_capture_process.cpp
+    ../capture_process.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_capture_process ${CAPTURE_PROCESS_TEST_SOURCES})
+target_compile_definitions(test_capture_process PRIVATE OPENCV)
+
+target_include_directories(test_capture_process PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_capture_process COMMAND test_capture_process)
+
+# -------------------------------------------------------------------------
+# test_capture_replay — shared gray-frame provider/replay entry point
+# -------------------------------------------------------------------------
+set(CAPTURE_REPLAY_TEST_SOURCES
+    test_capture_replay.cpp
+    ../capture_replay.c
+    ../frame_adapter.c
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_capture_replay ${CAPTURE_REPLAY_TEST_SOURCES})
+
+target_include_directories(test_capture_replay PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+
+add_test(NAME test_capture_replay COMMAND test_capture_replay)
+
+# -------------------------------------------------------------------------
 # test_frame_adapter — shared capture-to-grayscale conversion semantics
 # -------------------------------------------------------------------------
 set(FRAME_ADAPTER_TEST_SOURCES

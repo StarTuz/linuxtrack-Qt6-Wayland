@@ -251,6 +251,10 @@ Completed so far:
 - switched the Linux webcam driver to use those helpers instead of keeping capture-buffer handoff and thresholding logic local to `webcam_driver.c`
 - extracted a shared grayscale-image-to-blob helper in `src/capture_process.c` so camera backends can reuse the same stripes/blob extraction and flip semantics instead of keeping that logic inside individual drivers
 - switched both the Linux webcam path and the legacy PS3Eye path to call that shared blob-extraction helper for non-face-tracking capture
+- extracted a shared gray-frame routing helper in `src/capture_process.c` so capture backends can switch between blob extraction and face-detect processing through one entry point instead of branching inline in driver code
+- switched the Linux webcam path to use that shared routing helper for both blob and face-tracking processing
+- extracted a gray-frame replay/provider helper in `src/capture_replay.c` so future mac capture code and recorded-frame harnesses can feed already-grayscale images into the shared frame setup and processing path without relying on the legacy helper/mmap backend
+- added regression coverage for that replay/provider entry point, including thresholded non-face replay and passthrough face-tracking replay semantics
 
 Required regression tests:
 
