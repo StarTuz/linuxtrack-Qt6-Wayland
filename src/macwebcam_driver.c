@@ -5,6 +5,7 @@
 #include "cal.h"
 #include "capture_provider.h"
 #include "capture_replay.h"
+#include "frame_adapter.h"
 #include <com_proc.h>
 #include "ipc_utils.h"
 #include "wc_driver_prefs.h"
@@ -55,6 +56,13 @@ static ltr_gray_capture_provider gray_provider = {
   .ctx = &gray_provider_ctx
 };
 
+static unsigned int helper_blob_capacity(const struct frame_type *frame)
+{
+  if(frame == NULL){
+    return 0;
+  }
+  return frame->bloblist.num_blobs;
+}
 
 static bool init_capture(char *prog, char *camera, int w, int h, char *fileName, char *cascade)
 {
@@ -112,6 +120,18 @@ static void update_frame_from_gray_helper(struct frame_type *frame)
     memcpy(frame->bitmap, ltr_int_getFramePtr(&mmm), frame->width * frame->height);
     ltr_int_resetFrameFlag(&mmm);
   }
+}
+
+static int update_frame_from_helper_blobs(struct frame_type *frame,
+                                          bool *frame_acquired)
+{
+  if(!ltr_int_haveNewBlobs(&mmm)){
+    return 0;
+  }
+  frame->bloblist.num_blobs = ltr_int_getBlobs(&mmm, frame->bloblist.blobs,
+                                               helper_blob_capacity(frame));
+  *frame_acquired = true;
+  return 1;
 }
 
 int ltr_int_tracker_init(struct camera_control_block *ccb)
@@ -181,14 +201,11 @@ int ltr_int_tracker_close()
 int ltr_int_tracker_get_frame(struct camera_control_block *ccb, 
 			      struct frame_type *frame, bool *frame_acquired)
 {
-  frame->width = width;
-  frame->height = height;
+  const unsigned int blob_capacity = helper_blob_capacity(frame);
+  ltr_int_prepare_capture_frame(frame, width, height, blob_capacity);
   read_img_processing_prefs();
   update_frame_from_gray_helper(frame);
-  if(ltr_int_haveNewBlobs(&mmm)){
-    frame->bloblist.num_blobs = ltr_int_getBlobs(&mmm, frame->bloblist.blobs, frame->bloblist.num_blobs);
-    *frame_acquired = true;
-  }else{
+  if(update_frame_from_helper_blobs(frame, frame_acquired) == 0){
     if(!ltr_int_child_alive()){
       return -1;
     }
