@@ -5,9 +5,9 @@ env:
 
 on:
   push:
-    branches: [ master, main, modernization-*, beta ]
+    branches: [ master, main, modernization-*, beta, mac ]
   pull_request:
-    branches: [ master, main, beta ]
+    branches: [ master, main, beta, mac ]
 
 jobs:
   build-linux:
