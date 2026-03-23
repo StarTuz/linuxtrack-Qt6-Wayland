@@ -165,7 +165,11 @@ target_link_libraries(ltr_recenter linuxtrack ltr ${LTR_LIBDL})
 
 # ltr_pipe
 add_executable(ltr_pipe ltr_pipe.c linuxtrack.c utils.c)
-target_compile_definitions(ltr_pipe PRIVATE _GNU_SOURCE LINUX)
+target_compile_definitions(ltr_pipe PRIVATE _GNU_SOURCE)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(ltr_pipe PRIVATE LINUX)
+endif()
+
 target_include_directories(ltr_pipe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ..)
 target_link_libraries(ltr_pipe ${LTR_LIBDL})
 
