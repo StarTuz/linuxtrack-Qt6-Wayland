@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-typedef struct semaphore_t *semaphore_p;
+typedef struct ltr_semaphore_t *semaphore_p;
 struct mmap_s{
   char *fname;
   size_t size;

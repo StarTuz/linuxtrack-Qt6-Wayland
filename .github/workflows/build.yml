@@ -255,7 +255,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install qt@6 opencv cmake ninja pkg-config libmxml
+          brew install qt@6 opencv cmake ninja pkg-config libmxml libusb
 
       - name: Configure CMake
         run: |

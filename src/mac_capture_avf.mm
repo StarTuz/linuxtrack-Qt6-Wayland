@@ -39,6 +39,7 @@
     if (gray_buffer) {
         free(gray_buffer);
     }
+    [super dealloc];
 }
 
 - (BOOL)startCapture {
@@ -50,14 +51,14 @@
     // Find default video device
     AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
     if (!device) {
-        ltr_int_log_message(PRV_ERROR, "macOS AVFoundation: No video device found\n");
+        ltr_int_log_message("macOS AVFoundation: No video device found\n");
         return NO;
     }
     
     NSError *error = nil;
     AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
     if (!input || error) {
-        ltr_int_log_message(PRV_ERROR, "macOS AVFoundation: Could not open video device\n");
+        ltr_int_log_message("macOS AVFoundation: Could not open video device\n");
         return NO;
     }
     
@@ -157,7 +158,7 @@ static int mac_capture_avf_next_frame(void *ctx, ltr_gray_capture_frame *frame) 
     ltr_mac_capture_avf *avf = (ltr_mac_capture_avf *)ctx;
     if (!avf || !avf->internal) return -1;
     
-    LtrAVFCaptureDelegate *delegate = (__bridge LtrAVFCaptureDelegate *)avf->internal;
+    LtrAVFCaptureDelegate *delegate = (LtrAVFCaptureDelegate *)avf->internal;
     return [delegate getNextFrame:frame];
 }
 
@@ -173,19 +174,21 @@ bool ltr_int_mac_capture_avf_init(ltr_mac_capture_avf *avf) {
     
     LtrAVFCaptureDelegate *delegate = [[LtrAVFCaptureDelegate alloc] init];
     if (![delegate startCapture]) {
+        [delegate release];
         return false;
     }
     
     // Retain it for C struct
-    avf->internal = (void *)CFBridgingRetain(delegate);
+    avf->internal = (void *)delegate;
     return true;
 }
 
 void ltr_int_mac_capture_avf_shutdown(ltr_mac_capture_avf *avf) {
     if (!avf || !avf->internal) return;
     
-    LtrAVFCaptureDelegate *delegate = (__bridge_transfer LtrAVFCaptureDelegate *)avf->internal;
+    LtrAVFCaptureDelegate *delegate = (LtrAVFCaptureDelegate *)avf->internal;
     [delegate stopCapture];
+    [delegate release];
     avf->internal = NULL;
 }
 

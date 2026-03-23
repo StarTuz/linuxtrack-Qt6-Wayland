@@ -128,13 +128,13 @@ int ltr_int_server_running_already(const char *lockName, bool isAbsolute,
 
 
 
-struct semaphore_t{
+struct ltr_semaphore_t{
   int fd;
-}semaphore_t;
+};
 
 static semaphore_p ltr_int_semaphoreFromFd(int fd)
 {
-  semaphore_p res = (semaphore_p)ltr_int_my_malloc(sizeof(semaphore_t));
+  semaphore_p res = (semaphore_p)ltr_int_my_malloc(sizeof(struct ltr_semaphore_t));
   res->fd = fd;
   return res;
 }
