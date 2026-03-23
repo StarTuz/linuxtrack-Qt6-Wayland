@@ -7,6 +7,7 @@
 #include "pref_global.h"
 #include "runloop.h"
 #include "frame_adapter.h"
+#include "image_process.h"
 #include "utils.h"
 #include "wc_driver_prefs.h"
 #include "webcam_driver.h"
