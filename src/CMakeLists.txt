@@ -8,7 +8,6 @@ add_library(ltr SHARED
     capture_process.c capture_process.h
     capture_replay.c capture_replay.h
     capture_provider.c capture_provider.h
-    mac_capture_stub.c mac_capture_stub.h
     image_process.c image_process.h tracking.c tracking.h
     ltlib_int.c ltlib_int.h spline.c spline.h axis.c axis.h 
     wii_driver_prefs.c wii_driver_prefs.h tir_driver_prefs.c tir_driver_prefs.h 
@@ -18,6 +17,14 @@ add_library(ltr SHARED
     one_euro_filter.c one_euro_filter.h
 )
 target_include_directories(ltr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ..)
+
+if(APPLE)
+    target_sources(ltr PRIVATE mac_capture_avf.mm mac_capture_avf.h)
+    target_link_libraries(ltr PRIVATE "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo" "-framework Foundation")
+else()
+    target_sources(ltr PRIVATE mac_capture_stub.c mac_capture_stub.h)
+endif()
+
 target_link_libraries(ltr PRIVATE ${LTR_LIBM} ${LTR_LIBPTHREAD} ${LTR_LIBDL})
 
 add_library(linuxtrack SHARED
