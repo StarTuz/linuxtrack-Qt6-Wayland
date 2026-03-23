@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mxml.h>
+
+/* mxml v4 API compatibility */
+#ifndef MXML_DESCEND
+#define MXML_DESCEND MXML_DESCEND_ALL
+#endif
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/stat.h>
@@ -104,7 +109,13 @@ static bool game_data_init(const char *fname, bool from_update)
     return false;
   }
   xml = mxmlNewXML("1.0");
+#ifdef MXML_TEXT_CALLBACK
+  /* mxml v3 API */
   tree = mxmlLoadString(xml, decoded, MXML_TEXT_CALLBACK);
+#else
+  /* mxml v4 API: mxmlLoadString(top, options, string) */
+  tree = mxmlLoadString(xml, NULL, decoded);
+#endif
   return (tree != NULL);
 }
 
