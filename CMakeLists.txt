@@ -173,7 +173,7 @@ check_function_exists(strerror HAVE_STRERROR)
 # Platform specifics
 if(APPLE)
     set(HAS_DARWIN 1)
-    add_definitions(-DAPL=1 -DIBM=0 -DLIN=0)
+    add_definitions(-DAPL=1 -DIBM=0 -DLIN=0 -DDARWIN)
     if(BUILD_MAC_EXPERIMENTAL)
         message(STATUS "Experimental macOS build scaffolding enabled")
     else()
