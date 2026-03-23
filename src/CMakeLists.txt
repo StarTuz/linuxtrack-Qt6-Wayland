@@ -177,6 +177,7 @@ target_link_libraries(ltr_pipe ${LTR_LIBDL})
 # ltr_extractor
 add_executable(ltr_extractor hashing.c digest.c game_data.c utils.c extract.c)
 target_include_directories(ltr_extractor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} qt_gui .. ${MXML_INCLUDE_DIRS})
+target_link_directories(ltr_extractor PRIVATE ${MXML_LIBRARY_DIRS})
 target_link_libraries(ltr_extractor ${MXML_LIBRARIES} ${LTR_LIBPTHREAD})
 
 # osc_server

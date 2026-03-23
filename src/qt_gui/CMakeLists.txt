@@ -184,6 +184,7 @@ target_link_libraries(ltr_gui PRIVATE
     ${MXML_LIBRARIES}
     ${LTR_LIBM}
 )
+target_link_directories(ltr_gui PRIVATE ${MXML_LIBRARY_DIRS})
 
 # Install executable
 if(APPLE AND BUILD_MAC_EXPERIMENTAL)
