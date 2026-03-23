@@ -118,6 +118,13 @@ if(APPLE AND BUILD_MAC_EXPERIMENTAL)
     set_source_files_properties(${LTR_GUI_BUNDLE_RESOURCES} PROPERTIES
         MACOSX_PACKAGE_LOCATION Resources/linuxtrack
     )
+    # Prevent Wavefront .obj 3D model files from being treated as compiled
+    # object files by the linker — they are data resources, not code.
+    foreach(resource_file IN LISTS LTR_GUI_BUNDLE_RESOURCES)
+        if(resource_file MATCHES "\\.obj$")
+            set_source_files_properties(${resource_file} PROPERTIES HEADER_FILE_ONLY ON)
+        endif()
+    endforeach()
     set_source_files_properties(${LTR_GUI_BUNDLE_HELP_RESOURCES} PROPERTIES
         MACOSX_PACKAGE_LOCATION Resources/linuxtrack/help/ltr_gui
     )
