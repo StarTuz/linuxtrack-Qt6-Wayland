@@ -55,7 +55,7 @@ include(FindPkgConfig)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # Dependency Checks
-pkg_check_modules(MXML REQUIRED mxml)
+pkg_search_module(MXML REQUIRED mxml mxml4)
 pkg_check_modules(LIBUSB10 libusb-1.0)
 pkg_check_modules(LIBLO liblo)
 pkg_check_modules(OPENCV opencv4)
