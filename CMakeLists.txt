@@ -97,7 +97,11 @@ endif()
 # GLU for GUI
 if(BUILD_GUI)
     find_package(OpenGL REQUIRED)
-    find_library(GLU_LIBRARY GLU)
+    if(APPLE)
+        set(GLU_LIBRARY "-framework OpenGL")
+    else()
+        find_library(GLU_LIBRARY GLU)
+    endif()
 endif()
 
 find_package(ZLIB REQUIRED)
