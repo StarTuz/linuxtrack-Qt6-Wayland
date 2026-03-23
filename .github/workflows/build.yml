@@ -260,7 +260,7 @@ jobs:
       - name: Configure CMake
         run: |
           chmod +x scripts/configure_macos_experimental.sh
-          ./scripts/configure_macos_experimental.sh build_macos stage_macos
+          ./scripts/configure_macos_experimental.sh build_macos stage_macos -G Ninja
 
       - name: Build
         run: |
