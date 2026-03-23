@@ -81,6 +81,7 @@ if(LIBUSB10_FOUND AND ZLIB_FOUND)
 
     add_library(ltusb1 MODULE libusb_ifc.c usb_ifc.h)
     target_include_directories(ltusb1 PRIVATE ${LIBUSB10_INCLUDE_DIRS})
+    target_link_directories(ltusb1 PRIVATE ${LIBUSB10_LIBRARY_DIRS})
     target_link_libraries(ltusb1 PRIVATE ltr ${LIBUSB10_LIBRARIES})
     set_target_properties(ltusb1 PROPERTIES PREFIX "lib")
 endif()
