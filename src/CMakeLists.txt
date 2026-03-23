@@ -109,11 +109,13 @@ if(OPENCV_FOUND AND HAS_V4L2 AND LTR_LIBV4L2)
     set_target_properties(ft PROPERTIES PREFIX "lib" LINK_FLAGS ${DRIVER_LDFLAGS})
 endif()
 
-# libjoy (Joystick Driver)
-add_library(joy MODULE runloop.c runloop.h joy.c)
-target_include_directories(joy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(joy PRIVATE ltr)
-set_target_properties(joy PROPERTIES PREFIX "lib" LINK_FLAGS ${DRIVER_LDFLAGS})
+# libjoy (Joystick Driver) - Linux only
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_library(joy MODULE runloop.c runloop.h joy.c)
+    target_include_directories(joy PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(joy PRIVATE ltr)
+    set_target_properties(joy PROPERTIES PREFIX "lib" LINK_FLAGS ${DRIVER_LDFLAGS})
+endif()
 
 # --- X-Plane Plugins ---
 if(EXISTS "/usr/include/xplane_sdk/XPLM")
