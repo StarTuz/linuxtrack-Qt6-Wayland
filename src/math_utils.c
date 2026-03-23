@@ -1,6 +1,7 @@
 
 #include "math_utils.h"
 #include <stdio.h>
+#include <math.h>
 void ltr_int_make_vec(double pt1[3],double pt2[3],double res[3])
 {
   res[0]=pt1[0]-pt2[0];
@@ -257,11 +258,7 @@ bool ltr_int_is_vector_finite(double vec[3])
 
 bool ltr_int_is_finite(double f)
 {
-  if(finite(f) != 0){
-    return true;
-  }else{
-    return false;
-  }
+  return isfinite(f) ? true : false;
 }
 
 double clamp_angle(double angle)
