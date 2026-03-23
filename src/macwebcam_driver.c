@@ -3,9 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include "cal.h"
-#include "capture_provider.h"
-#include "capture_replay.h"
 #include "frame_adapter.h"
+#include "mac_capture_stub.h"
 #include <com_proc.h>
 #include "ipc_utils.h"
 #include "wc_driver_prefs.h"
@@ -16,45 +15,15 @@ static int width;
 static int height;
 static struct mmap_s mmm;
 
-typedef struct {
-  const struct camera_control_block *ccb;
-} mac_gray_provider_ctx;
+static ltr_mac_capture_stub gray_capture_stub;
 
-static mac_gray_provider_ctx gray_provider_ctx = {
-  .ccb = NULL
-};
-
-static int next_gray_frame(void *ctx, ltr_gray_capture_frame *frame)
+static bool is_face_tracking_device(const struct camera_control_block *ccb)
 {
-  mac_gray_provider_ctx *provider_ctx = (mac_gray_provider_ctx *)ctx;
-
-  if((provider_ctx == NULL) || (provider_ctx->ccb == NULL) || (frame == NULL)){
-    return -1;
+  if(ccb == NULL){
+    return false;
   }
-  if(!ltr_int_getFrameFlag(&mmm)){
-    return 0;
-  }
-
-  frame->gray_bitmap = ltr_int_getFramePtr(&mmm);
-  frame->width = width;
-  frame->height = height;
-  frame->expected_blobs = MAX_BLOBS;
-  frame->threshold = (unsigned int)ltr_int_wc_get_threshold();
-  frame->min_blob_pixels = ltr_int_wc_get_min_blob();
-  frame->max_blob_pixels = ltr_int_wc_get_max_blob();
-  frame->flip = false;
-  frame->face_tracking = (provider_ctx->ccb->device.category == mac_webcam_ft);
-  return 1;
+  return (ccb->device.category == mac_webcam_ft);
 }
-
-static const ltr_gray_capture_provider_vtable gray_provider_vtable = {
-  .next_frame = next_gray_frame
-};
-
-static ltr_gray_capture_provider gray_provider = {
-  .vtable = &gray_provider_vtable,
-  .ctx = &gray_provider_ctx
-};
 
 static unsigned int helper_blob_capacity(const struct frame_type *frame)
 {
@@ -62,6 +31,11 @@ static unsigned int helper_blob_capacity(const struct frame_type *frame)
     return 0;
   }
   return frame->bloblist.num_blobs;
+}
+
+static bool should_require_cascade(const struct camera_control_block *ccb)
+{
+  return is_face_tracking_device(ccb);
 }
 
 static bool init_capture(char *prog, char *camera, int w, int h, char *fileName, char *cascade)
@@ -102,24 +76,47 @@ static bool read_img_processing_prefs()
   return true;
 }
 
-static void update_frame_from_gray_helper(struct frame_type *frame)
+static void submit_gray_helper_frame(const struct camera_control_block *ccb)
 {
-  bool helper_frame_acquired = false;
-
-  if(frame == NULL){
+  if((ccb == NULL) || !ltr_int_getFrameFlag(&mmm)){
     return;
   }
-  if(ltr_int_provider_get_frame(&gray_provider, frame, frame->bitmap,
+
+  ltr_int_mac_capture_stub_submit_frame(&gray_capture_stub,
+                                        ltr_int_getFramePtr(&mmm),
+                                        width,
+                                        height,
+                                        MAX_BLOBS,
+                                        (unsigned int)ltr_int_wc_get_threshold(),
+                                        ltr_int_wc_get_min_blob(),
+                                        ltr_int_wc_get_max_blob(),
+                                        false,
+                                        is_face_tracking_device(ccb));
+}
+
+static bool update_frame_from_gray_helper(const struct camera_control_block *ccb,
+                                          struct frame_type *frame)
+{
+  bool helper_frame_acquired = false;
+  const ltr_gray_capture_provider *provider = NULL;
+
+  if((ccb == NULL) || (frame == NULL)){
+    return false;
+  }
+  submit_gray_helper_frame(ccb);
+  provider = ltr_int_mac_capture_stub_provider(&gray_capture_stub);
+  if(ltr_int_provider_get_frame(provider, frame, frame->bitmap,
                                 frame->bitmap_processed,
                                 &helper_frame_acquired) == 0 &&
      helper_frame_acquired){
     ltr_int_resetFrameFlag(&mmm);
-    return;
+    return true;
   }
   if(ltr_int_getFrameFlag(&mmm) && (frame->bitmap != NULL)){
     memcpy(frame->bitmap, ltr_int_getFramePtr(&mmm), frame->width * frame->height);
     ltr_int_resetFrameFlag(&mmm);
   }
+  return false;
 }
 
 static int update_frame_from_helper_blobs(struct frame_type *frame,
@@ -134,6 +131,23 @@ static int update_frame_from_helper_blobs(struct frame_type *frame,
   return 1;
 }
 
+static bool apply_helper_blob_override_if_available(struct frame_type *frame,
+                                                    bool gray_frame_acquired,
+                                                    bool *frame_acquired)
+{
+  if((frame == NULL) || (frame_acquired == NULL)){
+    return false;
+  }
+  if(update_frame_from_helper_blobs(frame, frame_acquired) != 0){
+    return true;
+  }
+  if(gray_frame_acquired){
+    *frame_acquired = true;
+    return true;
+  }
+  return false;
+}
+
 int ltr_int_tracker_init(struct camera_control_block *ccb)
 {
   if(!ltr_int_wc_init_prefs()){
@@ -146,7 +160,7 @@ int ltr_int_tracker_init(struct camera_control_block *ccb)
   char *cam_id = ltr_int_my_strdup(ltr_int_wc_get_id());
   char *capture_path = ltr_int_get_ipc_path("macwebcam_capture.mmap");
   char *cascade = NULL;
-  if(ccb->device.category == mac_webcam_ft){
+  if(should_require_cascade(ccb)){
     if(ltr_int_wc_get_cascade() == NULL){
 	  ltr_int_log_message("No cascade specified!\n");
       free(cap_path);
@@ -173,7 +187,7 @@ int ltr_int_tracker_init(struct camera_control_block *ccb)
     free(cascade);
   }
   read_img_processing_prefs();
-  gray_provider_ctx.ccb = ccb;
+  ltr_int_mac_capture_stub_init(&gray_capture_stub);
   ltr_int_resetFrameFlag(&mmm);
   return 0;
 }
@@ -202,10 +216,13 @@ int ltr_int_tracker_get_frame(struct camera_control_block *ccb,
 			      struct frame_type *frame, bool *frame_acquired)
 {
   const unsigned int blob_capacity = helper_blob_capacity(frame);
+  bool gray_frame_acquired = false;
+
   ltr_int_prepare_capture_frame(frame, width, height, blob_capacity);
   read_img_processing_prefs();
-  update_frame_from_gray_helper(frame);
-  if(update_frame_from_helper_blobs(frame, frame_acquired) == 0){
+  gray_frame_acquired = update_frame_from_gray_helper(ccb, frame);
+  if(!apply_helper_blob_override_if_available(frame, gray_frame_acquired,
+                                              frame_acquired)){
     if(!ltr_int_child_alive()){
       return -1;
     }

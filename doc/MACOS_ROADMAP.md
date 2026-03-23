@@ -263,6 +263,19 @@ Completed so far:
 - tightened the shared replay helper so provider-driven capture paths can operate with only one caller buffer available, which makes the legacy mac helper path and future provider-backed adapters easier to plug in
 - moved the legacy mac webcam path one step closer to the provider contract by routing helper frames through a local grayscale provider callback instead of constructing replay inputs inline
 - switched the legacy mac webcam path to the shared frame-preparation helper and isolated helper-blob synchronization into a dedicated local seam, reducing the remaining inline hand-population logic
+- replaced the legacy mac webcam path's file-local provider context/vtable with the shared `ltr_mac_capture_stub` scaffold, so helper-published gray frames now enter the common provider contract through the same mac-facing shape intended for future capture backends
+- relaxed the old helper-blob dependency so the legacy mac webcam path now treats shared grayscale processing as a valid frame-acquisition fallback when a helper frame arrives without a fresh helper-blob side-channel update
+- narrowed the remaining helper-blob dependency to the legacy face-tracking path, while plain `mac_webcam` now treats the shared grayscale-processing result as its primary blob source whenever a helper gray frame is available
+- isolated the remaining face-specific legacy policy behind dedicated local helpers in `src/macwebcam_driver.c`, making the last helper-dependent `MacWebcam-face` path an explicit seam rather than a set of scattered category checks
+- promoted shared grayscale processing to the primary frame-acquisition path for both `MacWebcam` and `MacWebcam-face`, with the old helper blob side channel reduced to an optional override instead of a requirement for delivering processed frames
+
+Current Phase 3 status:
+
+- `src/mac_capture_stub.c` is now part of the core `ltr` library build, so the mac-facing provider scaffold is available to real code paths rather than only to test targets
+- `src/macwebcam_driver.c` now uses the shared provider/replay/process path as the primary frame route for both `MacWebcam` and `MacWebcam-face`
+- the legacy helper blob channel has been reduced to an optional override layer instead of a frame-delivery gate
+- the main remaining legacy dependency for this path is the `qt_cam` helper as a gray-frame source, plus face-mode cascade setup at initialization time
+- repository-side shared verification is in place for the supporting seams, but the mac-specific `libmacwc` path still needs real macOS compile and launch validation
 
 Required regression tests:
 

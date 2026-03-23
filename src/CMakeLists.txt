@@ -8,6 +8,7 @@ add_library(ltr SHARED
     capture_process.c capture_process.h
     capture_replay.c capture_replay.h
     capture_provider.c capture_provider.h
+    mac_capture_stub.c mac_capture_stub.h
     image_process.c image_process.h tracking.c tracking.h
     ltlib_int.c ltlib_int.h spline.c spline.h axis.c axis.h 
     wii_driver_prefs.c wii_driver_prefs.h tir_driver_prefs.c tir_driver_prefs.h 
