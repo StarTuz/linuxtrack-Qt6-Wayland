@@ -9,7 +9,7 @@ target_include_directories(lal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # If nlohmann_json needs to be found:
 find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp)
 if(NLOHMANN_JSON_INCLUDE_DIR)
-    target_include_directories(lal PRIVATE ${NLOHMANN_JSON_INCLUDE_DIR})
+    target_include_directories(lal PUBLIC ${NLOHMANN_JSON_INCLUDE_DIR})
 endif()
 
 # Since we use std::filesystem (C++17), ensure standards
