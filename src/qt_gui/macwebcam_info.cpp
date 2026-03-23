@@ -1,4 +1,5 @@
 #include "macwebcam_info.h"
+#include "../utils.h"
 
 #include <QCoreApplication>
 #include <QProcess>
@@ -95,4 +96,3 @@ QStringList &MacWebcamInfo::EnumerateWebcams() {
   *res = str.split(QString::fromUtf8("\n"), Qt::SkipEmptyParts);
   return *res;
 }
-#include "../utils.h"
