@@ -365,8 +365,8 @@ static void *linuxtrack_find_library(linuxtrack_state_type *problem) {
     }
   }
 
-#ifdef DARWIN
   int i = 0;
+#ifdef DARWIN
   while (lib_locations[i] != NULL) {
     if (lib_locations[i][0] == '@') {
       if ((handle = linuxtrack_try_library(lib_locations[i++])) != NULL) {
@@ -383,7 +383,7 @@ static void *linuxtrack_find_library(linuxtrack_state_type *problem) {
     *problem = err_NO_CONFIG;
     return NULL;
   }
-  int i = 0;
+  i = 0;
   while (lib_locations[i] != NULL) {
     name = construct_name(prefix, "/../", lib_locations[i++]);
     if ((handle = linuxtrack_try_library(name)) != NULL) {
