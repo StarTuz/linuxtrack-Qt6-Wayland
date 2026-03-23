@@ -146,6 +146,7 @@ target_include_directories(ltr_gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../lal
     ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}/src
+    ${MXML_INCLUDE_DIRS}
 )
 
 target_compile_definitions(ltr_gui PRIVATE 
