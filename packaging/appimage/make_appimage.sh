@@ -93,7 +93,7 @@ fi
 
 if [ ! -f "$LINUXDEPLOY_PLUGIN_QT" ]; then
     echo "--> Downloading linuxdeploy-plugin-qt..."
-    wget -q -O "$LINUXDEPLOY_PLUGIN_QT" "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
+    wget -q -O "$LINUXDEPLOY_PLUGIN_QT" "https://github.com/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
     chmod +x "$LINUXDEPLOY_PLUGIN_QT"
 fi
 
