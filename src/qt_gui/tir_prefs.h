@@ -35,6 +35,7 @@ class TirPrefs : public QWidget{
   void on_TirUseGrayscale_stateChanged(int state);
   void on_TirVideoOnDelay_valueChanged(int i);
   void on_TirInstallFirmware_pressed();
+  void on_TirCheckUsb_pressed();
   void TirFirmwareDLFinished(bool state);
 };
 

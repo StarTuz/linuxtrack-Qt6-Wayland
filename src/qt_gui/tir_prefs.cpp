@@ -6,6 +6,10 @@
 #include "ui_tir_setup.h"
 #include <QFile>
 #include <QMessageBox>
+#include <QProcess>
+#include <QFileInfo>
+#include <QTextStream>
+#include <QDebug>
 #include <iostream>
 
 static QString currentId = QString::fromUtf8("None");
@@ -178,10 +182,14 @@ bool TirPrefs::AddAvailableDevices(QComboBox &combo) {
     QMessageBox::warning(
         nullptr, QString::fromUtf8("TrackIR permissions problem"),
         QString::fromUtf8(
-            "TrackIR device was found, but you don't have permissions to access it.\n \
-Please install the file 99-TIR.rules to the udev rules directory\n\
-(consult help and your distro documentation for details).\n\
-You are going to need administrator privileges to do that."));
+            "TrackIR device was found, but you don't have permissions to access it.\n\n"
+            "Troubleshooting steps:\n"
+            "1. Install udev rules: sudo cp 99-TIR.rules /etc/udev/rules.d/\n"
+            "2. Reload rules: sudo udevadm control --reload-rules && sudo udevadm trigger\n"
+            "3. Unplug and replug the device\n"
+            "4. Check if USBGuard is blocking access: systemctl status usbguard\n\n"
+            "Use the 'Check USB Permissions' button in the Troubleshooting section\n"
+            "for detailed diagnostics."));
     return false;
   }
   if (tirType == 0) {
@@ -243,6 +251,63 @@ void TirPrefs::on_TirUseGrayscale_stateChanged(int state) {
 void TirPrefs::on_TirVideoOnDelay_valueChanged(int i) {
   if (!initializing)
     ltr_int_tir_set_video_on_delay(i);
+}
+
+void TirPrefs::on_TirCheckUsb_pressed()
+{
+  QString report = QString::fromUtf8("Searching for NaturalPoint devices (Vendor ID 131d)...\n\n");
+  QProcess lsusb;
+  lsusb.start(QString::fromUtf8("lsusb"), QStringList() << QString::fromUtf8("-d") << QString::fromUtf8("131d:"));
+  lsusb.waitForFinished();
+  QString output = QString::fromUtf8(lsusb.readAllStandardOutput());
+
+  if (output.isEmpty()) {
+    report += QString::fromUtf8("Result: No NaturalPoint devices found.\n"
+                                "Please ensure your TrackIR/SmartNav is plugged in.");
+  } else {
+    report += QString::fromUtf8("Result: Found device(s):\n") + output + QString::fromUtf8("\n");
+    report += QString::fromUtf8("Checking permissions on /dev/bus/usb/...\n");
+
+    // Parse lsusb output to find bus and device numbers
+    // Example: Bus 001 Device 008: ID 131d:0158 NaturalPoint ...
+    QTextStream scanner(&output);
+    QString line;
+    bool anyPermIssue = false;
+    while (scanner.readLineInto(&line)) {
+      QStringList parts = line.split(QString::fromUtf8(" "), Qt::SkipEmptyParts);
+      if (parts.size() >= 4 && parts[0] == QString::fromUtf8("Bus") && parts[2] == QString::fromUtf8("Device")) {
+        QString bus = parts[1];
+        QString dev = parts[3].left(3); // Remove trailing colon
+        QString path = QString::fromUtf8("/dev/bus/usb/%1/%2").arg(bus).arg(dev);
+        
+        QFileInfo info(path);
+        if (info.exists()) {
+          report += QString::fromUtf8("\nDevice: %1\n").arg(path);
+          report += QString::fromUtf8("  Owner: %1, Group: %2\n").arg(info.owner()).arg(info.group());
+          report += QString::fromUtf8("  Permissions: %1\n").arg(QString::number(info.permissions().toInt(), 16));
+          
+          if (!info.isReadable() || !info.isWritable()) {
+            report += QString::fromUtf8("  !!! PERMISSION DENIED: You cannot read/write this device. !!!\n");
+            anyPermIssue = true;
+          } else {
+            report += QString::fromUtf8("  Permissions OK: Access granted.\n");
+          }
+        }
+      }
+    }
+    
+    if (anyPermIssue) {
+      report += QString::fromUtf8("\nRecommendation:\n"
+                                  "1. Check if 99-TIR.rules is in /etc/udev/rules.d/\n"
+                                  "2. Check if your user is in the 'plugdev' or 'usb' group (if applicable)\n"
+                                  "3. Check for USBGuard interference: systemctl status usbguard");
+    }
+  }
+
+  QMessageBox msgBox;
+  msgBox.setWindowTitle(QString::fromUtf8("USB Diagnostic Report"));
+  msgBox.setText(report);
+  msgBox.exec();
 }
 
 void TirPrefs::TirFirmwareDLFinished(bool state) {

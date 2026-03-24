@@ -220,7 +220,11 @@ dev_found ltr_int_find_tir(void) {
   }
 
   if (found) {
-    ltr_int_log_message("Opening handle to the device found.\n");
+    uint8_t bus = libusb_get_bus_number(found);
+    uint8_t addr = libusb_get_device_address(found);
+    ltr_int_log_message("Opening handle to device at bus %03d addr %03d "
+                        "(/dev/bus/usb/%03d/%03d).\n",
+                        bus, addr, bus, addr);
     err = libusb_open(found, &handle);
     if (err) {
       // Retry once after short delay (udev timing issue workaround)
@@ -231,9 +235,16 @@ dev_found ltr_int_find_tir(void) {
       err = libusb_open(found, &handle);
     }
     if (err) {
-      ltr_int_log_message("Error opening device: %s\n", libusb_strerror(err));
-      ltr_int_log_message("If udev rules are installed, try unplugging and "
-                          "replugging the device.\n");
+      ltr_int_log_message(
+          "Error opening USB device at /dev/bus/usb/%03d/%03d: %s\n",
+          bus, addr, libusb_strerror(err));
+      ltr_int_log_message(
+          "Troubleshooting:\n"
+          "  1. Check device permissions: ls -la /dev/bus/usb/%03d/%03d\n"
+          "  2. Verify udev rules: ls /etc/udev/rules.d/99-TIR.rules\n"
+          "  3. Check your groups: groups $(whoami)\n"
+          "  4. Check for USBGuard: systemctl status usbguard\n",
+          bus, addr);
       return dev | NOT_PERMITTED;
     }
     ltr_int_log_message("Handle opened successfully.\n");

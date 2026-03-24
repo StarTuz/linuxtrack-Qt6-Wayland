@@ -1,3 +1,5 @@
 # TrackIR / SmartNav USB device permissions
-SUBSYSTEM=="usb", ATTR{idVendor}=="131d", MODE="0666", GROUP="users", TAG+="uaccess"
-SUBSYSTEM=="usb_device", ATTRS{idVendor}=="131d", MODE="0666", GROUP="users", TAG+="uaccess"
+# Grants access to all NaturalPoint (vendor 131d) USB devices.
+# MODE=0666 provides universal rw access; TAG+=uaccess delegates to
+# systemd-logind for seat-aware permission grants.
+SUBSYSTEM=="usb", ATTR{idVendor}=="131d", MODE="0666", TAG+="uaccess"
