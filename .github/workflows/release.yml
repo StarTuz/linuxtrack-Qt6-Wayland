@@ -103,14 +103,19 @@ jobs:
           bash packaging/appimage/make_appimage.sh
           mv Linuxtrack-x86_64.AppImage Linuxtrack-${{ github.ref_name }}-x86_64.AppImage
 
+      - name: Collect Linux artifacts
+        run: |
+          mkdir -p dist
+          cp Linuxtrack-*-x86_64.AppImage dist/
+          cp build_pkg/*.deb dist/
+          cp build_pkg/*.rpm dist/
+          ls -la dist/
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v6
         with:
           name: linux-artifacts
-          path: |
-            Linuxtrack-*-x86_64.AppImage
-            build_pkg/*.deb
-            build_pkg/*.rpm
+          path: dist/*
 
   build-macos:
     runs-on: macos-14
@@ -168,11 +173,17 @@ jobs:
           cd ../stage_macos
           zip -r ../Linuxtrack-${{ github.ref_name }}-macOS-ARM64-experimental.zip .
 
+      - name: Collect macOS artifacts
+        run: |
+          mkdir -p dist
+          cp Linuxtrack-*-macOS-ARM64-experimental.zip dist/
+          ls -la dist/
+
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v6
         with:
           name: macos-artifacts
-          path: Linuxtrack-*-macOS-ARM64-experimental.zip
+          path: dist/*
 
   publish-release:
     needs: [build-linux, build-macos]
