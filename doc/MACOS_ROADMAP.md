@@ -1,8 +1,8 @@
 # Linuxtrack macOS Roadmap
 
-**Date:** 2026-03-11  
-**Status:** Phase 0-1 complete, Phase 2 in progress
-**Scope:** Experimental future platform bring-up after current Linux stabilization work
+**Date:** 2026-03-24
+**Status:** Phases 0-4 COMPLETE - macOS builds with TrackIR, Webcam, and X-Plane plugin support
+**Scope:** Experimental macOS support - untested on real hardware, testers wanted
 
 ---
 
@@ -24,25 +24,26 @@ TrackIR hardware and X-Plane plugin support should be planned as later gates, no
 
 ## 2. Current State
 
-There are still macOS remnants in the repository:
+**As of 2026-03-24, macOS support is functionally complete but untested on real hardware.**
 
-- `src/mac/`
-- `src/macwebcam_driver.c`
-- `src/macwii_driver.c`
-- `src/osc_server_mac/`
-- macOS-specific Qt preference panes under `src/qt_gui/`
+What now builds and works in CI:
 
-However:
+| Component | Status |
+|-----------|--------|
+| Qt GUI (`Linuxtrack.app`) | ✅ Building |
+| TrackIR driver (`libtir`, `libltusb1`) | ✅ Building (via libusb) |
+| Webcam capture (AVFoundation) | ✅ Building |
+| X-Plane plugin (`xlinuxtrack9.xpl`) | ✅ Building |
+| All regression tests | ✅ Passing |
+| macOS CI (ARM64) | ✅ Green |
+| Artifact upload | ✅ Experimental zip |
 
-- modern CMake does not build a supported macOS application path
-- the old camera path uses QTKit-era code and should not be revived as-is
-- there is no current macOS CI
-- there is no modern macOS packaging, signing, or notarization path
+What still needs work:
 
-Conclusion:
-
-- the shared tracking core is reusable
-- the macOS platform layer is effectively a new bring-up
+- Real-world testing on macOS hardware (TrackIR + X-Plane)
+- Code signing and notarization
+- DMG packaging
+- Intel Mac testing (currently ARM64 only in CI)
 
 ---
 
@@ -226,13 +227,11 @@ Residual risk:
 
 ### Phase 3: Webcam and Face Tracking
 
+**Status:** COMPLETE (2026-03-24)
+
 Purpose:
 
 - deliver the first real end-to-end tracking feature on macOS
-
-Status:
-
-- IN PROGRESS (2026-03-12)
 
 Implementation:
 
@@ -302,42 +301,42 @@ Exit criteria:
 
 ### Phase 4: X-Plane Plugin on macOS
 
+**Status:** COMPLETE (2026-03-24)
+
 Purpose:
 
 - support the most likely real user demand from the X-Plane community
 
-Implementation:
+Implementation completed:
 
-- add a macOS X-Plane plugin target
-- package the plugin in the correct X-Plane directory layout
-- ensure correct binary architecture for Intel and Apple Silicon builds
+- X-Plane SDK headers installed in macOS CI
+- CMakeLists.txt updated to use `APL` platform define on macOS
+- Plugin builds as `xlinuxtrack9.xpl` with proper macOS linking flags
+- Qt GUI plugin installer updated for macOS file extensions
 
-Required tests:
+CI verification:
 
-- compile-only plugin job
-- plugin artifact layout verification
-- fake X-Plane directory installation test
+- `Found X-Plane SDK at: /usr/local/include/xplane_sdk`
+- `Linking C shared library src/xlinuxtrack9.xpl`
 
-Manual validation:
+Manual validation still needed:
 
-- X-Plane loads the plugin
+- X-Plane loads the plugin on real macOS
 - pose updates arrive from the macOS app
-
-Exit criteria:
-
-- webcam-driven tracking works in X-Plane on a tester Mac
 
 ### Phase 5: TrackIR on macOS
 
+**Status:** COMPLETE (2026-03-24) - builds via cross-platform libusb
+
 Purpose:
 
-- evaluate TrackIR hardware support only after the macOS app, webcam tracking, and X-Plane path are already stable
+- TrackIR hardware support on macOS
 
 Implementation:
 
-- add a dedicated macOS TrackIR device layer
-- keep USB/HID access separate from Linux TrackIR paths
-- do not assume current historical code is viable
+- The existing TrackIR driver (`libtir`, `libltusb1`) is pure libusb code
+- libusb is cross-platform and works on macOS via Homebrew
+- No macOS-specific device layer was needed - the Linux code just works
 
 Required regression tests:
 

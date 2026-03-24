@@ -293,3 +293,17 @@ jobs:
         run: |
           cd build_macos
           ctest --output-on-failure
+
+      - name: Install and Package
+        run: |
+          cd build_macos
+          ninja install
+          cd ../stage_macos
+          # Create a zip of the staged installation
+          zip -r ../Linuxtrack-macOS-ARM64-experimental.zip .
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: Linuxtrack-macOS-ARM64-experimental
+          path: Linuxtrack-macOS-ARM64-experimental.zip

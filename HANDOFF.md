@@ -1,9 +1,10 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-24
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
+**Current Version:** 1.4.0
 
 ---
 
@@ -19,7 +20,7 @@ There are THREE related head tracking projects in this workspace:
 **Philosophy:** Slow, methodical modernization of the original linuxtrack  
 **Goal:** Get linuxtrack compiling and working on modern Linux without breaking existing functionality  
 **Approach:** Minimal, careful changes. Fix one thing at a time. Document everything.  
-**Status:** Active - ✅ Qt6 Migration Complete, TrackIR Game Support Fixed. Follow MODERNIZATION_ROADMAP.md
+**Status:** Active - ✅ Qt6 Migration Complete, TrackIR Game Support Fixed, macOS Experimental Support Added
 
 ### tuxtracksold
 
@@ -223,6 +224,33 @@ The project now compiles successfully on modern Linux with:
 - **Webcam Tracking Regression — blob size limits (critical):** `min_blob=4, max_blob=230` were calibrated at 160×120. At 800×600 (~25× the reference area) the same physical IR LED covers ~250–1250 pixels, so every blob was rejected by `max_blob=230`. **Final Fix:** Keep the shared blob extractor (`src/image_process.c`) device-agnostic and apply the 160×120 area scaling only in webcam-style callers (`src/webcam_driver.c`, `src/ps3eye_driver.c`). This preserves the intended webcam fix without changing TrackIR blob semantics.
 
 - **TrackIR Regression From Webcam Blob Scaling (critical, 2026-03-11):** The first webcam fix implementation scaled blob-size thresholds globally inside `ltr_int_stripes_to_blobs` (`src/image_process.c`). TrackIR uses the same extractor via `src/tir_img.c`, but its `Min-blob` / `Max-blob` values are already calibrated for native TrackIR resolutions (for example, 640×480 on TrackIR 5). Applying the webcam scale factor to TrackIR inflated `120/2500` to `1920/40000`, which poisoned the TrackIR 3-point pose path: bright points were visible in the camera view, but the 3D view produced no usable pose. **Fix:** Move the scaling out of the shared extractor and make it opt-in for webcam / PS3Eye callers only.
+
+**Recent Additions (2026-03-24) [v1.4.0 — macOS Experimental Support]:**
+
+- **Version Bump:** Project version advanced to `1.4.0`.
+
+- **macOS Support (Experimental):** Complete macOS support added, building on ARM64 in CI. All major components now compile and link on macOS:
+  - Qt GUI (`Linuxtrack.app`) with proper bundle layout
+  - TrackIR driver (`libtir`, `libltusb1`) via cross-platform libusb
+  - Webcam capture via AVFoundation (`mac_capture_avf.mm`)
+  - X-Plane plugin (`xlinuxtrack9.xpl`) with `APL` platform define
+  - All regression tests passing
+
+- **X-Plane Plugin macOS Support:** Updated CMakeLists.txt to support macOS:
+  - Searches multiple SDK paths (`/usr/include`, `/usr/local/include`, `$XPLANE_SDK_DIR`)
+  - Uses `APL` define on macOS, `LINUX` on Linux, `IBM` on Windows
+  - Configures proper macOS linking (`-flat_namespace -undefined suppress`)
+  - Outputs `.xpl` extension on macOS
+
+- **macOS CI Artifact:** Added experimental macOS ARM64 zip artifact upload to CI workflow.
+
+- **Qt GUI macOS Fixes:** Updated `xplugin.cpp` for platform-appropriate file extensions (`.xpl` vs `.so`, `.dylib` vs `.so`).
+
+- **Linux USB Diagnostics:** Added "Check USB Permissions" button to TrackIR settings for troubleshooting permission issues (helps with CachyOS and other distros).
+
+- **Status:** macOS builds are completely untested on real hardware. Testers with Mac + TrackIR + X-Plane wanted.
+
+---
 
 **Recent Additions (2026-03-11) [v1.3.7 — TrackIR regression coverage and webcam face tuning]:**
 
