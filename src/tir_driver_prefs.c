@@ -2,7 +2,7 @@
 #include "pref.h"
 #include "pref_global.h"
 #include <stdlib.h>
-#include <string.h>
+#include <strings.h>
 
 static int max_blob = 0;
 static int min_blob = 0;
@@ -12,6 +12,7 @@ static int threshold = 0;
 static bool status = false;
 static bool grayscale = false;
 static int video_on_delay = 0;
+static bool precision_mode = true;
 
 static char max_blob_key[] = "Max-blob";
 static char min_blob_key[] = "Min-blob";
@@ -21,6 +22,7 @@ static char threshold_key[] = "Threshold";
 static char status_key[] = "Status-signals";
 static char grayscale_key[] = "Grayscale";
 static char video_on_delay_key[] = "Video-on-delay";
+static char precision_mode_key[] = "Precision-mode";
 
 bool ltr_int_tir_init_prefs() {
   const char *dev = ltr_int_get_device_section();
@@ -59,6 +61,13 @@ bool ltr_int_tir_init_prefs() {
   }
   if (!ltr_int_get_key_int(dev, video_on_delay_key, &video_on_delay)) {
     video_on_delay = 0;
+  }
+  tmp = ltr_int_get_key(dev, precision_mode_key);
+  if (tmp != NULL) {
+    precision_mode = (strcasecmp(tmp, "Yes") == 0) ? true : false;
+    free(tmp);
+  } else {
+    precision_mode = true;
   }
   free((void *)dev);
   return true;
@@ -178,5 +187,18 @@ bool ltr_int_tir_set_video_on_delay(int val) {
   bool res = ltr_int_change_key_int(dev, video_on_delay_key, val);
   free(dev);
   return res;
+}
+
+bool ltr_int_tir_get_precision_mode() { return precision_mode; }
+
+bool ltr_int_tir_set_precision_mode(bool on) {
+  char on_val[] = "Yes";
+  char off_val[] = "No";
+  char *res = on ? on_val : off_val;
+  precision_mode = on;
+  char *dev = ltr_int_get_device_section();
+  bool result = ltr_int_change_key(dev, precision_mode_key, res);
+  free(dev);
+  return result;
 }
 

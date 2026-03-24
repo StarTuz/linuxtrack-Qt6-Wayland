@@ -1,31 +1,19 @@
 #!/bin/bash
-set -e
+# Linuxtrack Udev Rules Installer
 
-# Script to install Linuxtrack udev rules for TrackIR/SmartNav devices.
-# This ensures that the current user has permission to access the hardware.
+RULES_FILE="src/99-TIR.rules"
+DEST_DIR="/etc/udev/rules.d"
 
-RULE_FILE="src/99-TIR.rules"
-DEST_PATH="/etc/udev/rules.d/99-TIR.rules"
-
-# Ensure we are in the project root
-if [ ! -f "$RULE_FILE" ]; then
-    echo "Error: Please run this script from the project root directory."
+if [ ! -f "$RULES_FILE" ]; then
+    echo "Error: $RULES_FILE not found. Please run this script from the project root."
     exit 1
 fi
 
-if [ "$EUID" -ne 0 ]; then
-    echo "This script requires root privileges to copy files to /etc/udev/rules.d/"
-    echo "Please run with sudo: sudo $0"
-    exit 1
-fi
+echo "Copying $RULES_FILE to $DEST_DIR..."
+sudo cp "$RULES_FILE" "$DEST_DIR/"
 
-echo "--> Installing Linuxtrack udev rules to $DEST_PATH..."
-cp "$RULE_FILE" "$DEST_PATH"
-chmod 644 "$DEST_PATH"
+echo "Reloading udev rules..."
+sudo udevadm control --reload-rules
+sudo udevadm trigger
 
-echo "--> Reloading udev rules..."
-udevadm control --reload-rules
-udevadm trigger
-
-echo "--> Success! Please unplug and replug your TrackIR/SmartNav device."
-echo "    If you still encounter permission issues, check if your user is in the 'users' group."
+echo "Done! If your TrackIR device is plugged in, please replug it or run 'ltr_gui' to test."

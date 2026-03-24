@@ -12,7 +12,6 @@
 #include "usb_ifc.h"
 #include "utils.h"
 #include "tir_driver_prefs.h"
-#include "tir.h"
 #include "ipc_utils.h"
 
 
@@ -947,9 +946,9 @@ static bool init_camera_tir4(bool force_fw_load, bool p_ir_on)
   }
 
 
-  if((device == TIR5)||(device == TIR5V2)){
-    ltr_int_send_data(out_ep, Precision_mode,sizeof(Precision_mode));
-  }
+    if(((device == TIR5)||(device == TIR5V2)) && ltr_int_tir_get_precision_mode()){
+      ltr_int_send_data(out_ep, Precision_mode,sizeof(Precision_mode));
+    }
 
   free(firmware.firmware);
   ltr_int_log_message("TIR4 camera initialized.\n");
@@ -988,13 +987,17 @@ static bool init_camera_tir5(bool force_fw_load, bool p_ir_on)
   control_ir_led_tir(true);
   control_status_led_tir(false, false);
   control_status_led_tir(false, false);
-  ltr_int_send_data(out_ep, Precision_mode,sizeof(Precision_mode));
+  if(ltr_int_tir_get_precision_mode()){
+    ltr_int_send_data(out_ep, Precision_mode,sizeof(Precision_mode));
+  }
   control_status_led_tir(false, false);
   control_ir_led_tir(true);
   ltr_int_set_threshold_tir(0x76);
   set_exposure(0x15E);
   control_status_led_tir(false, false);
-  ltr_int_send_data(out_ep, Precision_mode,sizeof(Precision_mode));
+  if(ltr_int_tir_get_precision_mode()){
+    ltr_int_send_data(out_ep, Precision_mode,sizeof(Precision_mode));
+  }
   flush_fifo_tir();
   ltr_int_send_data(out_ep, Camera_stop,sizeof(Camera_stop));
   control_ir_led_tir(true);

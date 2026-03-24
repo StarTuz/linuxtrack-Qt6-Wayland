@@ -119,7 +119,7 @@ export ARCH=x86_64
 # Set Qt environment for proper plugin discovery
 # We explicitly list common problematic plugins to ensure they are picked up
 # For Qt6 on Arch/modern distros, wayland is split into -egl and -generic
-export EXTRA_QT_PLUGINS="platforms/libqxcb.so;platforms/libqwayland-egl.so;platforms/libqwayland-generic.so;platformthemes/libqgtk3.so;iconengines;xcbglintegrations;imageformats;wayland-graphics-integration-client"
+export EXTRA_QT_PLUGINS="platforms/libqxcb.so platforms/libqwayland-egl.so platforms/libqwayland-generic.so wayland-graphics-integration-client/libqt-wayland-compositor-share-egl-server.so"
 
 export STRIP=${STRIP:-true}
 
@@ -199,6 +199,28 @@ ln -sf "$(basename "$ICON_FILE")" "$APP_DIR/.DirIcon"
 # 4b. Explicitly bundle Qt6 platform plugins (CRITICAL fallback for modern distros)
 # linuxdeploy-plugin-qt often fails to bundle these when strip fails
 echo "--> Manually bundling critical Qt6 plugins..."
+
+# Helper function to copy a file if it exists
+copy_if_exists() {
+    local src="$1"
+    local dest="$2"
+    if [ -f "$src" ]; then
+        echo "    Copying $src to $dest"
+        cp -v "$src" "$dest" 2>/dev/null || true
+    fi
+}
+
+# Explicitly bundle core Wayland client libraries and XKB common
+mkdir -p "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/x86_64-linux-gnu/libwayland-client.so.0" "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0" "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/x86_64-linux-gnu/libwayland-egl.so.1" "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/x86_64-linux-gnu/libxkbcommon.so.0" "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/libwayland-client.so.0" "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/libwayland-cursor.so.0" "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/libwayland-egl.so.1" "${APP_DIR}/usr/lib/"
+copy_if_exists "/usr/lib/libxkbcommon.so.0" "${APP_DIR}/usr/lib/"
+
 QT_PLUGINS_DIR=$($QMAKE -query QT_INSTALL_PLUGINS)
 if [ -d "$QT_PLUGINS_DIR" ]; then
     mkdir -p "$APP_DIR/usr/plugins/platforms"

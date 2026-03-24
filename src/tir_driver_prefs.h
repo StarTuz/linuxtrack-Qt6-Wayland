@@ -33,6 +33,9 @@ bool ltr_int_tir_get_use_grayscale();
 int ltr_int_tir_get_video_on_delay();
 bool ltr_int_tir_set_video_on_delay(int val);
 
+bool ltr_int_tir_get_precision_mode();
+bool ltr_int_tir_set_precision_mode(bool on);
+
 #ifdef __cplusplus
 }
 #endif

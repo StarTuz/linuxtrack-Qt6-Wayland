@@ -513,7 +513,7 @@ static void ltr_int_init_axis(const char *sec_name, struct axis_def *axis, const
   axis->factor = 1.0f;
   axis->r_limit = 50.0f;
   axis->l_limit = 50.0f;
-  axis->filter_factor = 0.2f;
+  axis->filter_factor = 0.1f;
   //Either exists -> default gets overwritten normally,
   // or not -> default stays...
   ltr_int_axis_get_key_flt(sec_name, "Filter-factor", &(axis->filter_factor));

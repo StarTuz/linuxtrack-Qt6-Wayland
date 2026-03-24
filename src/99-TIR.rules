@@ -3,4 +3,4 @@
 # MODE=0666 provides universal rw access; TAG+=uaccess delegates to
 # systemd-logind for seat-aware permission grants.
 # Using SUBSYSTEMS=="usb" and ATTRS is more robust for modern distros.
-SUBSYSTEMS=="usb", ATTRS{idVendor}="131d", MODE="0666", GROUP="users", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="131d", ATTRS{idProduct}=="015[9ab]", GROUP="plugdev", MODE="0660", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"

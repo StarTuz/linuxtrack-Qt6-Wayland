@@ -399,6 +399,13 @@ bool ltr_int_postprocess_axes(ltr_axes_t axes, linuxtrack_pose_t *pose, linuxtra
   }
   // Clamp to reasonable range (2Hz-500Hz)
   if(dt <= 0.002f || dt > 0.5f) dt = 1.0f / 60.0f;
+  
+  // Smooth dt to prevent scheduling jitter from hitting the adaptive filters
+  static float smoothed_dt = 0.0f;
+  if(smoothed_dt < 1e-6f) smoothed_dt = dt;
+  else smoothed_dt = 0.9f * smoothed_dt + 0.1f * dt;
+  dt = smoothed_dt;
+  
   last_ts = now;
 
   //Single point must be "denormalized"
