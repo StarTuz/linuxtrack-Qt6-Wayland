@@ -120,9 +120,15 @@ static bool ensureStableLibraries() {
 
   // Libraries and plugins to copy
   QStringList libs;
+#ifdef DARWIN
+  libs << QString::fromUtf8("liblinuxtrack.dylib")
+       << QString::fromUtf8("libltr.dylib")
+       << QString::fromUtf8("xlinuxtrack9.xpl");
+#else
   libs << QString::fromUtf8("liblinuxtrack.so.0")
        << QString::fromUtf8("libltr.so")
        << QString::fromUtf8("xlinuxtrack9.so");
+#endif
 
   // Also copy drivers if needed, but let's start with core libs
   QString appPath = QApplication::applicationDirPath() +
@@ -208,7 +214,11 @@ void XPluginInstall::on_BrowseXPlane_pressed() {
 
   // Robust search for the source plugin file
   QString sourceFile;
+#ifdef DARWIN
+  QString pluginBase = QString::fromUtf8("xlinuxtrack9.xpl");
+#else
   QString pluginBase = QString::fromUtf8("xlinuxtrack9.so");
+#endif
   sourceFile = PrefProxy::findRuntimeFile(
       pluginBase,
       QStringList()

@@ -257,6 +257,28 @@ jobs:
         run: |
           brew install qt@6 opencv cmake ninja pkg-config libmxml libusb nlohmann-json
 
+      - name: Install X-Plane SDK headers
+        run: |
+          curl -sL https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK430.zip -o xpsdk.zip
+          unzip -q xpsdk.zip -d xpsdk_tmp
+          XPLM_HEADER=$(find xpsdk_tmp -name "XPLMPlugin.h" | head -1)
+          WIDGETS_HEADER=$(find xpsdk_tmp -name "XPWidgets.h" | head -1)
+          if [ -z "$XPLM_HEADER" ]; then
+            echo "ERROR: XPLMPlugin.h not found in SDK zip"
+            find xpsdk_tmp -name "*.h" | head -20
+            exit 1
+          fi
+          XPLM_DIR=$(dirname "$XPLM_HEADER")
+          WIDGETS_DIR=$(dirname "$WIDGETS_HEADER")
+          echo "XPLM headers found at: $XPLM_DIR"
+          echo "Widget headers found at: $WIDGETS_DIR"
+          sudo mkdir -p /usr/local/include/xplane_sdk/XPLM
+          sudo mkdir -p /usr/local/include/xplane_sdk/Widgets
+          sudo cp "$XPLM_DIR"/*.h /usr/local/include/xplane_sdk/XPLM/
+          sudo cp "$WIDGETS_DIR"/*.h /usr/local/include/xplane_sdk/Widgets/
+          echo "Installed XPLM headers to /usr/local/include/xplane_sdk/"
+          ls /usr/local/include/xplane_sdk/XPLM/ | head -5
+
       - name: Configure CMake
         run: |
           chmod +x scripts/configure_macos_experimental.sh

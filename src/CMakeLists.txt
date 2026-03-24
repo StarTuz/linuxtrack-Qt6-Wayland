@@ -119,25 +119,57 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 # --- X-Plane Plugins ---
-if(EXISTS "/usr/include/xplane_sdk/XPLM")
-    set(XPL_INCLUDE_DIRS "/usr/include/xplane_sdk/XPLM" "/usr/include/xplane_sdk/Widgets")
-    
+# Find X-Plane SDK in common locations
+set(XPLANE_SDK_SEARCH_PATHS
+    "/usr/include/xplane_sdk"
+    "/usr/local/include/xplane_sdk"
+    "$ENV{XPLANE_SDK_DIR}"
+)
+set(XPLANE_SDK_FOUND FALSE)
+foreach(SDK_PATH ${XPLANE_SDK_SEARCH_PATHS})
+    if(EXISTS "${SDK_PATH}/XPLM/XPLMPlugin.h")
+        set(XPL_INCLUDE_DIRS "${SDK_PATH}/XPLM" "${SDK_PATH}/Widgets")
+        set(XPLANE_SDK_FOUND TRUE)
+        message(STATUS "Found X-Plane SDK at: ${SDK_PATH}")
+        break()
+    endif()
+endforeach()
+
+if(XPLANE_SDK_FOUND)
+    # Platform-specific defines for X-Plane SDK
+    if(APPLE)
+        set(XPL_PLATFORM_DEFINE "APL")
+    elseif(WIN32)
+        set(XPL_PLATFORM_DEFINE "IBM")
+    else()
+        set(XPL_PLATFORM_DEFINE "LINUX")
+    endif()
+
     # 64-bit X-Plane Plugin
     add_library(xlinuxtrack9 SHARED xlinuxtrack9.c linuxtrack.c)
     target_include_directories(xlinuxtrack9 PRIVATE ${XPL_INCLUDE_DIRS} ..)
-    target_compile_definitions(xlinuxtrack9 PRIVATE XPLM200 LINUX)
-    target_link_libraries(xlinuxtrack9 PRIVATE ${LTR_LIBM} ${LTR_LIBDL})
-    set_target_properties(xlinuxtrack9 PROPERTIES 
+    target_compile_definitions(xlinuxtrack9 PRIVATE XPLM200 ${XPL_PLATFORM_DEFINE})
+    set_target_properties(xlinuxtrack9 PROPERTIES
         PREFIX ""
         OUTPUT_NAME "xlinuxtrack9"
     )
+    if(APPLE)
+        # macOS: Link against system frameworks, use flat namespace for X-Plane compatibility
+        target_link_libraries(xlinuxtrack9 PRIVATE "-framework CoreFoundation")
+        set_target_properties(xlinuxtrack9 PROPERTIES
+            SUFFIX ".xpl"
+            LINK_FLAGS "-flat_namespace -undefined suppress"
+        )
+    else()
+        target_link_libraries(xlinuxtrack9 PRIVATE ${LTR_LIBM} ${LTR_LIBDL})
+    endif()
 
-    # 32-bit X-Plane Plugin
-    if(HAS_LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # 32-bit X-Plane Plugin (Linux only, for legacy X-Plane 10)
+    if(HAS_LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT APPLE)
         add_library(xlinuxtrack9_32 SHARED xlinuxtrack9.c linuxtrack.c)
         target_include_directories(xlinuxtrack9_32 PRIVATE ${XPL_INCLUDE_DIRS} ..)
         target_compile_definitions(xlinuxtrack9_32 PRIVATE XPLM200 LINUX)
-        set_target_properties(xlinuxtrack9_32 PROPERTIES 
+        set_target_properties(xlinuxtrack9_32 PROPERTIES
             COMPILE_FLAGS "-m32"
             LINK_FLAGS "-m32"
             PREFIX ""
@@ -146,7 +178,8 @@ if(EXISTS "/usr/include/xplane_sdk/XPLM")
         target_link_libraries(xlinuxtrack9_32 PRIVATE ${LTR_LIBM} ${LTR_LIBDL})
     endif()
 else()
-    message(WARNING "X-Plane SDK headers not found at /usr/include/xplane_sdk/XPLM - skipping xlinuxtrack9 plugin build")
+    message(WARNING "X-Plane SDK headers not found - skipping xlinuxtrack9 plugin build. "
+                    "Searched: ${XPLANE_SDK_SEARCH_PATHS}")
 endif()
 
 # --- Executables ---
