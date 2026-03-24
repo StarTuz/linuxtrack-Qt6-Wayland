@@ -118,7 +118,8 @@ export ARCH=x86_64
 
 # Set Qt environment for proper plugin discovery
 # We explicitly list common problematic plugins to ensure they are picked up
-export EXTRA_QT_PLUGINS="platforms/libqxcb.so;platforms/libqwayland.so;platformthemes/libqgtk3.so;iconengines;xcbglintegrations;imageformats;wayland-graphics-integration-client"
+# For Qt6 on Arch/modern distros, wayland is split into -egl and -generic
+export EXTRA_QT_PLUGINS="platforms/libqxcb.so;platforms/libqwayland-egl.so;platforms/libqwayland-generic.so;platformthemes/libqgtk3.so;iconengines;xcbglintegrations;imageformats;wayland-graphics-integration-client"
 
 export STRIP=${STRIP:-true}
 
@@ -135,6 +136,17 @@ for lib in "$APP_DIR"/usr/lib/linuxtrack/*.so*; do
             xlinuxtrack9*.so*) continue ;;
         esac
         LIBRARY_FLAGS="$LIBRARY_FLAGS --library $lib"
+    fi
+done
+
+# Explicitly bundle Wayland and XKB libraries which are often missing or incompatible
+# on modern Arch-based systems when using an AppImage built on older environments.
+# These will be bundled into the AppImage's private library directory.
+for wl_lib in libwayland-client libwayland-cursor libwayland-egl libxkbcommon; do
+    LIB_PATH=$(ldconfig -p | grep "$wl_lib.so.0" | head -n 1 | awk '{print $4}')
+    if [ -n "$LIB_PATH" ]; then
+        echo "--> Bundling $wl_lib from $LIB_PATH"
+        LIBRARY_FLAGS="$LIBRARY_FLAGS --library $LIB_PATH"
     fi
 done
 
