@@ -12,10 +12,10 @@ permissions:
   contents: write
 
 jobs:
-  publish-release:
+  build-linux:
     runs-on: ubuntu-24.04
-    name: Build and Release AppImage
-    
+    name: Build Linux Artifacts
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -100,25 +100,122 @@ jobs:
           STRIP: "true"
         run: |
           chmod +x packaging/appimage/make_appimage.sh
-          # Our optimized script already handles exclusions and manual strip
           bash packaging/appimage/make_appimage.sh
           mv Linuxtrack-x86_64.AppImage Linuxtrack-${{ github.ref_name }}-x86_64.AppImage
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: linux-artifacts
+          path: |
+            Linuxtrack-*-x86_64.AppImage
+            build_pkg/*.deb
+            build_pkg/*.rpm
+
+  build-macos:
+    runs-on: macos-14
+    name: Build macOS Artifacts
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          brew install qt@6 opencv cmake ninja pkg-config libmxml libusb nlohmann-json
+
+      - name: Install X-Plane SDK headers
+        run: |
+          curl -sL https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK430.zip -o xpsdk.zip
+          unzip -q xpsdk.zip -d xpsdk_tmp
+          XPLM_HEADER=$(find xpsdk_tmp -name "XPLMPlugin.h" | head -1)
+          WIDGETS_HEADER=$(find xpsdk_tmp -name "XPWidgets.h" | head -1)
+          if [ -z "$XPLM_HEADER" ]; then
+            echo "ERROR: XPLMPlugin.h not found in SDK zip"
+            find xpsdk_tmp -name "*.h" | head -20
+            exit 1
+          fi
+          XPLM_DIR=$(dirname "$XPLM_HEADER")
+          WIDGETS_DIR=$(dirname "$WIDGETS_HEADER")
+          echo "XPLM headers found at: $XPLM_DIR"
+          echo "Widget headers found at: $WIDGETS_DIR"
+          sudo mkdir -p /usr/local/include/xplane_sdk/XPLM
+          sudo mkdir -p /usr/local/include/xplane_sdk/Widgets
+          sudo cp "$XPLM_DIR"/*.h /usr/local/include/xplane_sdk/XPLM/
+          sudo cp "$WIDGETS_DIR"/*.h /usr/local/include/xplane_sdk/Widgets/
+          echo "Installed XPLM headers to /usr/local/include/xplane_sdk/"
+          ls /usr/local/include/xplane_sdk/XPLM/ | head -5
+
+      - name: Configure CMake
+        run: |
+          chmod +x scripts/configure_macos_experimental.sh
+          ./scripts/configure_macos_experimental.sh build_macos stage_macos -G Ninja
+
+      - name: Build
+        run: |
+          cd build_macos
+          ninja
+
+      - name: Run Tests
+        run: |
+          cd build_macos
+          ctest --output-on-failure
+
+      - name: Install and Package
+        run: |
+          cd build_macos
+          ninja install
+          cd ../stage_macos
+          zip -r ../Linuxtrack-${{ github.ref_name }}-macOS-ARM64-experimental.zip .
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos-artifacts
+          path: Linuxtrack-*-macOS-ARM64-experimental.zip
+
+  publish-release:
+    needs: [build-linux, build-macos]
+    runs-on: ubuntu-latest
+    name: Publish GitHub Release
+
+    steps:
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: linux-artifacts
+          path: artifacts/
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: macos-artifacts
+          path: artifacts/
+
+      - name: List artifacts
+        run: |
+          echo "All artifacts:"
+          find artifacts/ -type f
 
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "${{ github.ref_name }}" \
-              Linuxtrack-*-x86_64.AppImage \
-              build_pkg/*.deb \
-              build_pkg/*.rpm \
+              artifacts/*.AppImage \
+              artifacts/*.deb \
+              artifacts/*.rpm \
+              artifacts/*.zip \
+              --repo "${{ github.repository }}" \
               --clobber
           else
             gh release create "${{ github.ref_name }}" \
-              Linuxtrack-*-x86_64.AppImage \
-              build_pkg/*.deb \
-              build_pkg/*.rpm \
+              artifacts/*.AppImage \
+              artifacts/*.deb \
+              artifacts/*.rpm \
+              artifacts/*.zip \
+              --repo "${{ github.repository }}" \
               --generate-notes \
               --latest
           fi
