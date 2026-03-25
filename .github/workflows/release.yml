@@ -127,7 +127,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install qt@6 opencv cmake ninja pkg-config libmxml libusb nlohmann-json
+          brew install qt@6 opencv cmake ninja pkg-config libmxml libusb nlohmann-json create-dmg
 
       - name: Install X-Plane SDK headers
         run: |
@@ -171,11 +171,19 @@ jobs:
           cd build_macos
           ninja install
           cd ../stage_macos
+          # Bundle Qt dependencies
+          macdeployqt Linuxtrack.app -always-overwrite
+          # Create DMG installer
+          chmod +x ../scripts/make_macos_dmg.sh
+          ../scripts/make_macos_dmg.sh .
+          mv Linuxtrack-macOS-Installer.dmg ../Linuxtrack-${{ github.ref_name }}-macOS-ARM64.dmg
+          # Also create zip as fallback
           zip -r ../Linuxtrack-${{ github.ref_name }}-macOS-ARM64-experimental.zip .
 
       - name: Collect macOS artifacts
         run: |
           mkdir -p dist
+          cp Linuxtrack-*-macOS-ARM64.dmg dist/ || true
           cp Linuxtrack-*-macOS-ARM64-experimental.zip dist/
           ls -la dist/
 
@@ -217,6 +225,7 @@ jobs:
               artifacts/*.AppImage \
               artifacts/*.deb \
               artifacts/*.rpm \
+              artifacts/*.dmg \
               artifacts/*.zip \
               --repo "${{ github.repository }}" \
               --clobber
@@ -225,6 +234,7 @@ jobs:
               artifacts/*.AppImage \
               artifacts/*.deb \
               artifacts/*.rpm \
+              artifacts/*.dmg \
               artifacts/*.zip \
               --repo "${{ github.repository }}" \
               --generate-notes \
