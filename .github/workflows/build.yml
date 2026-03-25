@@ -255,7 +255,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install qt@6 opencv cmake ninja pkg-config libmxml libusb nlohmann-json
+          brew install qt@6 opencv cmake ninja pkg-config libmxml libusb nlohmann-json create-dmg
 
       - name: Install X-Plane SDK headers
         run: |
@@ -299,11 +299,18 @@ jobs:
           cd build_macos
           ninja install
           cd ../stage_macos
-          # Create a zip of the staged installation
+          # Bundle Qt dependencies
+          macdeployqt Linuxtrack.app -always-overwrite
+          # Create a professional DMG installer
+          chmod +x ../scripts/make_macos_dmg.sh
+          ../scripts/make_macos_dmg.sh .
+          # Also keep the zip for now as a fallback
           zip -r ../Linuxtrack-macOS-ARM64-experimental.zip .
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v6
         with:
           name: Linuxtrack-macOS-ARM64-experimental
-          path: Linuxtrack-macOS-ARM64-experimental.zip
+          path: |
+            Linuxtrack-macOS-ARM64-experimental.zip
+            stage_macos/*.dmg

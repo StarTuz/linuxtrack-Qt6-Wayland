@@ -29,18 +29,14 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 ## 🆕 Recent in 1.4.0
 
 - **Wayland Support**: Added explicit bundling of Wayland and XKB libraries to the AppImage, ensuring out-of-the-box compatibility with modern distributions like CachyOS.
-- **USB Permissions**: Modernized udev rules for TrackIR devices using seat-aware `uaccess` tagging and implemented an automated rule installer (`scripts/install_rules.sh`).
+- **USB & Permissions**: Modernized udev rules for TrackIR devices using seat-aware `uaccess` tagging. Added a new [macOS QuickStart Guide](doc/MACOS_QUICKSTART.md) for handling Gatekeeper and system permissions on un-signed releases.
 - **Tracking Responsiveness**: Fixed 'hitching' and 'magnetic centering' by making TrackIR 5 'Precision Mode' configurable and tuning the default filter responsiveness.
 - **Adaptive Filtering**: Stabilized the time-delta (dt) calculation to prevent scheduling jitter from causing jumps in the smoothing filters.
 
-## 📍 Future Platform Work
+## 📍 Platform Status
 
-macOS support is not currently maintained. There is historical macOS code in the tree, but bringing it back should be treated as a staged platform bring-up, not a small compatibility fix. The current implementation plan lives in [doc/MACOS_ROADMAP.md](doc/MACOS_ROADMAP.md) and intentionally prioritizes:
-
-- build isolation from Linux
-- shared-core regression coverage
-- webcam and face tracking before TrackIR hardware
-- X-Plane support before any claim of broad macOS parity
+- **Linux**: Fully maintained. Official support for AppImage, Ubuntu, and Arch Linux.
+- **macOS**: Experimental but functional. Now includes simplified installation steps and bundled Qt dependencies. See the [MACOS_ROADMAP.md](doc/MACOS_ROADMAP.md) for future integration plans.
 
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
 
@@ -48,7 +44,7 @@ macOS support is not currently maintained. There is historical macOS code in the
 
 Your TrackIR/SmartNav device needs udev rules so Linux can access it without root privileges.
 
-**Step 1: Copy the rules file**
+### Step 1: Copy the rules file
 
 ```bash
 # If installed to /opt/linuxtrack:
@@ -59,7 +55,7 @@ sudo cp /opt/linuxtrack/share/linuxtrack/99-TIR.rules /etc/udev/rules.d/
 sudo cp squashfs-root/usr/share/linuxtrack/99-TIR.rules /etc/udev/rules.d/
 ```
 
-**Step 2: Reload udev rules**
+### Step 2: Reload udev rules
 
 ```bash
 sudo udevadm control --reload-rules
@@ -111,7 +107,6 @@ If X-Plane fails to load the plugin or reports `linuxtrack.so` is missing when u
 
 > [!TIP]
 > **Auto-start tracking:** Run `ltr_gui --autostart` (or `-a`) to automatically begin tracking when the GUI launches. Add this to your X-Plane startup script:
->
 > ```bash
 > ltr_gui --autostart &
 > xplane12
@@ -127,7 +122,7 @@ If your tracking feels jittery compared to Windows, you can enable the **One Eur
 The filter is available in the **Tracking Setup** tab of your profile with two sliders:
 
 | Parameter | Effect | Range | Default |
-|-----------|--------|-------|---------|
+| :--- | :--- | :--- | :--- |
 | **Smoothness** (`min_cutoff`) | Jitter reduction — slide right for smoother | 0.1-5.0 | 1.0 |
 | **Responsiveness** (`beta`) | Fast-move responsiveness — slide right for snappier | 0.0-0.1 | 0.007 |
 
