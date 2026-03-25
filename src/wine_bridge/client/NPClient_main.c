@@ -322,9 +322,15 @@ int __stdcall NPCLIENT_NP_RegisterProgramProfileID(unsigned short id) {
   game_desc_t gd;
   if (game_data_get_desc(id, &gd)) {
     printf("Application ID: %d - %s!!!\n", id, gd.name);
-    if (game_data_get_desc(id, &gd)) {
-      crypted = gd.encrypted;
-      if (gd.encrypted) {
+    /* Emergency fallback for Elite Dangerous if keys are missing in gamedata.txt */
+    if (id == 3475 && !gd.encrypted) {
+      dbg_report("Applying emergency encryption keys for Elite Dangerous\n");
+      gd.encrypted = true;
+      gd.key1 = 0xA9485EEC;
+      gd.key2 = 0xA12E18BE;
+    }
+    crypted = gd.encrypted;
+    if (gd.encrypted) {
         printf("Table: %02X %02X %02X %02X %02X %02X %02X %02X\n", table[0],
                table[1], table[2], table[3], table[4], table[5], table[6],
                table[7]);
@@ -345,7 +351,6 @@ int __stdcall NPCLIENT_NP_RegisterProgramProfileID(unsigned short id) {
         table[7] = (unsigned char)(gd.key2 & 0xff);
         gd.key2 >>= 8;
       }
-    }
     if (linuxtrack_init(gd.name) < LINUXTRACK_OK) {
       return 1;
     }
