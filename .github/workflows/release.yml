@@ -117,9 +117,9 @@ jobs:
           name: linux-artifacts
           path: dist/*
 
-  build-macos:
+  build-macos-arm64:
     runs-on: macos-14
-    name: Build macOS Artifacts
+    name: Build macOS ARM64 Artifacts
 
     steps:
       - name: Checkout code
@@ -187,14 +187,90 @@ jobs:
           cp Linuxtrack-*-macOS-ARM64-experimental.zip dist/
           ls -la dist/
 
-      - name: Upload macOS artifact
+      - name: Upload macOS ARM64 artifact
         uses: actions/upload-artifact@v6
         with:
-          name: macos-artifacts
+          name: macos-arm64-artifacts
+          path: dist/*
+
+  build-macos-intel:
+    runs-on: macos-13
+    name: Build macOS Intel Artifacts
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          brew install qt@6 opencv cmake ninja pkg-config libmxml libusb nlohmann-json create-dmg
+
+      - name: Install X-Plane SDK headers
+        run: |
+          curl -sL https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK430.zip -o xpsdk.zip
+          unzip -q xpsdk.zip -d xpsdk_tmp
+          XPLM_HEADER=$(find xpsdk_tmp -name "XPLMPlugin.h" | head -1)
+          WIDGETS_HEADER=$(find xpsdk_tmp -name "XPWidgets.h" | head -1)
+          if [ -z "$XPLM_HEADER" ]; then
+            echo "ERROR: XPLMPlugin.h not found in SDK zip"
+            find xpsdk_tmp -name "*.h" | head -20
+            exit 1
+          fi
+          XPLM_DIR=$(dirname "$XPLM_HEADER")
+          WIDGETS_DIR=$(dirname "$WIDGETS_HEADER")
+          echo "XPLM headers found at: $XPLM_DIR"
+          echo "Widget headers found at: $WIDGETS_DIR"
+          sudo mkdir -p /usr/local/include/xplane_sdk/XPLM
+          sudo mkdir -p /usr/local/include/xplane_sdk/Widgets
+          sudo cp "$XPLM_DIR"/*.h /usr/local/include/xplane_sdk/XPLM/
+          sudo cp "$WIDGETS_DIR"/*.h /usr/local/include/xplane_sdk/Widgets/
+          echo "Installed XPLM headers to /usr/local/include/xplane_sdk/"
+          ls /usr/local/include/xplane_sdk/XPLM/ | head -5
+
+      - name: Configure CMake
+        run: |
+          chmod +x scripts/configure_macos_experimental.sh
+          ./scripts/configure_macos_experimental.sh build_macos stage_macos -G Ninja
+
+      - name: Build
+        run: |
+          cd build_macos
+          ninja
+
+      - name: Run Tests
+        run: |
+          cd build_macos
+          ctest --output-on-failure
+
+      - name: Install and Package
+        run: |
+          cd build_macos
+          ninja install
+          cd ../stage_macos
+          # Bundle Qt dependencies
+          macdeployqt Linuxtrack.app -always-overwrite
+          # Create DMG installer
+          chmod +x ../scripts/make_macos_dmg.sh
+          ../scripts/make_macos_dmg.sh .
+          mv Linuxtrack-macOS-Installer.dmg ../Linuxtrack-${{ github.ref_name }}-macOS-x86_64.dmg
+          # Also create zip as fallback
+          zip -r ../Linuxtrack-${{ github.ref_name }}-macOS-x86_64-experimental.zip .
+
+      - name: Collect macOS Intel artifacts
+        run: |
+          mkdir -p dist
+          cp Linuxtrack-*-macOS-x86_64.dmg dist/ || true
+          cp Linuxtrack-*-macOS-x86_64-experimental.zip dist/
+          ls -la dist/
+
+      - name: Upload macOS Intel artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos-intel-artifacts
           path: dist/*
 
   publish-release:
-    needs: [build-linux, build-macos]
+    needs: [build-linux, build-macos-arm64, build-macos-intel]
     runs-on: ubuntu-latest
     name: Publish GitHub Release
 
@@ -205,10 +281,16 @@ jobs:
           name: linux-artifacts
           path: artifacts/
 
-      - name: Download macOS artifacts
+      - name: Download macOS ARM64 artifacts
         uses: actions/download-artifact@v7
         with:
-          name: macos-artifacts
+          name: macos-arm64-artifacts
+          path: artifacts/
+
+      - name: Download macOS Intel artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: macos-intel-artifacts
           path: artifacts/
 
       - name: List artifacts
