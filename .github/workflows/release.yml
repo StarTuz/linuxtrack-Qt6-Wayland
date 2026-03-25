@@ -194,7 +194,7 @@ jobs:
           path: dist/*
 
   build-macos-intel:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     name: Build macOS Intel Artifacts
 
     steps:
