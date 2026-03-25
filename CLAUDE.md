@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Linuxtrack is a head-tracking solution for Linux that enables applications (primarily flight simulators and games) to respond to head movement. It supports TrackIR USB devices, webcams, and OpenCV face tracking. Windows games are supported through a Wine/Proton bridge.
 
-**Current Version:** 1.3.7 (HANDOFF.md documents the March 2026 TrackIR/webcam work)
+**Current Version:** 1.4.0 (Wayland support and TrackIR responsiveness fixes)
 
 ## Build Commands
 

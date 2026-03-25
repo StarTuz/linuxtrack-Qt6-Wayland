@@ -26,13 +26,12 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.3.7
+## 🆕 Recent in 1.4.0
 
-- **TrackIR regression fixed:** Webcam blob-threshold scaling is now applied only in webcam-style drivers, so TrackIR keeps its native 3-point pose behavior.
-- **Regression test added:** Shared blob extraction now has automated coverage to catch webcam changes that would alter TrackIR semantics.
-- **Webcam face tracking improved:** Neural webcam tracking now has a configurable camera FOV, steadier pose filtering, correct translation scale, and stronger forward/back response.
-- **Slider ranges tuned:** Common smoothing, One Euro smoothness, webcam face smoothing, and detailed-axis controls now land in a more useful part of their range.
-- **Release path repaired:** `1.3.7` also restores the release AppImage path after packaging changes by fixing icon lookup, rebuilding the X-Plane plugin in tagged releases, and removing CI's dependency on downloading Catch2 at runtime.
+- **Wayland Support**: Added explicit bundling of Wayland and XKB libraries to the AppImage, ensuring out-of-the-box compatibility with modern distributions like CachyOS.
+- **USB Permissions**: Modernized udev rules for TrackIR devices using seat-aware `uaccess` tagging and implemented an automated rule installer (`scripts/install_rules.sh`).
+- **Tracking Responsiveness**: Fixed 'hitching' and 'magnetic centering' by making TrackIR 5 'Precision Mode' configurable and tuning the default filter responsiveness.
+- **Adaptive Filtering**: Stabilized the time-delta (dt) calculation to prevent scheduling jitter from causing jumps in the smoothing filters.
 
 ## 📍 Future Platform Work
 
