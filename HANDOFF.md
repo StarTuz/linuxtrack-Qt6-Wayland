@@ -4,7 +4,7 @@
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.1
+**Current Version:** 1.4.3
 
 ---
 
@@ -250,9 +250,9 @@ The project now compiles successfully on modern Linux with:
 
 - **Status:** macOS builds are completely untested on real hardware. Testers with Mac + TrackIR + X-Plane wanted.
 
-**Recent Additions (2026-04-28) [v1.4.1 — UDP Bridge Protocol Modes]:**
+**Recent Additions (2026-04-28) [v1.4.3 — UDP Bridge Protocol Modes]:**
 
-- **Version Bump:** Project version advanced to `1.4.1`.
+- **Version Bump:** Project version advanced to `1.4.3`.
 
 - **UDP yaw convention split:** Added an explicit `Wine/Proton NPClient` protocol mode in the UDP settings. Native OpenTrack/FreeTrack output keeps the existing yaw sign used by games such as X4 Foundations, while Wine/Proton NPClient starts `ltr_udp` with `--no-yaw-invert` for Proton titles such as Elite Dangerous.
 

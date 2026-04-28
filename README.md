@@ -26,7 +26,7 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.1
+## 🆕 Recent in 1.4.3
 
 - **UDP Bridge Protocol Modes**: Split native OpenTrack/FreeTrack output from Wine/Proton NPClient output so games with different yaw conventions no longer break each other. Use **OpenTrack (6 doubles)** for native games like *X4 Foundations* and **Wine/Proton NPClient** for Proton games like *Elite Dangerous*.
 - **UDP Profile Sync**: The GUI now starts/restarts `ltr_udp` with the active Tracking Setup profile, so profile-specific axis settings such as **Invert** apply to the UDP stream.
