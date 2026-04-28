@@ -4,7 +4,7 @@
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.0
+**Current Version:** 1.4.1
 
 ---
 
@@ -249,6 +249,16 @@ The project now compiles successfully on modern Linux with:
 - **Linux USB Diagnostics:** Added "Check USB Permissions" button to TrackIR settings for troubleshooting permission issues (helps with CachyOS and other distros).
 
 - **Status:** macOS builds are completely untested on real hardware. Testers with Mac + TrackIR + X-Plane wanted.
+
+**Recent Additions (2026-04-28) [v1.4.1 — UDP Bridge Protocol Modes]:**
+
+- **Version Bump:** Project version advanced to `1.4.1`.
+
+- **UDP yaw convention split:** Added an explicit `Wine/Proton NPClient` protocol mode in the UDP settings. Native OpenTrack/FreeTrack output keeps the existing yaw sign used by games such as X4 Foundations, while Wine/Proton NPClient starts `ltr_udp` with `--no-yaw-invert` for Proton titles such as Elite Dangerous.
+
+- **Profile sync for UDP stack:** The GUI now passes the active Tracking Setup profile to `ltr_udp` and restarts the bridge when target, protocol, or profile changes. Profile-specific axis settings, including Yaw Invert, now apply to the UDP stream instead of silently falling back to `Default`.
+
+- **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
 
 ---
 
@@ -976,7 +986,7 @@ The user mentioned "there will be more later." Potential future work could inclu
 |---------|-------------|
 | Target IP | Usually `127.0.0.1` for local games |
 | Port | Default `4242` (OpenTrack standard) |
-| Protocol | OpenTrack (6 doubles) or FreeTrack |
+| Protocol | OpenTrack (6 doubles), FreeTrack, or Wine/Proton NPClient |
 | Auto-start | Start UDP when tracking begins |
 
 ### Controls

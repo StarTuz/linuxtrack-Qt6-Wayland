@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(LinuxTrack VERSION 1.4.0 LANGUAGES C CXX)
+project(LinuxTrack VERSION 1.4.1 LANGUAGES C CXX)
 
 # Set C++ Standard
 set(CMAKE_CXX_STANDARD 17)

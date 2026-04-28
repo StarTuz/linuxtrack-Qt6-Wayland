@@ -285,6 +285,11 @@ void UdpSettings::onInstallWineClicked()
     }
     
     if (success) {
+        ui->protocolCombo->setCurrentIndex(static_cast<int>(UdpBridge::WineNpClient));
+        saveSettings();
+        if (bridge) {
+            bridge->setProtocol(UdpBridge::WineNpClient);
+        }
         QMessageBox::information(this, QString::fromLatin1("Success"),
             QString::fromLatin1("UDP Bridge installed to:\n") + destDir64 + 
             QString::fromLatin1("\nand\n") + destDir32);

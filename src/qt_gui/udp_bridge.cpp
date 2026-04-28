@@ -40,6 +40,7 @@ UdpBridge::UdpBridge(QObject *parent)
     , address(QHostAddress::LocalHost)
     , port(4242)
     , proto(OpenTrack)
+    , invertYaw(true)
     , running(false)
     , ltrUdpProcess(nullptr)
 {
@@ -55,18 +56,45 @@ UdpBridge::~UdpBridge()
 
 void UdpBridge::setTarget(const QString &ip, int p)
 {
+    bool shouldRestart = running &&
+                         (address != QHostAddress(ip) ||
+                          port != static_cast<quint16>(p));
     address = QHostAddress(ip);
     port = static_cast<quint16>(p);
+    if (shouldRestart) {
+        stop();
+        start();
+    }
 }
 
 void UdpBridge::setProtocol(Protocol p)
 {
+    bool shouldRestart = running && proto != p;
     proto = p;
+    if (shouldRestart) {
+        stop();
+        start();
+    }
 }
 
 void UdpBridge::setProfile(const QString &profileName)
 {
+    bool shouldRestart = running && profile != profileName;
     profile = profileName;
+    if (shouldRestart) {
+        stop();
+        start();
+    }
+}
+
+void UdpBridge::setInvertYaw(bool enabled)
+{
+    bool shouldRestart = running && invertYaw != enabled;
+    invertYaw = enabled;
+    if (shouldRestart) {
+        stop();
+        start();
+    }
 }
 
 QString UdpBridge::targetAddress() const
@@ -94,6 +122,9 @@ void UdpBridge::start()
     }
     if (!profile.isEmpty()) {
         args << QString::fromLatin1("--profile=") + profile;
+    }
+    if (proto == WineNpClient || !invertYaw) {
+        args << QString::fromLatin1("--no-yaw-invert");
     }
     
     // Find ltr_udp binary
@@ -143,7 +174,7 @@ void UdpBridge::sendPose(float yaw, float pitch, float roll, float x, float y, f
     
     QByteArray data;
     
-    if (proto == OpenTrack) {
+    if (proto == OpenTrack || proto == WineNpClient) {
         OpenTrackPacket pkt;
         pkt.x = static_cast<double>(x) / 10.0;  // mm -> cm
         pkt.y = static_cast<double>(y) / 10.0;

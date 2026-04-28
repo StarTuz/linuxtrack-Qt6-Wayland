@@ -17,7 +17,7 @@ class UdpBridge : public QObject {
     Q_OBJECT
 
 public:
-    enum Protocol { OpenTrack, FreeTrack };
+    enum Protocol { OpenTrack, FreeTrack, WineNpClient };
     Q_ENUM(Protocol)
 
     explicit UdpBridge(QObject *parent = nullptr);
@@ -26,11 +26,13 @@ public:
     void setTarget(const QString &ip, int port);
     void setProtocol(Protocol p);
     void setProfile(const QString &profileName);
+    void setInvertYaw(bool enabled);
     
     bool isRunning() const { return running; }
     QString targetAddress() const;
     int targetPort() const { return port; }
     Protocol protocol() const { return proto; }
+    bool yawInverted() const { return invertYaw; }
 
 public slots:
     void start();
@@ -53,6 +55,7 @@ private:
     QHostAddress address;
     quint16 port;
     Protocol proto;
+    bool invertYaw;
     bool running;
     QProcess *ltrUdpProcess;
     QString profile;

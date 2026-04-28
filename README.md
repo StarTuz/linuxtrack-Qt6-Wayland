@@ -26,7 +26,12 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.0
+## 🆕 Recent in 1.4.1
+
+- **UDP Bridge Protocol Modes**: Split native OpenTrack/FreeTrack output from Wine/Proton NPClient output so games with different yaw conventions no longer break each other. Use **OpenTrack (6 doubles)** for native games like *X4 Foundations* and **Wine/Proton NPClient** for Proton games like *Elite Dangerous*.
+- **UDP Profile Sync**: The GUI now starts/restarts `ltr_udp` with the active Tracking Setup profile, so profile-specific axis settings such as **Invert** apply to the UDP stream.
+
+## Recent in 1.4.0
 
 - **Wayland Support**: Added explicit bundling of Wayland and XKB libraries to the AppImage, ensuring out-of-the-box compatibility with modern distributions like CachyOS.
 - **USB & Permissions**: Modernized udev rules for TrackIR devices using seat-aware `uaccess` tagging. Added a new [macOS QuickStart Guide](doc/MACOS_QUICKSTART.md) for handling Gatekeeper and system permissions on un-signed releases.
@@ -249,9 +254,18 @@ If the install was performed through `setup_linuxtrack.sh`, the uninstaller will
 
 1. Open `ltr_gui`.
 2. Go to the **Misc.** tab.
-3. Click **"Install Linuxtrack-Wine support..."**.
-4. Select your game's Wine prefix from the auto-discovered list.
-5. Controller.exe is automatically installed for Pause/Recenter hotkeys.
+3. Open **UDP Bridge Settings**.
+4. Click **"Install UDP Bridge (Wine/Proton)..."**.
+5. Select your game's Wine/Proton prefix from the auto-discovered list.
+6. Set **Protocol** to **Wine/Proton NPClient** for Proton games such as *Elite Dangerous*.
+
+For native OpenTrack UDP games such as *X4 Foundations*, leave **Protocol** set to **OpenTrack (6 doubles)**.
+
+Legacy non-UDP Wine bridge support is still available from the Misc tab:
+
+1. Click **"Install Linuxtrack-Wine support..."**.
+2. Select your game's Wine prefix from the auto-discovered list.
+3. Controller.exe is automatically installed for Pause/Recenter hotkeys.
 
 ## 🗺️ Roadmap & Next Steps
 

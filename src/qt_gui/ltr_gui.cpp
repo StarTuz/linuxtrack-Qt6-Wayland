@@ -117,6 +117,9 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
 
   // Initialize UDP Bridge
   udpBridge = new UdpBridge(this);
+  udpBridge->setProfile(QString::fromLatin1("Default"));
+  QObject::connect(ps, &ProfileSelector::profileChanged, udpBridge,
+                   &UdpBridge::setProfile);
   hotkeyProcess = nullptr; // Owned by main window
   QSettings udpSettings(QString::fromLatin1("linuxtrack"),
                         QString::fromLatin1("ltr_gui"));

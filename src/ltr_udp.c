@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
   int target_port = DEFAULT_PORT;
   proto_t protocol = PROTO_OPENTRACK;
   const char *profile_name = NULL;  // NULL = use "Default" profile
+  bool invert_yaw = true;
 
   // Parse simple arguments
   for (int i = 1; i < argc; i++) {
@@ -84,6 +85,8 @@ int main(int argc, char *argv[]) {
       target_port = atoi(argv[i] + 7);
     } else if (strncmp(argv[i], "--profile=", 10) == 0) {
       profile_name = argv[i] + 10;
+    } else if (strcmp(argv[i], "--no-yaw-invert") == 0) {
+      invert_yaw = false;
     } else {
       // Assume port if just a number
       int p = atoi(argv[i]);
@@ -115,6 +118,7 @@ int main(int argc, char *argv[]) {
   printf("Protocol: %s\n", (protocol == PROTO_OPENTRACK) ? "OpenTrack (UDP)" : "FreeTrack");
   printf("Target:   %s:%d\n", target_ip, target_port);
   printf("Profile:  %s\n", profile_name ? profile_name : "Default");
+  printf("Yaw sign: %s\n", invert_yaw ? "OpenTrack" : "Linuxtrack/NPClient");
   printf("Press Ctrl+C to stop.\n");
 
   // Initialize Linuxtrack with specified profile
@@ -179,10 +183,10 @@ int main(int argc, char *argv[]) {
         packet.y = (double)pose.ty / 10.0;
         packet.z = (double)pose.tz / 10.0;
 
-        // OpenTrack convention: positive yaw = look right
-        // Linuxtrack convention: positive yaw = look left (from face tracking geometry)
-        // Invert yaw to match OpenTrack expectations
-        packet.yaw = -(double)pose.yaw;
+        // Native OpenTrack consumers historically expect the opposite yaw sign.
+        // The Wine/Proton NPClient UDP DLL expects Linuxtrack's already
+        // post-processed sign, so it starts ltr_udp with --no-yaw-invert.
+        packet.yaw = invert_yaw ? -(double)pose.yaw : (double)pose.yaw;
         packet.pitch = (double)pose.pitch;
         packet.roll = (double)pose.roll;
 
@@ -193,8 +197,8 @@ int main(int argc, char *argv[]) {
         packet.data_id = 2; // ID?
         packet.cam_width = 0;
         packet.cam_height = 0;
-        // FreeTrack convention: same as OpenTrack (positive yaw = look right)
-        packet.yaw = -(float)pose.yaw;
+        // FreeTrack follows the same sign handling as the OpenTrack packet.
+        packet.yaw = invert_yaw ? -(float)pose.yaw : (float)pose.yaw;
         packet.pitch = (float)pose.pitch;
         packet.roll = (float)pose.roll;
         packet.x =
