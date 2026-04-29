@@ -160,62 +160,56 @@ void UdpSettings::onInstallWineClicked()
     QDir().mkpath(destDir64);
     QDir().mkpath(destDir32);
     
-    // Find the source DLLs (from install location or build directory)
+    // Find and copy the Wine/Proton bridge files. Some games probe
+    // NPClient.dll even from 64-bit processes, so install both names.
     bool success = true;
-    
-    // Copy 64-bit DLL to Program Files
+    QStringList installNotes;
+    QStringList sourcePaths;
+    sourcePaths << QString::fromLatin1("../lib/linuxtrack")
+                << QString::fromLatin1("../lib")
+                << QString::fromLatin1("../../src/wine_bridge/client")
+                << QString::fromLatin1("../../src/wine_bridge/controller")
+                << QString::fromLatin1("../../src/wine_bridge")
+                << QString::fromLatin1("../../wine_bridge/client")
+                << QString::fromLatin1("../../wine_bridge/controller")
+                << QString::fromLatin1("../../wine_bridge");
+
+    auto copyBridgeFile = [&](const QString &src, const QString &dst,
+                              const QString &label, bool required) {
+        if (!QFile::exists(src)) {
+            QString note = QString::fromLatin1("Missing %1 source").arg(label);
+            installNotes << note;
+            if (required) {
+                success = false;
+            }
+            return;
+        }
+
+        QFile::remove(dst);
+        if (!QFile::copy(src, dst) || !QFile::exists(dst)) {
+            installNotes << QString::fromLatin1("Failed to copy %1 to %2")
+                                .arg(label, dst);
+            success = false;
+        }
+    };
+
     QString src64 = PrefProxy::findRuntimeFile(
-        QString::fromLatin1("NPClient64UDP.dll.so"),
-        QStringList()
-            << QString::fromLatin1("../lib/linuxtrack")
-            << QString::fromLatin1("../lib")
-            << QString::fromLatin1("../../src/wine_bridge/client")
-            << QString::fromLatin1("../../src/wine_bridge")
-            << QString::fromLatin1("../../wine_bridge/client")
-            << QString::fromLatin1("../../wine_bridge"));
-    QString dst64 = destDir64 + QString::fromLatin1("/NPClient64.dll");
-    if (QFile::exists(src64)) {
-        QFile::remove(dst64);
-        if (!QFile::copy(src64, dst64)) success = false;
-    }
-    
-    // Copy 32-bit DLL to both directories (games may look in either)
+        QString::fromLatin1("NPClient64UDP.dll.so"), sourcePaths);
+    copyBridgeFile(src64, destDir64 + QString::fromLatin1("/NPClient64.dll"),
+                   QString::fromLatin1("NPClient64UDP.dll.so"), true);
+    copyBridgeFile(src64, destDir64 + QString::fromLatin1("/NPClient.dll"),
+                   QString::fromLatin1("NPClient64UDP.dll.so"), true);
+
     QString src32 = PrefProxy::findRuntimeFile(
-        QString::fromLatin1("NPClientUDP.dll.so"),
-        QStringList()
-            << QString::fromLatin1("../lib/linuxtrack")
-            << QString::fromLatin1("../lib")
-            << QString::fromLatin1("../../src/wine_bridge/client")
-            << QString::fromLatin1("../../src/wine_bridge")
-            << QString::fromLatin1("../../wine_bridge/client")
-            << QString::fromLatin1("../../wine_bridge"));
-    if (QFile::exists(src32)) {
-        // Program Files (for 64-bit loader looking for 32-bit compat)
-        QString dst32_64 = destDir64 + QString::fromLatin1("/NPClient.dll");
-        QFile::remove(dst32_64);
-        if (!QFile::copy(src32, dst32_64)) success = false;
-        
-        // Program Files (x86) (for native 32-bit games)
-        QString dst32_32 = destDir32 + QString::fromLatin1("/NPClient.dll");
-        QFile::remove(dst32_32);
-        if (!QFile::copy(src32, dst32_32)) success = false;
-    }
-    
-    // Copy hotkey utility to 64-bit dir
+        QString::fromLatin1("NPClientUDP.dll.so"), sourcePaths);
+    copyBridgeFile(src32, destDir32 + QString::fromLatin1("/NPClient.dll"),
+                   QString::fromLatin1("NPClientUDP.dll.so"), false);
+
     QString srcHotkey = PrefProxy::findRuntimeFile(
-        QString::fromLatin1("ltr_wine_hotkeys.exe"),
-        QStringList()
-            << QString::fromLatin1("../lib/linuxtrack")
-            << QString::fromLatin1("../lib")
-            << QString::fromLatin1("../../src/wine_bridge/controller")
-            << QString::fromLatin1("../../src/wine_bridge")
-            << QString::fromLatin1("../../wine_bridge/controller")
-            << QString::fromLatin1("../../wine_bridge"));
-    QString dstHotkey = destDir64 + QString::fromLatin1("/ltr_wine_hotkeys.exe");
-    if (QFile::exists(srcHotkey)) {
-        QFile::remove(dstHotkey);
-        if (!QFile::copy(srcHotkey, dstHotkey)) success = false;
-    }
+        QString::fromLatin1("ltr_wine_hotkeys.exe"), sourcePaths);
+    copyBridgeFile(srcHotkey,
+                   destDir64 + QString::fromLatin1("/ltr_wine_hotkeys.exe"),
+                   QString::fromLatin1("ltr_wine_hotkeys.exe"), true);
     
     // Apply registry entries - write directly to user.reg for Proton compatibility
     QString userRegPath = prefix + QString::fromLatin1("/user.reg");
@@ -290,12 +284,26 @@ void UdpSettings::onInstallWineClicked()
         if (bridge) {
             bridge->setProtocol(UdpBridge::WineNpClient);
         }
+        QString message = QString::fromLatin1("UDP Bridge installed to:\n") +
+                          destDir64 + QString::fromLatin1("\nand\n") +
+                          destDir32;
+        if (!installNotes.isEmpty()) {
+            message += QString::fromLatin1("\n\nNotes:\n") +
+                       installNotes.join(QString::fromLatin1("\n"));
+        }
         QMessageBox::information(this, QString::fromLatin1("Success"),
-            QString::fromLatin1("UDP Bridge installed to:\n") + destDir64 + 
-            QString::fromLatin1("\nand\n") + destDir32);
+            message);
     } else {
+        QString message =
+            QString::fromLatin1("Wine/Proton UDP bridge installation is incomplete.\n\n");
+        if (!installNotes.isEmpty()) {
+            message += installNotes.join(QString::fromLatin1("\n")) +
+                       QString::fromLatin1("\n\n");
+        }
+        message += QString::fromLatin1(
+            "Check that this Linuxtrack build or AppImage contains the Wine bridge files.");
         QMessageBox::warning(this, QString::fromLatin1("Warning"),
-            QString::fromLatin1("Some files could not be copied. Check if ltr_gui is installed or built."));
+            message);
     }
 }
 
