@@ -1,10 +1,10 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-03-24
+**Last Updated:** 2026-04-29
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.3
+**Current Version:** 1.4.4
 
 ---
 
@@ -259,6 +259,27 @@ The project now compiles successfully on modern Linux with:
 - **Profile sync for UDP stack:** The GUI now passes the active Tracking Setup profile to `ltr_udp` and restarts the bridge when target, protocol, or profile changes. Profile-specific axis settings, including Yaw Invert, now apply to the UDP stream instead of silently falling back to `Default`.
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
+
+**Recent Additions (2026-04-29) [v1.4.4 — gamedata.txt encryption-key extraction fix]:**
+
+- **Version Bump:** Project version advanced to `1.4.4`.
+
+- **TrackIR encryption keys missing for ALL games (critical):** [src/game_data.c](src/game_data.c) read text content from `<ApplicationID>` XML nodes via `mxmlGetElement(child)`, which returns the *element tag name* (NULL for text/opaque child nodes), not the text payload. Every entry in the generated `~/.config/linuxtrack/tir_firmware/gamedata.txt` rendered as `("(null)")` instead of the real 16-hex-digit encryption key. Effect: every TrackIR-aware Wine/Proton game received unencrypted pose data. Games that strictly require encryption (DCS World, Elite Dangerous) detected the mismatch and dropped the device on rescan. Elite Dangerous had been masked by the [src/wine_bridge/client/NPClient_udp_main.c](src/wine_bridge/client/NPClient_udp_main.c) hardcoded-key fallback added in commit `849d6a8`; DCS had no such fallback and broke completely.
+
+- **Fix:** Replace `mxmlGetElement(child)` with proper text-content extraction:
+  - mxml v3 (`MXML_TEXT_CALLBACK` defined): use `mxmlGetText(child, &whitespace)`, skip whitespace-only fragments, and walk siblings until a non-whitespace text node is found.
+  - mxml v4 (default): use `mxmlGetOpaque(child)` and skip leading whitespace.
+  - Both branches iterate via `mxmlGetNextSibling()` so leading whitespace text nodes don't short-circuit extraction.
+
+- **Verification:** Rebuilt `ltr_extractor`, re-ran `--extract` against `sgl.dat` from a TrackIR install, and confirmed:
+  - 62 entries now carry valid 16-hex-digit keys (was 0).
+  - The newly extracted Elite Dangerous key (`A9485EECA12E18BE`) matches the hardcoded fallback in `NPClient_udp_main.c` byte-for-byte, proving the extractor is correct.
+  - DCS World profile IDs now resolve with proper keys: `1003 "Black Shark" (B6DCD15F5A572F65)`, `1006 "DCS: A-10C" (F688FC9B0556868F)`.
+  - DCS retains TrackIR in Controls after Rescan (was: dropped on rescan).
+
+- **Action required for users on existing installs:** Re-run **Misc → Manage Assets (LAL) → Extract** against the original TrackIR installer `.exe` to regenerate `~/.config/linuxtrack/tir_firmware/gamedata.txt` with proper keys. The Wine/Proton bridge DLLs do not need to be reinstalled — they read `gamedata.txt` from the host filesystem at every game launch.
+
+- **Future cleanup (not in this fix):** `module_dir_path()` in [src/wine_bridge/client/linuxtrack_udp.c](src/wine_bridge/client/linuxtrack_udp.c) fails inside Wine's PE/ELF hybrid loader because `GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, &udp_log, ...)` does not resolve the module of an ELF-built `.dll.so` reliably. The `udp_log()` fallback then calls `fopen("C:\\ltr_udp_client.log", "a")`, which Wine's file-system layer does not translate to a Win32 path (no Win32 API was invoked), so Linux's `fopen` treats the literal string as a single filename in the game's CWD. Result: `ltr_udp_client.log` and `C:\\Program Files\\Linuxtrack\\ltr_udp_client.log` end up as literal filenames in `<game-install>/`. Cosmetic only — the bridge works fine — but worth fixing later by writing logs through Win32 (`CreateFileA`) or by writing to `%LOCALAPPDATA%\\Linuxtrack\\` instead of the prefix `Program Files` directory.
 
 ---
 

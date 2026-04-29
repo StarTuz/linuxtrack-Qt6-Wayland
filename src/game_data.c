@@ -147,16 +147,32 @@ bool get_game_data(const char *input_fname, const char *output_fname, bool from_
     id = mxmlElementGetAttr(game, "Id");
 
     mxml_node_t *appid = mxmlFindElement(game, game, "ApplicationID", NULL, NULL, MXML_DESCEND);
-    if(appid == NULL){
-      fprintf(outfile, "%s \"%s\"\n", id, name);
-    }else{
+    const char *val = NULL;
+    if(appid != NULL){
       mxml_node_t *child = mxmlGetFirstChild(appid);
-      if(child != NULL){
-	const char *val = mxmlGetElement(child);
-        fprintf(outfile, "%s \"%s\" (%s)\n", id, name, val);
-      }else{
-        fprintf(outfile, "%s \"%s\"\n", id, name);
+      while(child != NULL && val == NULL){
+#ifdef MXML_TEXT_CALLBACK
+        /* mxml v3 with MXML_TEXT_CALLBACK: text content is in MXML_TEXT nodes */
+        int ws = 0;
+        const char *t = mxmlGetText(child, &ws);
+        if(t != NULL && t[0] != '\0' && !ws){
+          val = t;
+        }
+#else
+        /* mxml v4 default: text content is in opaque nodes */
+        const char *t = mxmlGetOpaque(child);
+        if(t != NULL){
+          while(*t == ' ' || *t == '\t' || *t == '\n' || *t == '\r') t++;
+          if(*t != '\0') val = t;
+        }
+#endif
+        child = mxmlGetNextSibling(child);
       }
+    }
+    if(val != NULL){
+      fprintf(outfile, "%s \"%s\" (%s)\n", id, name, val);
+    }else{
+      fprintf(outfile, "%s \"%s\"\n", id, name);
     }
   }
   fclose(outfile);

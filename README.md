@@ -26,7 +26,12 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.3
+## 🆕 Recent in 1.4.4
+
+- **TrackIR Encryption Key Fix (critical)**: Fixed a long-standing bug in `ltr_extractor` that produced a `gamedata.txt` with no encryption keys (every entry showed `((null))`). This broke TrackIR-aware games that strictly require encryption — most visibly **DCS World**, where TrackIR appeared in the device list briefly then disappeared after Rescan. **Elite Dangerous** users were unaffected only because of a per-game hardcoded fallback. After this fix, all 62 affected games (DCS Black Shark, DCS A-10C, ED, etc.) extract their proper keys.
+- **Action required if you upgraded from <= 1.4.3**: Re-run **Misc → Manage Assets (LAL) → Extract** against your TrackIR installer `.exe` to regenerate `~/.config/linuxtrack/tir_firmware/gamedata.txt`. No need to reinstall the Wine/Proton UDP bridge.
+
+## Recent in 1.4.3
 
 - **UDP Bridge Protocol Modes**: Split native OpenTrack/FreeTrack output from Wine/Proton NPClient output so games with different yaw conventions no longer break each other. Use **OpenTrack (6 doubles)** for native games like *X4 Foundations* and **Wine/Proton NPClient** for Proton games like *Elite Dangerous*.
 - **UDP Profile Sync**: The GUI now starts/restarts `ltr_udp` with the active Tracking Setup profile, so profile-specific axis settings such as **Invert** apply to the UDP stream.
