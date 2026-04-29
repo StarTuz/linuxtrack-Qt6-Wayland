@@ -75,47 +75,34 @@ static bool log_initialized = false;
 
 void udp_log(const char *fmt, ...);
 
-static bool module_dir_path(char *path, DWORD path_size) {
-    HMODULE module = NULL;
-    DWORD len;
-
-    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                            GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                            (LPCSTR)&udp_log, &module)) {
-        return false;
+/* Resolve the Linux-side log path. The bridge DLL runs in Wine but its
+ * fopen() comes from GLIBC, not msvcrt — Win32 paths like "C:\..." are not
+ * translated and end up as literal filenames in the game CWD. Write to the
+ * standard linuxtrack config dir instead, which is on the Linux side and is
+ * shared across all Wine prefixes the user has installed the bridge into.
+ */
+static bool resolve_log_path(char *path, size_t path_size) {
+    const char *xdg = getenv("XDG_CONFIG_HOME");
+    const char *home = getenv("HOME");
+    int n = -1;
+    if (xdg != NULL && xdg[0] != '\0') {
+        n = snprintf(path, path_size, "%s/linuxtrack/wine_bridge.log", xdg);
+    } else if (home != NULL && home[0] != '\0') {
+        n = snprintf(path, path_size, "%s/.config/linuxtrack/wine_bridge.log",
+                     home);
     }
-
-    len = GetModuleFileNameA(module, path, path_size);
-    if ((len == 0) || (len >= path_size)) {
-        return false;
-    }
-
-    char *last_slash = strrchr(path, '\\');
-    if (last_slash == NULL) {
-        last_slash = strrchr(path, '/');
-    }
-    if (last_slash == NULL) {
-        return false;
-    }
-    last_slash[1] = '\0';
-    return true;
+    return (n > 0) && ((size_t)n < path_size);
 }
 
 void udp_log(const char *fmt, ...) {
     if (!log_initialized) {
         log_initialized = true;
-        char log_path[MAX_PATH];
-        if (module_dir_path(log_path, sizeof(log_path))) {
-            strncat(log_path, "ltr_udp_client.log",
-                    sizeof(log_path) - strlen(log_path) - 1);
+        char log_path[1024];
+        if (resolve_log_path(log_path, sizeof(log_path))) {
             log_file = fopen(log_path, "a");
         }
-        if (!log_file) {
-            log_file = fopen("C:\\ltr_udp_client.log", "a");
-        }
-        if (!log_file) {
-            log_file = fopen("ltr_udp_client.log", "a");
-        }
+        /* No more "C:\..."-as-literal-filename fallbacks — those produced
+         * garbage files in the game's install directory under Proton. */
     }
     if (log_file) {
         va_list ap;
