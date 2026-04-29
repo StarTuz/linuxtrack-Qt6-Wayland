@@ -73,13 +73,47 @@ static bool paused = false;
 static FILE *log_file = NULL;
 static bool log_initialized = false;
 
+void udp_log(const char *fmt, ...);
+
+static bool module_dir_path(char *path, DWORD path_size) {
+    HMODULE module = NULL;
+    DWORD len;
+
+    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                            GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            (LPCSTR)&udp_log, &module)) {
+        return false;
+    }
+
+    len = GetModuleFileNameA(module, path, path_size);
+    if ((len == 0) || (len >= path_size)) {
+        return false;
+    }
+
+    char *last_slash = strrchr(path, '\\');
+    if (last_slash == NULL) {
+        last_slash = strrchr(path, '/');
+    }
+    if (last_slash == NULL) {
+        return false;
+    }
+    last_slash[1] = '\0';
+    return true;
+}
+
 void udp_log(const char *fmt, ...) {
     if (!log_initialized) {
         log_initialized = true;
-        /* Always log to help debug - remove this check once stable */
-        log_file = fopen("C:\\ltr_udp_client.log", "a");
+        char log_path[MAX_PATH];
+        if (module_dir_path(log_path, sizeof(log_path))) {
+            strncat(log_path, "ltr_udp_client.log",
+                    sizeof(log_path) - strlen(log_path) - 1);
+            log_file = fopen(log_path, "a");
+        }
         if (!log_file) {
-            /* Try current directory as fallback */
+            log_file = fopen("C:\\ltr_udp_client.log", "a");
+        }
+        if (!log_file) {
             log_file = fopen("ltr_udp_client.log", "a");
         }
     }
@@ -172,8 +206,6 @@ static DWORD WINAPI receiver_thread_func(LPVOID param) {
 }
 
 static void auto_launch_hotkeys(void) {
-    char path[MAX_PATH];
-    GetModuleFileNameA(NULL, path, MAX_PATH);
     char *cmd = "ltr_wine_hotkeys.exe";
     
     /* 
@@ -195,6 +227,8 @@ static void auto_launch_hotkeys(void) {
             CloseHandle(pi.hThread);
             return;
         }
+        udp_log("UDP Bridge: Failed to launch hotkeys from %s (GetLastError=%lu)\n",
+                hotkey_path, (unsigned long)GetLastError());
     }
     
     /* 2. Try current directory as fallback */
@@ -205,7 +239,8 @@ static void auto_launch_hotkeys(void) {
         return;
     }
     
-    udp_log("UDP Bridge: Could not find or launch ltr_wine_hotkeys.exe\n");
+    udp_log("UDP Bridge: Could not find or launch ltr_wine_hotkeys.exe "
+            "(GetLastError=%lu)\n", (unsigned long)GetLastError());
 }
 
 linuxtrack_state_type linuxtrack_init(const char *cust_section) {

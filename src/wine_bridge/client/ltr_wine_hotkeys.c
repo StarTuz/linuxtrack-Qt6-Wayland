@@ -14,6 +14,8 @@
 #include <ws2tcpip.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
 
 #define IDC_BTN_RECENTER 101
 #define IDC_BTN_PAUSE    102
@@ -25,6 +27,8 @@ UINT cfg_vk_recenter = VK_F12;
 UINT cfg_vk_pause    = VK_PAUSE;
 
 char ini_path[MAX_PATH] = "";
+char log_path[MAX_PATH] = "";
+FILE *hotkey_log_file = NULL;
 
 SOCKET client_sock = INVALID_SOCKET;
 struct sockaddr_in bridge_addr;
@@ -36,6 +40,29 @@ HWND hMain;
 HWND hRecenterBtn, hPauseBtn;
 HWND hRecenterText, hPauseText;
 HHOOK hKeyboardHook = NULL;
+
+void init_log_path(HINSTANCE hInst) {
+    GetModuleFileNameA(hInst, log_path, MAX_PATH);
+    char *last_slash = strrchr(log_path, '\\');
+    if (last_slash) {
+        strcpy(last_slash + 1, "ltr_wine_hotkeys.log");
+    } else {
+        strcpy(log_path, "ltr_wine_hotkeys.log");
+    }
+}
+
+void hotkey_log(const char *fmt, ...) {
+    if (!hotkey_log_file) {
+        hotkey_log_file = fopen(log_path[0] ? log_path : "ltr_wine_hotkeys.log", "a");
+    }
+    if (hotkey_log_file) {
+        va_list ap;
+        va_start(ap, fmt);
+        vfprintf(hotkey_log_file, fmt, ap);
+        fflush(hotkey_log_file);
+        va_end(ap);
+    }
+}
 
 void init_ini_path(HINSTANCE hInst) {
     GetModuleFileNameA(hInst, ini_path, MAX_PATH);
@@ -49,7 +76,12 @@ void init_ini_path(HINSTANCE hInst) {
 
 void send_command(const char *cmd) {
     if (client_sock == INVALID_SOCKET) return;
-    sendto(client_sock, cmd, 4, 0, (struct sockaddr*)&bridge_addr, sizeof(bridge_addr));
+    int res = sendto(client_sock, cmd, 4, 0, (struct sockaddr*)&bridge_addr, sizeof(bridge_addr));
+    if (res == SOCKET_ERROR) {
+        hotkey_log("sendto('%s') failed: %d\n", cmd, WSAGetLastError());
+    } else {
+        hotkey_log("sent command '%s'\n", cmd);
+    }
 }
 
 void load_config() {
@@ -147,17 +179,39 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
+    (void)hPrev;
+    (void)lpCmd;
+    (void)nShow;
+
+    init_log_path(hInst);
+    hotkey_log("ltr_wine_hotkeys starting\n");
+
     /* Single-instance check using a named mutex */
     HANDLE hMutex = CreateMutexA(NULL, TRUE, "LtrWineHotkeysMutex");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        hotkey_log("another instance already exists; exiting\n");
         if (hMutex) CloseHandle(hMutex);
+        if (hotkey_log_file) fclose(hotkey_log_file);
         return 0;
     }
     
     WSADATA wsa;
-    WSAStartup(MAKEWORD(2, 2), &wsa);
+    int wsa_res = WSAStartup(MAKEWORD(2, 2), &wsa);
+    if (wsa_res != 0) {
+        hotkey_log("WSAStartup failed: %d\n", wsa_res);
+        if (hMutex) CloseHandle(hMutex);
+        if (hotkey_log_file) fclose(hotkey_log_file);
+        return 1;
+    }
     
     client_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (client_sock == INVALID_SOCKET) {
+        hotkey_log("socket failed: %d\n", WSAGetLastError());
+        WSACleanup();
+        if (hMutex) CloseHandle(hMutex);
+        if (hotkey_log_file) fclose(hotkey_log_file);
+        return 1;
+    }
     memset(&bridge_addr, 0, sizeof(bridge_addr));
     bridge_addr.sin_family = AF_INET;
     bridge_addr.sin_port = htons(4243);
@@ -165,27 +219,47 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
 
     init_ini_path(hInst);
     load_config();
+    hotkey_log("loaded config from %s (recenter=%u pause=%u)\n",
+               ini_path, cfg_vk_recenter, cfg_vk_pause);
 
     /* Install low-level keyboard hook */
     hKeyboardHook = SetWindowsHookExA(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInst, 0);
     if (!hKeyboardHook) {
+        hotkey_log("SetWindowsHookExA failed: %lu\n", (unsigned long)GetLastError());
         MessageBoxA(NULL, "Failed to install keyboard hook", "Error", MB_OK | MB_ICONERROR);
+        closesocket(client_sock);
+        WSACleanup();
+        if (hMutex) CloseHandle(hMutex);
+        if (hotkey_log_file) fclose(hotkey_log_file);
         return 1;
     }
+    hotkey_log("keyboard hook installed\n");
 
     WNDCLASSA wc = {0};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInst;
     wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
     wc.lpszClassName = "LtrHotkeyUtility";
-    RegisterClassA(&wc);
+    if (!RegisterClassA(&wc)) {
+        hotkey_log("RegisterClassA failed: %lu\n", (unsigned long)GetLastError());
+    }
 
     hMain = CreateWindowExA(WS_EX_TOOLWINDOW, "LtrHotkeyUtility", "Linuxtrack Hotkeys", 
                              WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX, 
                              CW_USEDEFAULT, CW_USEDEFAULT, 300, 110, NULL, NULL, hInst, NULL);
+    if (!hMain) {
+        hotkey_log("CreateWindowExA failed: %lu\n", (unsigned long)GetLastError());
+        UnhookWindowsHookEx(hKeyboardHook);
+        closesocket(client_sock);
+        WSACleanup();
+        if (hMutex) CloseHandle(hMutex);
+        if (hotkey_log_file) fclose(hotkey_log_file);
+        return 1;
+    }
     
     ShowWindow(hMain, SW_SHOW);
     UpdateWindow(hMain);
+    hotkey_log("window shown\n");
 
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
@@ -196,5 +270,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
     if (hKeyboardHook) UnhookWindowsHookEx(hKeyboardHook);
     closesocket(client_sock);
     WSACleanup();
+    if (hMutex) CloseHandle(hMutex);
+    hotkey_log("ltr_wine_hotkeys exiting\n");
+    if (hotkey_log_file) fclose(hotkey_log_file);
     return 0;
 }

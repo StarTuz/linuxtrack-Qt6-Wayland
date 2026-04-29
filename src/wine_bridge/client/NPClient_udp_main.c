@@ -2,7 +2,7 @@
  * NPClient_udp_main.c
  *
  * Simplified NPClient for UDP bridge - no file dependencies.
- * This version initializes UDP tracking immediately on load.
+ * This version initializes UDP tracking lazily from NPClient API calls.
  */
 
 #define __WINESRC__
@@ -32,6 +32,24 @@ static bool sig_cached = false;
 static game_desc_t cached_gd;
 static bool gd_cached = false;
 static unsigned short last_id = 0xFFFF;
+
+static int ensure_initialized(const char *profile_name) {
+  const char *profile = (profile_name != NULL) ? profile_name : "Default";
+  if (initialized) {
+    return 0;
+  }
+
+  udp_log("UDP Bridge: Lazy initializing with profile '%s'\n", profile);
+  if (linuxtrack_init(profile) >= LINUXTRACK_OK) {
+    initialized = true;
+    udp_log("UDP Bridge: Tracking initialized! tir_data_t size: %d\n",
+            (int)sizeof(tir_data_t));
+    return 0;
+  }
+
+  udp_log("UDP Bridge: Failed to initialize tracking\n");
+  return 1;
+}
 
 static float limit_num(float min, float val, float max) {
   if (val < min)
@@ -131,22 +149,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
 #endif
   case DLL_PROCESS_ATTACH:
     TRACE("UDP Bridge: DLL_PROCESS_ATTACH\n");
-    /* Initialize tracking immediately on load */
-    if (!initialized) {
-      if (linuxtrack_init("Default") >= LINUXTRACK_OK) {
-        initialized = true;
-        udp_log("UDP Bridge: Tracking initialized! tir_data_t size: %d\n", (int)sizeof(tir_data_t));
-      } else {
-        udp_log("UDP Bridge: Failed to initialize tracking\n");
-      }
-    }
+    DisableThreadLibraryCalls(hinstDLL);
     break;
   case DLL_PROCESS_DETACH:
     TRACE("UDP Bridge: DLL_PROCESS_DETACH\n");
-    if (initialized) {
-      linuxtrack_shutdown();
-      initialized = false;
-    }
     break;
   }
 
@@ -157,7 +163,15 @@ int __stdcall NPCLIENT_NP_GetData(tir_data_t *data) {
   static int call_count = 0;
   float r, p, y, tx, ty, tz;
   unsigned int frame;
-  int res = linuxtrack_get_pose(&y, &p, &r, &tx, &ty, &tz, &frame);
+  int res;
+
+  if (ensure_initialized("Default") != 0) {
+    memset((char *)data, 0, sizeof(tir_data_t));
+    data->status = 1;
+    return 1;
+  }
+
+  res = linuxtrack_get_pose(&y, &p, &r, &tx, &ty, &tz, &frame);
   
   call_count++;
   if (call_count <= 5 || call_count % 100 == 0) {
@@ -227,6 +241,9 @@ int __stdcall NPCLIENT_NP_QueryVersion(unsigned short *version) {
 
 int __stdcall NPCLIENT_NP_ReCenter(void) {
   udp_log("UDP Bridge: NP_ReCenter called\n");
+  if (ensure_initialized("Default") != 0) {
+    return 1;
+  }
   linuxtrack_recenter();
   return 0;
 }
@@ -274,15 +291,9 @@ int __stdcall NPCLIENT_NP_RegisterProgramProfileID(unsigned short id) {
     last_id = id;
   }
 
-  /* Initialize linuxtrack with the game-specific profile (or Default) */
-  udp_log("UDP Bridge: Initializing linuxtrack with profile '%s'\n", profile_name);
-  if (!initialized) {
-    if (linuxtrack_init(profile_name) >= LINUXTRACK_OK) {
-      initialized = true;
-    } else {
-      udp_log("UDP Bridge: linuxtrack_init failed!\n");
-      return 1;
-    }
+  if (ensure_initialized(profile_name) != 0) {
+    udp_log("UDP Bridge: linuxtrack_init failed!\n");
+    return 1;
   }
   linuxtrack_suspend();
   return 0;
@@ -309,6 +320,9 @@ int __stdcall NPCLIENT_NP_StartCursor(void) {
 
 int __stdcall NPCLIENT_NP_StartDataTransmission(void) {
   udp_log("UDP Bridge: NP_StartDataTransmission called\n");
+  if (ensure_initialized("Default") != 0) {
+    return 1;
+  }
   linuxtrack_wakeup();
   return 0;
 }
@@ -319,7 +333,9 @@ int __stdcall NPCLIENT_NP_StopCursor(void) {
 
 int __stdcall NPCLIENT_NP_StopDataTransmission(void) {
   udp_log("UDP Bridge: NP_StopDataTransmission called\n");
-  linuxtrack_suspend();
+  if (initialized) {
+    linuxtrack_suspend();
+  }
   return 0;
 }
 
