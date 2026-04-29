@@ -209,7 +209,7 @@ void UdpSettings::onInstallWineClicked()
         QString::fromLatin1("ltr_wine_hotkeys.exe"), sourcePaths);
     copyBridgeFile(srcHotkey,
                    destDir64 + QString::fromLatin1("/ltr_wine_hotkeys.exe"),
-                   QString::fromLatin1("ltr_wine_hotkeys.exe"), true);
+                   QString::fromLatin1("ltr_wine_hotkeys.exe"), false);
     
     // Apply registry entries - write directly to user.reg for Proton compatibility
     QString userRegPath = prefix + QString::fromLatin1("/user.reg");
