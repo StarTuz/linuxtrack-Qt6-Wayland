@@ -48,6 +48,7 @@ RUN apt-get update && apt-get install -y \
     bc \
     gcc-multilib \
     g++-multilib \
+    gcc-mingw-w64-i686 \
     # Needed for AppImage generation
     file \
     binutils \
