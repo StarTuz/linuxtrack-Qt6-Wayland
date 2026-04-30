@@ -244,7 +244,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
         hotkey_log("RegisterClassA failed: %lu\n", (unsigned long)GetLastError());
     }
 
-    hMain = CreateWindowExA(WS_EX_TOOLWINDOW, "LtrHotkeyUtility", "Linuxtrack Hotkeys", 
+    hMain = CreateWindowExA(WS_EX_APPWINDOW, "LtrHotkeyUtility", "Linuxtrack Hotkeys",
                              WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX, 
                              CW_USEDEFAULT, CW_USEDEFAULT, 300, 110, NULL, NULL, hInst, NULL);
     if (!hMain) {
