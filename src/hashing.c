@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 // This dependency proved problematic (deprecating MD5 and spweing warnings)
 //   so I opted for my own implementation.
 //#include <openssl/sha.h>
@@ -627,12 +628,48 @@ static char *get_time_string()
   return strdup(outstr);
 }
 
+static int mkdir_p(const char *path)
+{
+  char *tmp = strdup(path);
+  if(tmp == NULL){
+    return -1;
+  }
+  char *p = tmp;
+  if(*p == '/'){
+    ++p;
+  }
+  for(; *p != '\0'; ++p){
+    if(*p == '/'){
+      *p = '\0';
+      if((mkdir(tmp, S_IRWXU) != 0) && (errno != EEXIST)){
+        free(tmp);
+        return -1;
+      }
+      *p = '/';
+    }
+  }
+  if((mkdir(tmp, S_IRWXU) != 0) && (errno != EEXIST)){
+    free(tmp);
+    return -1;
+  }
+  free(tmp);
+  return 0;
+}
+
 static char* get_update_dir(const char* dirname, bool* is_link)
 {
   struct stat info;
   if(lstat(dirname, &info)){
-    printf("'%s' not found.\n", dirname);
-    return NULL;
+    if(errno != ENOENT){
+      printf("Problem checking '%s'.\n", dirname);
+      return NULL;
+    }
+    if(mkdir_p(dirname) != 0){
+      printf("Problem creating directory '%s'.\n", dirname);
+      return NULL;
+    }
+    *is_link = false;
+    return strdup(dirname);
   }
   if(info.st_mode & S_IFDIR){
     *is_link = false;
@@ -782,4 +819,3 @@ Add directory/link to tir_firmware creation.
 Create man page and add integrated help (with examples).
 Add checksums to blob records.
 */
-

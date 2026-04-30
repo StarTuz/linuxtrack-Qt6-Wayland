@@ -756,7 +756,7 @@ bool getSomeSeriousPoetry(char *verse1, char *verse2) {
     fclose(f1);
   } else {
     udp_log("UDP Bridge: Can't open dll signature ('%s')!\n", path1);
-    res = false;
+    snprintf(verse1, 200, "Not Set DLL");
   }
   free(path1);
   FILE *f2 = fopen(path2, "rb");
@@ -769,7 +769,10 @@ bool getSomeSeriousPoetry(char *verse1, char *verse2) {
     fclose(f2);
   } else {
     udp_log("UDP Bridge: Cant open app signature('%s')!\n", path2);
-    res = false;
+    snprintf(verse2, 200, "Not Set App");
+  }
+  if (verse1[0] != '\0' && verse2[0] != '\0') {
+    res = true;
   }
   free(path2);
   return res;

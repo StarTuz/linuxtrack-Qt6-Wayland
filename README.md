@@ -26,7 +26,13 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.7
+## 🆕 Recent in 1.4.8
+
+- **LAL now installs TrackIR assets where Linuxtrack actually reads them**: The previous LAL path only unpacked files into `~/.local/share/linuxtrack/lal/...`, so the GUI could report success while the Wine bridge still lacked `~/.config/linuxtrack/tir_firmware/gamedata.txt`, `poem1.txt`, and `poem2.txt`. LAL now handles TrackIR 5 specially: use an installed `TrackIR5.exe` next to `sgl.dat` (for example from `~/.wine/drive_c/Program Files (x86)/TrackIR5/`) and it runs the real extractor into `~/.config/linuxtrack/tir_firmware`.
+- **Clean-install extractor directory fix**: `ltr_extractor --extract` now creates `~/.config/linuxtrack/tir_firmware` instead of failing when the directory does not exist yet.
+- **Wine bridge signature fallback**: If `poem1.txt`/`poem2.txt` are absent, the UDP NPClient bridge now uses the same default signatures returned by the official TrackIR 5.5.3 `NPClient64.dll` instead of failing signature setup outright.
+
+## Recent in 1.4.7
 
 - **UDP bridge reinstall now rewrites stale NPClient registry paths**: Reinstalling the Wine/Proton UDP bridge into a prefix that already had a NaturalPoint `NPClient Location` key could leave the old `Path` untouched. In that state DCS and other games may never load Linuxtrack's `NPClient64.dll`, so TrackIR is not detected and no game-side UDP socket appears on port `4242`. The installer now replaces that registry block every time and points it at `C:\Program Files\Linuxtrack\`.
 

@@ -4,7 +4,7 @@
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.7
+**Current Version:** 1.4.8
 
 ---
 
@@ -259,6 +259,22 @@ The project now compiles successfully on modern Linux with:
 - **Profile sync for UDP stack:** The GUI now passes the active Tracking Setup profile to `ltr_udp` and restarts the bridge when target, protocol, or profile changes. Profile-specific axis settings, including Yaw Invert, now apply to the UDP stream instead of silently falling back to `Default`.
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
+
+**Recent Additions (2026-04-30) [v1.4.8 — TrackIR asset install path and signature fallback]:**
+
+- **Version Bump:** Project version advanced to `1.4.8`.
+
+- **LAL TrackIR install path was a false success (fix):** [src/lal/lal_manager.cpp](src/lal/lal_manager.cpp) previously treated TrackIR like a generic archive and only ran `7z e` into `~/.local/share/linuxtrack/lal/tir_firmware_v5`. That made the LAL dialog report success while the files the runtime actually needs were still missing from `~/.config/linuxtrack/tir_firmware`. The Wine bridge then logged missing `poem1.txt`/`poem2.txt`, and DCS did not detect TrackIR. TrackIR 5 is now handled as a special LAL asset: select an installed `TrackIR5.exe` next to `sgl.dat` (for example `~/.wine/drive_c/Program Files (x86)/TrackIR5/TrackIR5.exe`) and LAL copies the source files into the LAL store, copies `TIRViews.dll` when available, and runs `ltr_extractor --extract TrackIR5.exe sgl.dat` so `gamedata.txt` lands in `~/.config/linuxtrack/tir_firmware`.
+
+- **Installer bundle limitation:** TrackIR 5.5.3's downloaded `TrackIR_5.5.3.exe` is a WiX Burn bootstrapper. Plain `7z e` only exposes bootstrapper payload files (`u0`, `u1`, etc.), not the final installed `TrackIR5.exe`/`sgl.dat` pair. For now, LAL directs users to install TrackIR with Wine first, then select the installed `TrackIR5.exe`. The legacy Wine install path still exists for direct installer handling.
+
+- **Clean-install `ltr_extractor` directory creation (fix):** [src/hashing.c](src/hashing.c) `get_update_dir()` returned failure when `~/.config/linuxtrack/tir_firmware` did not already exist. Added recursive directory creation so `ltr_extractor --extract` works on a clean config instead of printing `Problem creating the destination directory`.
+
+- **Wine bridge missing poem fallback (fix):** [src/wine_bridge/client/rest.c](src/wine_bridge/client/rest.c) now falls back to `Not Set DLL` / `Not Set App` when `poem1.txt` and `poem2.txt` are absent. Those are the default signatures returned by the official TrackIR 5.5.3 `NPClient64.dll` when queried directly, and this prevents the UDP NPClient bridge from hard-failing signature setup solely because the legacy poem extraction offsets no longer match a newer TrackIR build.
+
+- **Local diagnosis/repair note:** The DCS prefix at `/flightsim/steam/steamapps/compatdata/223750/pfx` had the corrected v1.4.7 registry path and `NPClient64.dll` installed, but `~/.config/linuxtrack/tir_firmware` only contained no firmware/signature assets. Running `ltr_extractor --extract` against the installed TrackIR 5.5.3 `TrackIR5.exe` and `sgl.dat` produced `gamedata.txt`; generated default poem files unblocked the existing bridge's signature-file lookup.
+
+---
 
 **Recent Additions (2026-04-30) [v1.4.7 — UDP bridge reinstall registry correction]:**
 
