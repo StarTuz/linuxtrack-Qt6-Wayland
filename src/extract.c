@@ -300,6 +300,10 @@ static FILE* find_blob(const char *installer_name)
 	blobs.gl_offs = 0;
 	FILE* res = NULL;
 	char *pattern = ltr_int_get_data_path("blob_*.bin");
+	if(pattern == NULL){
+		fclose(installer);
+		return NULL;
+	}
 	if(glob(pattern, GLOB_NOSORT, NULL, &blobs) == GLOB_NOMATCH){
 		free(pattern);
 		globfree(&blobs);
