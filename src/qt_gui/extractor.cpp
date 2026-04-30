@@ -474,7 +474,7 @@ void TirFwExtractor::commenceExtraction(QString file) {
   // windows XP
   //  This hack set Windows version to 7...
   QString win7regFile = PrefProxy::getDataPath(QString::fromUtf8("win7.reg"));
-  wine->run(QString::fromUtf8("regedit\" \"%1").arg(win7regFile));
+  wine->run(QString::fromUtf8("regedit"), QStringList() << win7regFile);
 }
 
 void Mfc42uExtractor::commenceExtraction(QString file) {
