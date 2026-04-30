@@ -131,7 +131,8 @@ bool TirFwExtractThread::findCandidates(QString name) {
   QDir dir(name);
   QStringList patt;
   patt << QString::fromUtf8("*.dll") << QString::fromUtf8("*.exe")
-       << QString::fromUtf8("*.dat");
+       << QString::fromUtf8("*.dat") << QString::fromUtf8("*.fw")
+       << QString::fromUtf8("*.txt");
   QFileInfoList files = dir.entryInfoList(patt, QDir::Files | QDir::Readable);
   for (i = 0; i < files.size(); ++i) {
     if (quit)
@@ -157,7 +158,7 @@ bool TirFwExtractThread::findCandidates(QString name) {
   }
 
   QFileInfoList subdirs = dir.entryInfoList(
-      QDir::AllDirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+      QDir::AllDirs | QDir::NoDotAndDotDot);
   QString dirname;
   for (i = 0; i < subdirs.size(); ++i) {
     dirname = subdirs[i].canonicalFilePath();
