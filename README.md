@@ -26,7 +26,11 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.6
+## 🆕 Recent in 1.4.7
+
+- **UDP bridge reinstall now rewrites stale NPClient registry paths**: Reinstalling the Wine/Proton UDP bridge into a prefix that already had a NaturalPoint `NPClient Location` key could leave the old `Path` untouched. In that state DCS and other games may never load Linuxtrack's `NPClient64.dll`, so TrackIR is not detected and no game-side UDP socket appears on port `4242`. The installer now replaces that registry block every time and points it at `C:\Program Files\Linuxtrack\`.
+
+## Recent in 1.4.6
 
 - **Firmware extractor crash fix (clean install)**: On a fresh system with no existing Linuxtrack config, the "Reinstall TrackIR firmware" dialog would crash immediately after choosing the installer file. `find_blob()` passed a NULL glob pattern to `glob()` when the install prefix was not yet configured. Now returns gracefully and falls through to the 7z/Wine path.
 - **Wine extractor: firmware files now found after installer runs**: The post-install scan only looked for `*.dll`, `*.exe`, and `*.dat`, missing the `*.fw` and `*.txt` firmware files that the TrackIR installer drops directly. Also removed `NoSymLinks` from directory traversal so Wine's symlinked user directories are no longer silently skipped.

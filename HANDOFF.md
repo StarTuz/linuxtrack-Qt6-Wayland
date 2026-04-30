@@ -1,10 +1,10 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-04-29
+**Last Updated:** 2026-04-30
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.4
+**Current Version:** 1.4.7
 
 ---
 
@@ -259,6 +259,16 @@ The project now compiles successfully on modern Linux with:
 - **Profile sync for UDP stack:** The GUI now passes the active Tracking Setup profile to `ltr_udp` and restarts the bridge when target, protocol, or profile changes. Profile-specific axis settings, including Yaw Invert, now apply to the UDP stream instead of silently falling back to `Default`.
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
+
+**Recent Additions (2026-04-30) [v1.4.7 — UDP bridge reinstall registry correction]:**
+
+- **Version Bump:** Project version advanced to `1.4.7`.
+
+- **Stale NaturalPoint `NPClient Location` registry path after bridge reinstall (fix):** [src/qt_gui/udp_settings.cpp](src/qt_gui/udp_settings.cpp) treated any existing `NPClient Location` block in a Wine/Proton prefix's `user.reg` as success and left it untouched. On a prefix that previously had TrackIR, linuxtrack, or another NPClient bridge installed, DCS could keep resolving `NPClient64.dll` from the stale `Path`, meaning Linuxtrack's UDP bridge DLL never loaded. Symptom: TrackIR not detected in game, and no game-side UDP socket appears on port `4242` while DCS is running. The installer now removes the existing NaturalPoint `NPClient Location` block and appends a fresh one pointing to `C:\\Program Files\\Linuxtrack\\` every time the bridge is installed.
+
+- **Diagnostic note:** `ltr_udp` itself is a UDP sender and does not normally show as a listener on port `4242`. A listener on `4242` appears when the Wine/Proton NPClient DLL is loaded by the game. If DCS is running and no `4242` socket appears, suspect the registry/DLL load path before chasing tracker or firmware data.
+
+---
 
 **Recent Additions (2026-04-30) [v1.4.6 — firmware extractor robustness on clean installs]:**
 
