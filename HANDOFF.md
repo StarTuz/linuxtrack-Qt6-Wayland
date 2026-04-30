@@ -276,6 +276,7 @@ The project now compiles successfully on modern Linux with:
   - The newly extracted Elite Dangerous key (`A9485EECA12E18BE`) matches the hardcoded fallback in `NPClient_udp_main.c` byte-for-byte, proving the extractor is correct.
   - DCS World profile IDs now resolve with proper keys: `1003 "Black Shark" (B6DCD15F5A572F65)`, `1006 "DCS: A-10C" (F688FC9B0556868F)`.
   - DCS retains TrackIR in Controls after Rescan (was: dropped on rescan).
+  - **End-to-end AppImage test (2026-04-29):** v1.4.4 AppImage confirmed: DCS World (Proton) and Elite Dangerous (Proton) both track correctly after re-running LAL Extract.
 
 - **Action required for users on existing installs:** Re-run **Misc → Manage Assets (LAL) → Extract** against the original TrackIR installer `.exe` to regenerate `~/.config/linuxtrack/tir_firmware/gamedata.txt` with proper keys. The Wine/Proton bridge DLLs do not need to be reinstalled — they read `gamedata.txt` from the host filesystem at every game launch.
 

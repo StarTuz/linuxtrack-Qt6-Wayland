@@ -30,6 +30,8 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 
 - **TrackIR Encryption Key Fix (critical)**: Fixed a long-standing bug in `ltr_extractor` that produced a `gamedata.txt` with no encryption keys (every entry showed `((null))`). This broke TrackIR-aware games that strictly require encryption — most visibly **DCS World**, where TrackIR appeared in the device list briefly then disappeared after Rescan. **Elite Dangerous** users were unaffected only because of a per-game hardcoded fallback. After this fix, all 62 affected games (DCS Black Shark, DCS A-10C, ED, etc.) extract their proper keys.
 - **Action required if you upgraded from <= 1.4.3**: Re-run **Misc → Manage Assets (LAL) → Extract** against your TrackIR installer `.exe` to regenerate `~/.config/linuxtrack/tir_firmware/gamedata.txt`. No need to reinstall the Wine/Proton UDP bridge.
+- **UDP bridge log path fix**: The bridge DLL previously created stray log files with literal `C:\...` names in the game's install directory. Logs now go to `~/.config/linuxtrack/wine_bridge.log` where they belong.
+- **Verified**: DCS World (Proton) and Elite Dangerous (Proton) both confirmed working end-to-end with this release.
 
 ## Recent in 1.4.3
 
