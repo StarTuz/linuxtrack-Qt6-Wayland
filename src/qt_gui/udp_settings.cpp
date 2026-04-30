@@ -177,10 +177,13 @@ void UdpSettings::onInstallWineClicked()
     auto copyBridgeFile = [&](const QString &src, const QString &dst,
                               const QString &label, bool required) {
         if (!QFile::exists(src)) {
-            QString note = QString::fromLatin1("Missing %1 source").arg(label);
-            installNotes << note;
             if (required) {
+                installNotes << QString::fromLatin1("Missing %1 source").arg(label);
                 success = false;
+            } else {
+                installNotes << QString::fromLatin1(
+                    "%1 not included in this build (optional — only needed for legacy 32-bit games)")
+                    .arg(label);
             }
             return;
         }
