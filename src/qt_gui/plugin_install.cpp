@@ -69,7 +69,7 @@ void PluginInstall::Connect() {
 }
 
 void PluginInstall::on_TIRFWButton_pressed() {
-  state = TIR_FW;
+  state = TIR_FW_ONLY;
   tirFirmwareInstall();
 }
 
@@ -306,13 +306,19 @@ void PluginInstall::mfc42uInstall() {
 }
 
 void PluginInstall::finished(bool ok) {
-  (void)ok;
   if (dlfw != nullptr) {
     dlfw->hide();
   }
   if (dlmfc != nullptr) {
     dlmfc->hide();
   }
+
+  if (!ok) {
+    state = DONE;
+    enableButtons(true);
+    return;
+  }
+
   switch (state) {
   case TIR_FW:
     state = MFC;
@@ -323,11 +329,17 @@ void PluginInstall::finished(bool ok) {
     installLinuxtrackWine();
     break;
   case LTR_W:
-  case TIR_FW_ONLY:
   case MFC_ONLY:
   default:
     state = DONE;
     enableButtons(true);
+    break;
+  case TIR_FW_ONLY:
+    state = DONE;
+    enableButtons(true);
+    QMessageBox::information(
+        nullptr, QString::fromUtf8("TrackIR firmware installed"),
+        QString::fromUtf8("TrackIR firmware extraction finished successfully."));
     break;
   }
 }
