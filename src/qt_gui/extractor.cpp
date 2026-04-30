@@ -117,10 +117,6 @@ void TirFwExtractThread::analyzeFile(const QString fname) {
 }
 
 bool TirFwExtractThread::allFound() {
-  for (targets_iterator_t it = targets->begin(); it != targets->end(); ++it) {
-    if (!it->second.foundAlready())
-      return false;
-  }
   return gameDataFound && tirviewsFound;
 }
 
@@ -325,6 +321,29 @@ static QString makeDestPath(const QString &base) {
   }
   dir.mkpath(final);
   return base + QString::fromUtf8("/") + final + QString::fromUtf8("/");
+}
+
+static bool containsTrackIrPayload(const QString &path) {
+  QDir dir(path);
+  QFileInfoList files = dir.entryInfoList(QDir::Files | QDir::Readable);
+  for (const QFileInfo &file : files) {
+    const QString name = file.fileName();
+    if ((name == QString::fromUtf8("sgl.dat")) ||
+        (name == QString::fromUtf8("TIRViews.dll")) ||
+        (name == QString::fromUtf8("TrackIR5.exe")) ||
+        name.endsWith(QString::fromUtf8(".fw"), Qt::CaseInsensitive)) {
+      return true;
+    }
+  }
+
+  QFileInfoList subdirs =
+      dir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
+  for (const QFileInfo &subdir : subdirs) {
+    if (containsTrackIrPayload(subdir.canonicalFilePath())) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void TirFwExtractor::wineFinished(bool result) {
@@ -542,7 +561,8 @@ void Extractor::on_BrowseInstaller_pressed() {
     args << QString::fromUtf8("x") << file << QString::fromUtf8("-o") + tempDir
          << QString::fromUtf8("-y");
     unpacker.start(QString::fromUtf8("7z"), args);
-    if (unpacker.waitForFinished(30000) && unpacker.exitCode() == 0) {
+    if (unpacker.waitForFinished(30000) && unpacker.exitCode() == 0 &&
+        containsTrackIrPayload(tempDir)) {
       progress(QString::fromUtf8(
           "Native extraction successful. Commencing analysis..."));
       destPath = makeDestPath(PrefProxy::getRsrcDirPath());
@@ -551,7 +571,7 @@ void Extractor::on_BrowseInstaller_pressed() {
       return;
     } else {
       progress(QString::fromUtf8(
-          "Native extraction failed or 7z not found. Falling back to Wine..."));
+          "Native extraction did not expose TrackIR payload files. Falling back to Wine..."));
     }
   }
 

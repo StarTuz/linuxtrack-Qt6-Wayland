@@ -111,8 +111,7 @@ void PluginInstall::installWinePlugin() {
 }
 
 bool PluginInstall::isTirFirmwareInstalled() {
-  return QFile::exists(poem1) && QFile::exists(poem2) &&
-         QFile::exists(gameData) && QFile::exists(tirViews);
+  return QFile::exists(gameData) && QFile::exists(tirViews);
 }
 
 bool PluginInstall::isMfc42uInstalled() { return QFile::exists(mfc42u); }
