@@ -365,9 +365,7 @@ void TirFwExtractor::wineFinished(bool result) {
                             "just in case..."
                             "Please see the log for more details.\n\n"));
     }
-    QStringList args;
-    args << QStringLiteral("/S") << QStringLiteral("/v/qn");
-    wine->run(installerFile, args);
+    wine->run(installerFile);
   } else {
     if (!result) {
       QMessageBox::warning(
