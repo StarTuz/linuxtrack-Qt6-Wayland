@@ -26,7 +26,12 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.4
+## 🆕 Recent in 1.4.5
+
+- **Wine hotkey window now Alt+Tab accessible**: `Controller.exe` (the Wine-side hotkey utility) was created with `WS_EX_TOOLWINDOW`, which intentionally hides a window from the Alt+Tab switcher and taskbar. Changed to `WS_EX_APPWINDOW` so you can reach the rebind dialog while a full-screen game is running.
+- **UDP bridge installer note clarified**: The "Missing NPClientUDP.dll.so source" note no longer looks like an error. The 32-bit bridge DLL is an optional component not included in AppImage builds (requires 32-bit Wine devel libs at compile time); the note now explains this plainly.
+
+## Recent in 1.4.4
 
 - **TrackIR Encryption Key Fix (critical)**: Fixed a long-standing bug in `ltr_extractor` that produced a `gamedata.txt` with no encryption keys (every entry showed `((null))`). This broke TrackIR-aware games that strictly require encryption — most visibly **DCS World**, where TrackIR appeared in the device list briefly then disappeared after Rescan. **Elite Dangerous** users were unaffected only because of a per-game hardcoded fallback. After this fix, all 62 affected games (DCS Black Shark, DCS A-10C, ED, etc.) extract their proper keys.
 - **Action required if you upgraded from <= 1.4.3**: Re-run **Misc → Manage Assets (LAL) → Extract** against your TrackIR installer `.exe` to regenerate `~/.config/linuxtrack/tir_firmware/gamedata.txt`. No need to reinstall the Wine/Proton UDP bridge.

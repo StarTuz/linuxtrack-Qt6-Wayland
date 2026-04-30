@@ -260,6 +260,16 @@ The project now compiles successfully on modern Linux with:
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
 
+**Recent Additions (2026-04-29) [v1.4.5 — Wine hotkey window visibility + installer note polish]:**
+
+- **Version Bump:** Project version advanced to `1.4.5`.
+
+- **Wine hotkey window hidden from Alt+Tab (fix):** [src/wine_bridge/client/ltr_wine_hotkeys.c](src/wine_bridge/client/ltr_wine_hotkeys.c) created the main window with `WS_EX_TOOLWINDOW`, a Win32 extended style that explicitly removes a window from the Alt+Tab list and taskbar. With a full-screen Proton game in the foreground the user had no way to reach the rebind dialog. Changed to `WS_EX_APPWINDOW`, which forces the window into the Alt+Tab list and taskbar regardless of ownership or other styles.
+
+- **UDP bridge installer note made user-friendly:** [src/qt_gui/udp_settings.cpp](src/qt_gui/udp_settings.cpp) emitted "Missing NPClientUDP.dll.so source" for the optional 32-bit bridge DLL, which reads as an error even though the install succeeded. The 32-bit DLL (`NPClientUDP.dll.so`) requires 32-bit Wine devel libs at compile time and is not included in CI AppImage builds. The note now reads: `NPClientUDP.dll.so not included in this build (optional — only needed for legacy 32-bit games)`. Required failures still use the original terse message.
+
+---
+
 **Recent Additions (2026-04-29) [v1.4.4 — gamedata.txt encryption-key extraction fix]:**
 
 - **Version Bump:** Project version advanced to `1.4.4`.
