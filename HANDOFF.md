@@ -260,6 +260,20 @@ The project now compiles successfully on modern Linux with:
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
 
+**Recent Additions (2026-04-30) [v1.4.6 — firmware extractor robustness on clean installs]:**
+
+- **Version Bump:** Project version advanced to `1.4.6`.
+
+- **NULL deref crash in `find_blob` on clean install (fix):** [src/extract.c](src/extract.c) called `glob(pattern, ...)` where `pattern` came from `ltr_int_get_data_path("blob_*.bin")`. On a system with no `~/.config/linuxtrack/linuxtrack1.conf` yet, `ltr_int_get_app_path` cannot read the `PREFIX` key and returns `NULL`, so `ltr_int_get_data_path` returns `NULL`, and `glob(NULL, ...)` segfaults. Added a NULL guard before the `glob` call so `find_blob` returns `NULL` cleanly and the extractor falls through to the 7z/Wine path as intended. Triggered by the "Reinstall TrackIR firmware" dialog on a fresh install; does not affect LAL (`ltr_extractor --extract`).
+
+- **Wine extractor missing `*.fw`/`*.txt` from scan pattern (fix):** [src/qt_gui/extractor.cpp](src/qt_gui/extractor.cpp) `findCandidates` filtered files to `*.dll *.exe *.dat`. The TrackIR installer drops firmware directly as `tir4.fw`, `tir5.fw`, `tir5v2.fw`, `sn4.fw`, `poem1.txt`, `poem2.txt` — none of which matched the pattern, so `analyzeFile` was never called on them. Added `*.fw` and `*.txt` to the pattern.
+
+- **Wine extractor `NoSymLinks` silently skipping installed directories (fix):** The same `findCandidates` used `QDir::NoSymLinks` when iterating subdirectories. Fresh Wine prefixes use symlinks for user directories (`My Documents`, `Desktop`, etc.); any files installed under those paths were invisible to the recursive scan. Removed `NoSymLinks` so all installed directories are traversed.
+
+- **Wine extractor regedit command malformed (fix):** [src/qt_gui/extractor.cpp](src/qt_gui/extractor.cpp) built the `win7.reg` application command as `QString::fromUtf8("regedit\" \"%1").arg(win7regFile)`, producing the single token `regedit" "/path/to/win7.reg` which Wine rejected (`wine: failed to open "regedit\" \"..."`). Replaced with `wine->run(QString::fromUtf8("regedit"), QStringList() << win7regFile)` using the two-argument overload.
+
+---
+
 **Recent Additions (2026-04-29) [v1.4.5 — Wine hotkey window visibility + installer note polish]:**
 
 - **Version Bump:** Project version advanced to `1.4.5`.

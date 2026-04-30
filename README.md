@@ -26,7 +26,13 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.5
+## 🆕 Recent in 1.4.6
+
+- **Firmware extractor crash fix (clean install)**: On a fresh system with no existing Linuxtrack config, the "Reinstall TrackIR firmware" dialog would crash immediately after choosing the installer file. `find_blob()` passed a NULL glob pattern to `glob()` when the install prefix was not yet configured. Now returns gracefully and falls through to the 7z/Wine path.
+- **Wine extractor: firmware files now found after installer runs**: The post-install scan only looked for `*.dll`, `*.exe`, and `*.dat`, missing the `*.fw` and `*.txt` firmware files that the TrackIR installer drops directly. Also removed `NoSymLinks` from directory traversal so Wine's symlinked user directories are no longer silently skipped.
+- **Wine extractor: regedit command quoting fixed**: The `win7.reg` application command was constructed as a single malformed string (`regedit" "/path`), causing Wine to reject it. Switched to the two-argument `run()` form so the path is passed as a proper argument.
+
+## Recent in 1.4.5
 
 - **Wine hotkey window now Alt+Tab accessible**: `Controller.exe` (the Wine-side hotkey utility) was created with `WS_EX_TOOLWINDOW`, which intentionally hides a window from the Alt+Tab switcher and taskbar. Changed to `WS_EX_APPWINDOW` so you can reach the rebind dialog while a full-screen game is running.
 - **UDP bridge installer note clarified**: The "Missing NPClientUDP.dll.so source" note no longer looks like an error. The 32-bit bridge DLL is an optional component not included in AppImage builds (requires 32-bit Wine devel libs at compile time); the note now explains this plainly.
