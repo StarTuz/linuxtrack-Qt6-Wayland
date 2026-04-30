@@ -117,7 +117,15 @@ void TirFwExtractThread::analyzeFile(const QString fname) {
 }
 
 bool TirFwExtractThread::allFound() {
-  return gameDataFound && tirviewsFound;
+  if (!gameDataFound || !tirviewsFound) {
+    return false;
+  }
+  for (targets_iterator_t it = targets->begin(); it != targets->end(); ++it) {
+    if (!it->second.foundAlready()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool TirFwExtractThread::findCandidates(QString name) {
@@ -523,9 +531,15 @@ bool Extractor::tryBlob(const QString &installerName) {
   if (blob_name.isEmpty()) {
     return false;
   }
+  QString blob_w_path = PrefProxy::getDataPath(blob_name);
+  if (blob_w_path.isEmpty() || !QFile::exists(blob_w_path)) {
+    progress(QString::fromUtf8("No matching firmware blob found for %1.")
+                 .arg(QFileInfo(installerName).fileName()));
+    return false;
+  }
+
   progress(QStringLiteral("Found blob. Commencing extraction."));
   destPath = makeDestPath(PrefProxy::getRsrcDirPath());
-  QString blob_w_path = PrefProxy::getDataPath(blob_name);
   return 0 ==
          extract_blob(installerName.toUtf8().data(), destPath.toUtf8().data());
 }
