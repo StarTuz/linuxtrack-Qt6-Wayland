@@ -223,21 +223,43 @@ void UdpSettings::onInstallWineClicked()
         QFile userReg(userRegPath);
         if (userReg.open(QIODevice::ReadWrite | QIODevice::Text)) {
             QString content = QString::fromUtf8(userReg.readAll());
-            
-            // Check if entry already exists
-            if (!content.contains(QString::fromLatin1("NPClient Location"))) {
-                // Append registry entry
-                QString entry = QString::fromLatin1(
-                    "\n[Software\\\\NaturalPoint\\\\NATURALPOINT\\\\NPClient Location] %1\n"
-                    "\"Path\"=\"C:\\\\Program Files\\\\Linuxtrack\\\\\"\n"
-                ).arg(QDateTime::currentSecsSinceEpoch());
-                
-                userReg.seek(userReg.size());
-                userReg.write(entry.toUtf8());
-                regApplied = true;
-            } else {
-                regApplied = true; // Already exists
+
+            // Always replace the NaturalPoint NPClient path. A stale key can
+            // point games at an old TrackIR/Linuxtrack install and prevent our
+            // bridge DLL from loading at all.
+            QStringList lines = content.split(QLatin1Char('\n'));
+            QStringList filtered;
+            bool skippingNpClientBlock = false;
+            const QString npClientHeader =
+                QString::fromLatin1("[Software\\\\NaturalPoint\\\\NATURALPOINT\\\\NPClient Location]");
+            for (const QString &line : lines) {
+                if (line.startsWith(npClientHeader)) {
+                    skippingNpClientBlock = true;
+                    continue;
+                }
+                if (skippingNpClientBlock && line.startsWith(QLatin1Char('['))) {
+                    skippingNpClientBlock = false;
+                }
+                if (!skippingNpClientBlock) {
+                    filtered << line;
+                }
             }
+
+            QString entry = QString::fromLatin1(
+                "\n[Software\\\\NaturalPoint\\\\NATURALPOINT\\\\NPClient Location] %1\n"
+                "\"Path\"=\"C:\\\\Program Files\\\\Linuxtrack\\\\\"\n"
+            ).arg(QDateTime::currentSecsSinceEpoch());
+
+            content = filtered.join(QLatin1Char('\n'));
+            if (!content.endsWith(QLatin1Char('\n'))) {
+                content += QLatin1Char('\n');
+            }
+            content += entry;
+
+            userReg.resize(0);
+            userReg.seek(0);
+            userReg.write(content.toUtf8());
+            regApplied = true;
             userReg.close();
         }
     }
