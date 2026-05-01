@@ -14,6 +14,7 @@ DEFAULT_BUILD_DIR="$PROJECT_ROOT/build"
 
 MODE="health"
 PREFIX="/opt/linuxtrack"
+PREFIX_SET=false
 BUILD_DIR="$DEFAULT_BUILD_DIR"
 ASSUME_YES=false
 SKIP_DEPS=false
@@ -185,6 +186,28 @@ add_unique_install() {
     FOUND_INSTALLS+=("$path")
 }
 
+is_appimage_mount_prefix() {
+    case "$1" in
+        /tmp/.mount_*|/tmp/.mount_*/*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+is_valid_install_prefix() {
+    local path="$1"
+    if [ -z "$path" ]; then
+        return 1
+    fi
+    if is_appimage_mount_prefix "$path"; then
+        return 1
+    fi
+    return 0
+}
+
 normalize_prefix_root() {
     local raw="$1"
     raw="${raw%/}"
@@ -240,7 +263,9 @@ scan_installations() {
         fi
     done
     if [ -n "$ACTIVE_PREFIX" ] && [ -x "$ACTIVE_PREFIX/bin/ltr_gui" ]; then
-        add_unique_install "$ACTIVE_PREFIX"
+        if is_valid_install_prefix "$ACTIVE_PREFIX"; then
+            add_unique_install "$ACTIVE_PREFIX"
+        fi
     fi
 }
 
@@ -265,6 +290,9 @@ show_health() {
         if [ -n "$ACTIVE_GUI" ]; then
             log "Configured GUI binary:"
             describe_binary "$ACTIVE_GUI"
+            if ! is_valid_install_prefix "$ACTIVE_PREFIX"; then
+                log "${YELLOW}Active prefix is an AppImage runtime mount and cannot be upgraded in place.${NC}"
+            fi
         else
             log "${YELLOW}Configured prefix does not currently contain bin/ltr_gui.${NC}"
         fi
@@ -364,6 +392,13 @@ EOF
 }
 
 perform_install() {
+    if ! is_valid_install_prefix "$PREFIX"; then
+        log "${RED}Refusing to install to AppImage runtime mount: $PREFIX${NC}"
+        log "Run with a persistent prefix instead, for example:"
+        log "  $0 --mode install --prefix /opt/linuxtrack"
+        exit 1
+    fi
+
     perform_build
 
     log "\n${GREEN}🚀 Installing to $PREFIX${NC}"
@@ -419,10 +454,12 @@ choose_existing_prefix() {
     if [ "${#FOUND_INSTALLS[@]}" -eq 0 ]; then
         return 1
     fi
-    if [ -n "$ACTIVE_PREFIX" ] && [ -x "$ACTIVE_PREFIX/bin/ltr_gui" ]; then
+    if [ -n "$ACTIVE_PREFIX" ] && [ -x "$ACTIVE_PREFIX/bin/ltr_gui" ] && is_valid_install_prefix "$ACTIVE_PREFIX"; then
         PREFIX="$ACTIVE_PREFIX"
         log "Using active configured prefix: $PREFIX"
         return 0
+    elif [ -n "$ACTIVE_PREFIX" ] && ! is_valid_install_prefix "$ACTIVE_PREFIX"; then
+        log "${YELLOW}Ignoring active AppImage runtime prefix: $ACTIVE_PREFIX${NC}"
     fi
     if [ "${#FOUND_INSTALLS[@]}" -eq 1 ] || [ "$ASSUME_YES" = true ]; then
         PREFIX="${FOUND_INSTALLS[0]}"
@@ -448,6 +485,7 @@ while [ $# -gt 0 ]; do
             ;;
         --prefix)
             PREFIX="$2"
+            PREFIX_SET=true
             shift 2
             ;;
         --build-dir)
@@ -489,7 +527,9 @@ case "$MODE" in
         perform_install
         ;;
     upgrade)
-        if choose_existing_prefix; then
+        if [ "$PREFIX_SET" = true ]; then
+            perform_install
+        elif choose_existing_prefix; then
             perform_install
         else
             log "${YELLOW}No existing installation detected; using --prefix=$PREFIX${NC}"

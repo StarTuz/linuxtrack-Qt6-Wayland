@@ -26,6 +26,10 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
+## Recent in 1.4.10
+
+- **Source installer no longer targets AppImage mounts**: `scripts/setup_linuxtrack.sh --mode upgrade` now ignores active config prefixes under `/tmp/.mount_*`, because those are read-only AppImage runtime mounts, not real install prefixes. `install`, `upgrade --prefix ...`, and `full` also refuse explicit AppImage mount prefixes before configuring or building, so failed upgrades do not waste time compiling first.
+
 ## Recent in 1.4.9
 
 - **UDP bridge install note cleanup**: Fixed mojibake in the success dialog for builds that do not include the optional 32-bit Wine bridge DLL. The note now explains plainly that `NPClientUDP.dll.so` is optional and only needed for legacy 32-bit games.

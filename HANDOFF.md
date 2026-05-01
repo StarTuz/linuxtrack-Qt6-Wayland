@@ -4,7 +4,7 @@
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.9
+**Current Version:** 1.4.10
 
 ---
 
@@ -259,6 +259,14 @@ The project now compiles successfully on modern Linux with:
 - **Profile sync for UDP stack:** The GUI now passes the active Tracking Setup profile to `ltr_udp` and restarts the bridge when target, protocol, or profile changes. Profile-specific axis settings, including Yaw Invert, now apply to the UDP stream instead of silently falling back to `Default`.
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
+
+**Recent Additions (2026-05-01) [v1.4.10 — source installer AppImage-prefix guard]:**
+
+- **Version Bump:** Project version advanced to `1.4.10`.
+
+- **Source upgrade no longer installs into AppImage runtime mounts (fix):** [scripts/setup_linuxtrack.sh](scripts/setup_linuxtrack.sh) now treats prefixes under `/tmp/.mount_*` as volatile AppImage runtime mounts. Health mode still reports the active config prefix, but marks AppImage mounts as non-upgradeable and excludes them from the detected persistent install list. Upgrade mode ignores the active AppImage prefix and prompts for a real install such as `/opt/linuxtrack` or `/usr`; if no persistent install exists, it falls back to the normal default prefix.
+
+- **Install/upgrade/full modes fail before building on bad prefixes:** The same guard is enforced by `perform_install()`, so `--mode install`, `--mode upgrade --prefix ...`, `--mode full`, or an explicit `--prefix /tmp/.mount_.../usr` fail immediately with a clear message instead of configuring, compiling, prompting for sudo, and then dying during `cmake --install`. `--mode upgrade --prefix PATH` now honors the explicit prefix instead of always selecting a detected install first.
 
 **Recent Additions (2026-05-01) [v1.4.9 — profile persistence and release polish]:**
 
