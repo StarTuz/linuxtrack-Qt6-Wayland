@@ -26,7 +26,13 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## 🆕 Recent in 1.4.8
+## Recent in 1.4.9
+
+- **UDP bridge install note cleanup**: Fixed mojibake in the success dialog for builds that do not include the optional 32-bit Wine bridge DLL. The note now explains plainly that `NPClientUDP.dll.so` is optional and only needed for legacy 32-bit games.
+- **Profile selection persistence restored**: The GUI again remembers the last selected tracking profile after Save/exit/relaunch. Automatic Wine game profile creation also updates the visible **Profile Name** selection, not only the hidden `ltr_udp` runtime profile.
+- **Wine hotkey and game profile handoff**: Wine Pause/Recenter hotkeys now talk directly to the in-game bridge on UDP `4242`, while game profile notifications use the persistent GUI listener on `4243`.
+
+## Recent in 1.4.8
 
 - **DCS UDP startup hardening**: `ltr_udp` no longer exits when the tracker is still initializing. It keeps sending neutral packets until Linuxtrack reaches `RUNNING`/`PAUSED`, so the Wine NPClient bridge receives frames immediately and games such as DCS do not drop TrackIR just because a fresh profile or camera startup is slow.
 - **AppImage prefix parser fix**: Host-side Linuxtrack startup now accepts both `Prefix = "..."` and `Prefix="..."` in `linuxtrack1.conf`. Fresh AppImage configs could save the no-space form, which let `ltr_udp` load but prevented it from launching `ltr_server1`, leaving the Wine bridge stuck on neutral zero-pose packets.

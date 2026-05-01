@@ -175,7 +175,8 @@ void UdpSettings::onInstallWineClicked()
                 success = false;
             } else {
                 installNotes << QString::fromLatin1(
-                    "%1 not included in this build (optional — only needed for legacy 32-bit games)")
+                    "%1 was not included in this build.\n"
+                    "This is optional and only needed for legacy 32-bit games.")
                     .arg(label);
             }
             return;

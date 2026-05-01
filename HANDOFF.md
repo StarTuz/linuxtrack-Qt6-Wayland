@@ -1,10 +1,10 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-04-30
+**Last Updated:** 2026-05-01
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.8
+**Current Version:** 1.4.9
 
 ---
 
@@ -259,6 +259,16 @@ The project now compiles successfully on modern Linux with:
 - **Profile sync for UDP stack:** The GUI now passes the active Tracking Setup profile to `ltr_udp` and restarts the bridge when target, protocol, or profile changes. Profile-specific axis settings, including Yaw Invert, now apply to the UDP stream instead of silently falling back to `Default`.
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
+
+**Recent Additions (2026-05-01) [v1.4.9 — profile persistence and release polish]:**
+
+- **Version Bump:** Project version advanced to `1.4.9`.
+
+- **Profile selector persistence restored (fix):** [src/qt_gui/ltr_gui.cpp](src/qt_gui/ltr_gui.cpp), [src/qt_gui/profile_selector.cpp](src/qt_gui/profile_selector.cpp), and [src/qt_gui/profile_selector.h](src/qt_gui/profile_selector.h) now persist the visible selected profile as `Profile/LastProfile` in Qt settings on Save and on close, then restore it on next GUI launch. The v1.4.8 game-profile handoff only changed `UdpBridge`, so `ltr_udp` could run under a game profile while the visible **Profile Name** combo still relaunched as `Default`.
+
+- **Automatic Wine game profile selection made visible (fix):** The Wine bridge `PROF<name>` notification now calls `ProfileSelector::selectProfile(profile, true)`, which creates missing profiles through the normal axis path, refreshes the combo box, selects the new/current game profile, and emits `profileChanged`. This keeps `PROFILE`, `TRACKER`, the visible profile selector, and `UdpBridge` aligned.
+
+- **UDP bridge install success dialog polish:** [src/qt_gui/udp_settings.cpp](src/qt_gui/udp_settings.cpp) no longer passes a Unicode dash through `QString::fromLatin1()` in the optional 32-bit bridge note. The success dialog now uses plain ASCII wording: `NPClientUDP.dll.so was not included in this build. This is optional and only needed for legacy 32-bit games.`
 
 **Recent Additions (2026-04-30) [v1.4.8 — TrackIR asset install path and signature fallback]:**
 
