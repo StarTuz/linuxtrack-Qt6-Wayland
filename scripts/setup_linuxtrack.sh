@@ -131,6 +131,17 @@ optional_dependency_note() {
     esac
 }
 
+xplane_dependency_note() {
+    case "$PKG_MANAGER" in
+        pacman)
+            printf '%s\n' "xplane-sdk-devel (AUR) -- required to build xlinuxtrack9.so"
+            ;;
+        *)
+            printf '%s\n' "X-Plane SDK headers (developer.x-plane.com) -- required to build xlinuxtrack9.so"
+            ;;
+    esac
+}
+
 install_dependencies() {
     if [ "$SKIP_DEPS" = true ]; then
         return 0
@@ -155,6 +166,12 @@ install_dependencies() {
     if [ -n "$optional_note" ]; then
         log "Optional runtime packages:"
         printf '  %s\n' "$optional_note"
+    fi
+    local xplane_note
+    xplane_note="$(xplane_dependency_note || true)"
+    if [ -n "$xplane_note" ]; then
+        log "Required for X-Plane support:"
+        printf '  %s\n' "$xplane_note"
     fi
 
     if [ "$ASSUME_YES" != true ] && ! confirm "Install missing packages automatically?"; then
