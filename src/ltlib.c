@@ -50,6 +50,11 @@ static char *ltr_int_init_helper(const char *cust_section, bool standalone)
       fd[0] = fd[1] = -1;
     }
     char *server = ltr_int_get_app_path("/ltr_server1");
+    if(server == NULL){
+      ltr_int_log_message("Couldn't resolve ltr_server1 path!\n");
+      com->state = err_NOT_INITIALIZED;
+      return NULL;
+    }
     if(cust_section == NULL){
       cust_section = "Default";
     }
@@ -453,4 +458,3 @@ int ltr_wait(int timeout)
   }
   return res;
 }
-

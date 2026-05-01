@@ -353,18 +353,35 @@ char *ltr_int_get_app_path(const char *suffix) {
 
   free(fname);
   fname = NULL;
+  char line[4096];
   char key[2048];
   char val[2048];
   bool found = false;
   while (!feof(f)) {
-    if (fscanf(f, "%2040s", key) == 1) {
-      if (strcasecmp(key, "PREFIX") == 0) {
-        if (fgets(key, 2040, f) != NULL) {
-          if (sscanf(key, " = \"%[^\"\n]", val) > 0) {
-            found = true;
-            break;
-          }
+    if (fgets(line, 4095, f) != NULL) {
+      if (sscanf(line, "%2040s = \"%2047[^\"\n]", key, val) == 2) {
+        found = (strcasecmp(key, "PREFIX") == 0);
+      } else if (sscanf(line, "%2047[^=]=\"%2047[^\"\n]", key, val) == 2) {
+        char *end = key + strlen(key) - 1;
+        while (end > key && ((*end == ' ') || (*end == '\t'))) {
+          *end-- = '\0';
         }
+        found = (strcasecmp(key, "PREFIX") == 0);
+      } else if (sscanf(line, "%2047[^=]= \"%2047[^\"\n]", key, val) == 2) {
+        char *end = key + strlen(key) - 1;
+        while (end > key && ((*end == ' ') || (*end == '\t'))) {
+          *end-- = '\0';
+        }
+        found = (strcasecmp(key, "PREFIX") == 0);
+      } else if (sscanf(line, "%2047[^=] =\"%2047[^\"\n]", key, val) == 2) {
+        char *end = key + strlen(key) - 1;
+        while (end > key && ((*end == ' ') || (*end == '\t'))) {
+          *end-- = '\0';
+        }
+        found = (strcasecmp(key, "PREFIX") == 0);
+      }
+      if (found) {
+        break;
       }
     }
   }
