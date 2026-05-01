@@ -1,6 +1,6 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-05-01
+**Last Updated:** 2026-04-30
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
@@ -1153,15 +1153,11 @@ When you install the UDP Bridge to a Wine prefix, the current hotkey settings ar
 
 ### Repository Status
 
-**Branch:** `main` (Default)
-**Tag:** `v1.1.12` (Latest Release)
-**Status:** Clean (All changes committed and pushed)
+**Branch:** `master`
+**Current Version:** `1.4.11`
+**Status:** 1 commit ahead of origin/master (2ad9aea — "Installer: prefer persistent prefix for source upgrades"); push pending.
 
-```
-On branch main
-Your branch is up to date with 'origin/main'.
-nothing to commit, working tree clean
-```
+Notable tags since v1.1.12 milestone: v1.4.4 (encryption key fix), v1.4.6 (extractor robustness), v1.4.7 (registry path rewrite), v1.4.8 (UDP startup hardening, prefix parser, hotkey routing, game profile handoff), v1.4.9 (profile persistence, polish), v1.4.10 (AppImage prefix guard), v1.4.11 (upgrade PATH fallback).
 
 ---
 
