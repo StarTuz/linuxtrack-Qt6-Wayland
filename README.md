@@ -26,6 +26,10 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
+## Recent in 1.4.11
+
+- **Source upgrade chooses the real install when launched from an AppImage**: `scripts/setup_linuxtrack.sh --mode upgrade` now ignores active `/tmp/.mount_*` AppImage runtime prefixes and then prefers the persistent `ltr_gui` found on `PATH`, for example `/opt/linuxtrack/bin/ltr_gui`, before showing an install-selection prompt. Health mode also reports that source upgrades will use that PATH prefix.
+
 ## Recent in 1.4.10
 
 - **Source installer no longer targets AppImage mounts**: `scripts/setup_linuxtrack.sh --mode upgrade` now ignores active config prefixes under `/tmp/.mount_*`, because those are read-only AppImage runtime mounts, not real install prefixes. `install`, `upgrade --prefix ...`, and `full` also refuse explicit AppImage mount prefixes before configuring or building, so failed upgrades do not waste time compiling first.

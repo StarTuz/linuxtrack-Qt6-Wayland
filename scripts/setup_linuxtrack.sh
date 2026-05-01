@@ -26,6 +26,8 @@ PKG_MANAGER=""
 FOUND_INSTALLS=()
 ACTIVE_PREFIX=""
 ACTIVE_GUI=""
+PATH_PREFIX=""
+PATH_GUI=""
 
 usage() {
     cat <<EOF
@@ -49,6 +51,7 @@ Options:
 
 Examples:
   scripts/setup_linuxtrack.sh --mode install --prefix /opt/linuxtrack
+  scripts/setup_linuxtrack.sh --mode upgrade --prefix /opt/linuxtrack
   scripts/setup_linuxtrack.sh --mode full --prefix /usr/local --yes
   scripts/setup_linuxtrack.sh --mode integrate --with-mickey
 EOF
@@ -243,6 +246,18 @@ read_active_prefix() {
     fi
 }
 
+read_path_prefix() {
+    PATH_PREFIX=""
+    PATH_GUI=""
+    local path_gui
+    path_gui="$(command -v ltr_gui || true)"
+    if [ -z "$path_gui" ]; then
+        return 0
+    fi
+    PATH_GUI="$(readlink -f "$path_gui" 2>/dev/null || printf '%s' "$path_gui")"
+    PATH_PREFIX="$(normalize_prefix_root "$(dirname "$(dirname "$PATH_GUI")")")"
+}
+
 describe_binary() {
     local binary="$1"
     if [ ! -e "$binary" ]; then
@@ -255,6 +270,7 @@ describe_binary() {
 scan_installations() {
     FOUND_INSTALLS=()
     read_active_prefix
+    read_path_prefix
     local search_paths=("/opt/linuxtrack" "/usr/local" "/usr" "$HOME/.local")
     local path
     for path in "${search_paths[@]}"; do
@@ -266,6 +282,9 @@ scan_installations() {
         if is_valid_install_prefix "$ACTIVE_PREFIX"; then
             add_unique_install "$ACTIVE_PREFIX"
         fi
+    fi
+    if [ -n "$PATH_PREFIX" ] && [ -x "$PATH_PREFIX/bin/ltr_gui" ] && is_valid_install_prefix "$PATH_PREFIX"; then
+        add_unique_install "$PATH_PREFIX"
     fi
 }
 
@@ -287,12 +306,12 @@ show_health() {
         log "Config file: not created yet ($config_file)"
     elif [ -n "$ACTIVE_PREFIX" ]; then
         log "Active config prefix: $ACTIVE_PREFIX"
+        if ! is_valid_install_prefix "$ACTIVE_PREFIX"; then
+            log "${YELLOW}Active prefix is an AppImage runtime mount and cannot be upgraded in place.${NC}"
+        fi
         if [ -n "$ACTIVE_GUI" ]; then
             log "Configured GUI binary:"
             describe_binary "$ACTIVE_GUI"
-            if ! is_valid_install_prefix "$ACTIVE_PREFIX"; then
-                log "${YELLOW}Active prefix is an AppImage runtime mount and cannot be upgraded in place.${NC}"
-            fi
         else
             log "${YELLOW}Configured prefix does not currently contain bin/ltr_gui.${NC}"
         fi
@@ -310,11 +329,12 @@ show_health() {
         fi
     fi
 
-    local path_gui
-    path_gui="$(command -v ltr_gui || true)"
-    if [ -n "$path_gui" ]; then
+    if [ -n "$PATH_GUI" ]; then
         log "PATH ltr_gui:"
-        describe_binary "$(readlink -f "$path_gui" 2>/dev/null || printf '%s' "$path_gui")"
+        describe_binary "$PATH_GUI"
+        if [ -n "$PATH_PREFIX" ] && is_valid_install_prefix "$PATH_PREFIX"; then
+            log "Source upgrades will use PATH prefix: $PATH_PREFIX"
+        fi
     fi
 
     if [ -x "$BUILD_DIR/src/qt_gui/ltr_gui" ]; then
@@ -395,7 +415,7 @@ perform_install() {
     if ! is_valid_install_prefix "$PREFIX"; then
         log "${RED}Refusing to install to AppImage runtime mount: $PREFIX${NC}"
         log "Run with a persistent prefix instead, for example:"
-        log "  $0 --mode install --prefix /opt/linuxtrack"
+        log "  $0 --mode $MODE --prefix /opt/linuxtrack"
         exit 1
     fi
 
@@ -461,8 +481,14 @@ choose_existing_prefix() {
     elif [ -n "$ACTIVE_PREFIX" ] && ! is_valid_install_prefix "$ACTIVE_PREFIX"; then
         log "${YELLOW}Ignoring active AppImage runtime prefix: $ACTIVE_PREFIX${NC}"
     fi
+    if [ -n "$PATH_PREFIX" ] && [ -x "$PATH_PREFIX/bin/ltr_gui" ] && is_valid_install_prefix "$PATH_PREFIX"; then
+        PREFIX="$PATH_PREFIX"
+        log "Using PATH ltr_gui prefix: $PREFIX"
+        return 0
+    fi
     if [ "${#FOUND_INSTALLS[@]}" -eq 1 ] || [ "$ASSUME_YES" = true ]; then
         PREFIX="${FOUND_INSTALLS[0]}"
+        log "Using detected prefix: $PREFIX"
         return 0
     fi
 
@@ -473,7 +499,7 @@ choose_existing_prefix() {
         log "  $i) $path"
         i=$((i + 1))
     done
-    read -r -p "Select installation to upgrade: " sel
+    read -r -p "Select installation to upgrade [1-${#FOUND_INSTALLS[@]}]: " sel
     PREFIX="${FOUND_INSTALLS[$((sel - 1))]}"
 }
 

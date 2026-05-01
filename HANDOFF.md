@@ -4,7 +4,7 @@
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.10
+**Current Version:** 1.4.11
 
 ---
 
@@ -259,6 +259,14 @@ The project now compiles successfully on modern Linux with:
 - **Profile sync for UDP stack:** The GUI now passes the active Tracking Setup profile to `ltr_udp` and restarts the bridge when target, protocol, or profile changes. Profile-specific axis settings, including Yaw Invert, now apply to the UDP stream instead of silently falling back to `Default`.
 
 - **User rule:** Use `OpenTrack (6 doubles)` for native OpenTrack UDP games such as X4 Foundations. Use `Wine/Proton NPClient` only for Wine/Proton games using the installed UDP NPClient DLL.
+
+**Recent Additions (2026-05-01) [v1.4.11 — source upgrade persistent-prefix selection]:**
+
+- **Version Bump:** Project version advanced to `1.4.11`.
+
+- **Upgrade mode now prefers PATH after ignoring AppImage runtime mounts:** [scripts/setup_linuxtrack.sh](scripts/setup_linuxtrack.sh) still refuses `/tmp/.mount_*` AppImage runtime prefixes, but `--mode upgrade` now falls through to the persistent `ltr_gui` found on `PATH` before prompting. This avoids the confusing `Detected installations: /opt/linuxtrack, /usr` menu when the active config prefix is a vanished AppImage mount and `/opt/linuxtrack/bin/ltr_gui` is the actual installed source tree.
+
+- **Health mode explains the selected upgrade target:** Health output now reports AppImage runtime prefixes as non-upgradeable even if the temporary mount has already disappeared, and prints `Source upgrades will use PATH prefix: ...` when a persistent `ltr_gui` is available on `PATH`.
 
 **Recent Additions (2026-05-01) [v1.4.10 — source installer AppImage-prefix guard]:**
 
