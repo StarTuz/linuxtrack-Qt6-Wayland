@@ -23,9 +23,10 @@ jobs:
       - name: Download AppImage from release
         if: github.event_name == 'release'
         run: |
-          wget -q "${{ github.event.release.assets[0].browser_download_url }}" -O Linuxtrack.AppImage
+          TAG="${{ github.event.release.tag_name }}"
+          wget -q "https://github.com/StarTuz/linuxtrack-Qt6-Wayland/releases/download/${TAG}/Linuxtrack-${TAG}-x86_64.AppImage" -O Linuxtrack.AppImage
           chmod +x Linuxtrack.AppImage
-      
+
       - name: Build AppImage (manual trigger)
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -65,7 +66,8 @@ jobs:
         if: github.event_name == 'release'
         run: |
           pacman -S --noconfirm wget
-          wget -q "${{ github.event.release.assets[0].browser_download_url }}" -O Linuxtrack.AppImage
+          TAG="${{ github.event.release.tag_name }}"
+          wget -q "https://github.com/StarTuz/linuxtrack-Qt6-Wayland/releases/download/${TAG}/Linuxtrack-${TAG}-x86_64.AppImage" -O Linuxtrack.AppImage
           chmod +x Linuxtrack.AppImage
       
       - name: Use existing AppImage (manual trigger)
@@ -98,7 +100,8 @@ jobs:
         if: github.event_name == 'release'
         run: |
           dnf install -y wget
-          wget -q "${{ github.event.release.assets[0].browser_download_url }}" -O Linuxtrack.AppImage
+          TAG="${{ github.event.release.tag_name }}"
+          wget -q "https://github.com/StarTuz/linuxtrack-Qt6-Wayland/releases/download/${TAG}/Linuxtrack-${TAG}-x86_64.AppImage" -O Linuxtrack.AppImage
           chmod +x Linuxtrack.AppImage
       
       - name: Validate AppImage
