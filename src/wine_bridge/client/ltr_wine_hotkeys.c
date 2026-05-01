@@ -214,7 +214,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
     }
     memset(&bridge_addr, 0, sizeof(bridge_addr));
     bridge_addr.sin_family = AF_INET;
-    bridge_addr.sin_port = htons(4243);
+    bridge_addr.sin_port = htons(4242);
     inet_pton(AF_INET, "127.0.0.1", &bridge_addr.sin_addr);
 
     init_ini_path(hInst);

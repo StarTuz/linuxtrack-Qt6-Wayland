@@ -44,7 +44,7 @@ UdpBridge::UdpBridge(QObject *parent)
     , running(false)
     , ltrUdpProcess(nullptr)
 {
-    // Listen for commands from hotkey utility on port 4243
+    // Listen for control/profile notifications from the Wine bridge DLL.
     commandSocket->bind(QHostAddress::LocalHost, 4243);
     connect(commandSocket, &QUdpSocket::readyRead, this, &UdpBridge::onCommandReadyRead);
 }
@@ -204,7 +204,7 @@ void UdpBridge::sendPose(float yaw, float pitch, float roll, float x, float y, f
 
 void UdpBridge::sendCommand(const char *cmd)
 {
-    // Send 4-byte command (RECN or PAUS)
+    // Send 4-byte command (RECN, RSET, or PAUS)
     QByteArray data(cmd, 4);
     socket->writeDatagram(data, address, port);
 }
@@ -217,7 +217,7 @@ void UdpBridge::onCommandReadyRead()
         commandSocket->readDatagram(datagram.data(), datagram.size());
         
         if (datagram.size() >= 4) {
-            QString cmd = QString::fromLatin1(datagram.data(), 4);
+            QString cmd = QString::fromLatin1(datagram.constData(), datagram.size());
             emit commandReceived(cmd);
         }
     }

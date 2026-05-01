@@ -38,7 +38,7 @@ public slots:
     void start();
     void stop();
     void sendPose(float yaw, float pitch, float roll, float x, float y, float z);
-    void sendCommand(const char *cmd); // "RECN" or "PAUS"
+    void sendCommand(const char *cmd); // "RECN", "RSET", or "PAUS"
 
 signals:
     void statusChanged(bool running);

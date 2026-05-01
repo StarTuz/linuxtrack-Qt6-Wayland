@@ -153,13 +153,12 @@ static DWORD WINAPI receiver_thread_func(LPVOID param) {
             }
             LeaveCriticalSection(&pose_mutex);
         } else if (bytes == 4) {
-             /* Handle commands from ltr_udp server */
+             /* Handle commands from ltr_udp server or Wine hotkey utility */
              if (memcmp(buffer, "RECN", 4) == 0) {
-                 /* Server has recentered - reset our client-side offsets to zero.
-                  * This is important: server sends already-recentered data after RECN,
-                  * so we must NOT add more offset on top.
-                  */
-                 udp_log("UDP Bridge: Received RECENTER command - resetting client offsets\n");
+                 udp_log("UDP Bridge: Received RECENTER command\n");
+                 linuxtrack_recenter();
+             } else if (memcmp(buffer, "RSET", 4) == 0) {
+                 udp_log("UDP Bridge: Received offset reset command\n");
                  EnterCriticalSection(&pose_mutex);
                  recenter_yaw = 0.0f;
                  recenter_pitch = 0.0f;
@@ -190,6 +189,30 @@ static DWORD WINAPI receiver_thread_func(LPVOID param) {
     
     udp_log("Receiver thread exiting...\n");
     return 0;
+}
+
+void linuxtrack_udp_notify_profile(const char *profile) {
+    if (profile == NULL || profile[0] == '\0' || udp_socket == INVALID_SOCKET) {
+        return;
+    }
+
+    char msg[260];
+    int n = snprintf(msg, sizeof(msg), "PROF%s", profile);
+    if (n <= 4 || (size_t)n >= sizeof(msg)) {
+        return;
+    }
+
+    struct sockaddr_in gui_addr;
+    memset(&gui_addr, 0, sizeof(gui_addr));
+    gui_addr.sin_family = AF_INET;
+    gui_addr.sin_port = htons(4243);
+    if (inet_pton(AF_INET, "127.0.0.1", &gui_addr.sin_addr) != 1) {
+        return;
+    }
+
+    int sent = sendto(udp_socket, msg, n, 0,
+                      (struct sockaddr*)&gui_addr, sizeof(gui_addr));
+    udp_log("UDP Bridge: Notified host profile '%s' (%d)\n", profile, sent);
 }
 
 static void auto_launch_hotkeys(void) {

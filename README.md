@@ -8,14 +8,14 @@ This is a modernized fork of the [Linuxtrack](https://github.com/uglyDwarf/linux
 
 Unlike other legacy forks, this version addresses deep technical debt to ensure long-term stability:
 
-- **Native Firmware Manager (LAL)**: New "Manage Assets" GUI allows legal, drag-and-drop installation of proprietary TrackIR/SmartNav firmware without needing Wine or external tools.
+- **Licensed Asset Loader (LAL)**: Experimental generic asset manager for proprietary firmware packages. TrackIR runtime assets currently use the legacy **Reinstall TrackIR firmware** path under `~/.config/linuxtrack/tir_firmware`; LAL's generic store is not the active TrackIR runtime path yet.
 - **Surgical Wine Injection**: No more fragile `.exe` installers! Directly inject bridge DLLs into Wine/Proton prefixes with one click.
 - **Proton-Aware Environment**: Automatically configures `PROTON_NO_FSYNC` and `PROTON_NO_ESYNC` to prevent race conditions and tracking stutters in games like *Elite Dangerous*.
 - **Qt6 & Wayland Support**: Fully ported from Qt4/5 to Qt6. Removed `QtX11Extras` to allow the GUI to run natively on Wayland.
 - **Modern OpenGL (3.0+)**: Rewrote the 3D Tracking View using a programmable shader-based pipeline (GLES 3.0), replacing the broken 20-year-old fixed-function legacy code.
 - **Bison/Flex Removal**: Replaced complex legacy configuration parsers with the lightweight, robust `mINI` library.
 - **TrackIR 5 V3 Support**: Full hardware activation for the latest TrackIR 5 revisions.
-- **Unified UDP Bridge**: New high-precision UDP stack that solves symmetry and range issues in full-screen games. Uses a unique coordinated architecture where hotkeys (Wine) trigger server-side (Linux) recentering on port 4243.
+- **Unified UDP Bridge**: New high-precision UDP stack that solves symmetry and range issues in full-screen games. Wine hotkeys talk directly to the in-game bridge on port `4242`; the bridge notifies the Linux GUI of game profiles on port `4243`.
 - **Seamless X-Plane Camera Toggle**: Switch between cockpit and external camera views without disabling TrackIR. One button press for helicopter inspections!
 
 ## 🎮 Verified Games & Apps
@@ -30,7 +30,10 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 
 - **DCS UDP startup hardening**: `ltr_udp` no longer exits when the tracker is still initializing. It keeps sending neutral packets until Linuxtrack reaches `RUNNING`/`PAUSED`, so the Wine NPClient bridge receives frames immediately and games such as DCS do not drop TrackIR just because a fresh profile or camera startup is slow.
 - **AppImage prefix parser fix**: Host-side Linuxtrack startup now accepts both `Prefix = "..."` and `Prefix="..."` in `linuxtrack1.conf`. Fresh AppImage configs could save the no-space form, which let `ltr_udp` load but prevented it from launching `ltr_server1`, leaving the Wine bridge stuck on neutral zero-pose packets.
+- **Wine hotkeys no longer depend on an open settings dialog**: `ltr_wine_hotkeys.exe` now sends Pause/Recenter directly to the Wine NPClient bridge on port `4242`. The persistent GUI listener on `4243` is reserved for host-side bridge notifications, so closing the UDP settings dialog no longer breaks hotkeys.
+- **Wine game profile handoff**: When a TrackIR game registers its NaturalPoint profile ID, the Wine bridge sends the resolved profile name (for example `Black Shark`) back to the Linux GUI. The GUI restarts `ltr_udp` under that profile, allowing Linuxtrack's normal missing-profile creation path to run for newly seen games instead of silently staying on `Default`.
 - **TrackIR asset install guidance**: The runtime reads TrackIR assets from `~/.config/linuxtrack/tir_firmware`. For TrackIR 5.5.3, use **Misc → Reinstall TrackIR firmware** with the downloaded `TrackIR_5.5.3.exe`; the legacy Wine install flow runs the installer so the license flow is visible, then extracts the installed payloads. LAL's generic asset-store path is not the active TrackIR runtime path.
+- **Clean-install AppImage verification**: Deleting `~/.config/linuxtrack`, running the AppImage, and using **Misc → Reinstall TrackIR firmware** with `TrackIR_5.5.3.exe` has been verified with DCS World, Elite Dangerous, and X4 Foundations.
 - **Clean-install extractor directory fix**: `ltr_extractor --extract` now creates `~/.config/linuxtrack/tir_firmware` instead of failing when the directory does not exist yet.
 - **Wine bridge signature fallback**: If `poem1.txt`/`poem2.txt` are absent, the UDP NPClient bridge now uses the same default signatures returned by the official TrackIR 5.5.3 `NPClient64.dll` instead of failing signature setup outright.
 
@@ -52,7 +55,7 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 ## Recent in 1.4.4
 
 - **TrackIR Encryption Key Fix (critical)**: Fixed a long-standing bug in `ltr_extractor` that produced a `gamedata.txt` with no encryption keys (every entry showed `((null))`). This broke TrackIR-aware games that strictly require encryption — most visibly **DCS World**, where TrackIR appeared in the device list briefly then disappeared after Rescan. **Elite Dangerous** users were unaffected only because of a per-game hardcoded fallback. After this fix, all 62 affected games (DCS Black Shark, DCS A-10C, ED, etc.) extract their proper keys.
-- **Action required if you upgraded from <= 1.4.3**: Re-run **Misc → Manage Assets (LAL) → Extract** against your TrackIR installer `.exe` to regenerate `~/.config/linuxtrack/tir_firmware/gamedata.txt`. No need to reinstall the Wine/Proton UDP bridge.
+- **Action required if you upgraded from <= 1.4.3**: Re-run **Misc → Reinstall TrackIR firmware** against your TrackIR installer `.exe` to regenerate `~/.config/linuxtrack/tir_firmware/gamedata.txt`. No need to reinstall the Wine/Proton UDP bridge.
 - **UDP bridge log path fix**: The bridge DLL previously created stray log files with literal `C:\...` names in the game's install directory. Logs now go to `~/.config/linuxtrack/wine_bridge.log` where they belong.
 - **Verified**: DCS World (Proton) and Elite Dangerous (Proton) both confirmed working end-to-end with this release.
 

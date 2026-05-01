@@ -120,6 +120,20 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
   udpBridge->setProfile(QString::fromLatin1("Default"));
   QObject::connect(ps, &ProfileSelector::profileChanged, udpBridge,
                    &UdpBridge::setProfile);
+  QObject::connect(udpBridge, &UdpBridge::commandReceived, this,
+                   [this](const QString &cmd) {
+                     if (cmd.startsWith(QString::fromLatin1("PROF"))) {
+                       QString profile = cmd.mid(4).trimmed();
+                       if (!profile.isEmpty()) {
+                         udpBridge->setProfile(profile);
+                       }
+                     } else if (cmd == QString::fromLatin1("RECN")) {
+                       TRACKER.recenter();
+                       udpBridge->sendCommand("RSET");
+                     } else if (cmd == QString::fromLatin1("PAUS")) {
+                       udpBridge->sendCommand("PAUS");
+                     }
+                   });
   hotkeyProcess = nullptr; // Owned by main window
   QSettings udpSettings(QString::fromLatin1("linuxtrack"),
                         QString::fromLatin1("ltr_gui"));

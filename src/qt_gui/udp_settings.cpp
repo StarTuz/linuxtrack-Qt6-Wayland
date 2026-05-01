@@ -29,13 +29,6 @@ UdpSettings::UdpSettings(UdpBridge *b, QWidget *parent)
     connect(ui->installWineButton, &QPushButton::clicked, this, &UdpSettings::onInstallWineClicked);
     connect(ui->startStopButton, &QPushButton::clicked, this, &UdpSettings::onStartStopClicked);
     
-    if (bridge) {
-        connect(bridge, &UdpBridge::commandReceived, this, [this](const QString &cmd){
-            if (cmd == QString::fromLatin1("RECN")) onRecenterClicked();
-            else if (cmd == QString::fromLatin1("PAUS")) onPauseClicked();
-        });
-    }
-    
     loadSettings();
     updateStatus();
 }
@@ -128,9 +121,9 @@ void UdpSettings::onRecenterClicked()
     // This affects the data ltr_udp sends
     TRACKER.recenter();
     
-    // Also send RECN to DLL to reset its client-side offsets
+    // Also tell the DLL to clear any Wine-side offsets; the host has recentered.
     if (bridge) {
-        bridge->sendCommand("RECN");
+        bridge->sendCommand("RSET");
     }
 }
 

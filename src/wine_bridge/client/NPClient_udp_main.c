@@ -23,6 +23,7 @@
 WINE_DEFAULT_DEBUG_CHANNEL(NPClient);
 
 extern void udp_log(const char *fmt, ...);
+extern void linuxtrack_udp_notify_profile(const char *profile);
 
 static bool initialized = false;
 static bool crypted = false;
@@ -295,6 +296,7 @@ int __stdcall NPCLIENT_NP_RegisterProgramProfileID(unsigned short id) {
     udp_log("UDP Bridge: linuxtrack_init failed!\n");
     return 1;
   }
+  linuxtrack_udp_notify_profile(profile_name);
   linuxtrack_suspend();
   return 0;
 }
