@@ -28,7 +28,8 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 
 ## 🆕 Recent in 1.4.8
 
-- **LAL now installs TrackIR assets where Linuxtrack actually reads them**: The previous LAL path only unpacked files into `~/.local/share/linuxtrack/lal/...`, so the GUI could report success while the Wine bridge still lacked `~/.config/linuxtrack/tir_firmware/gamedata.txt`, `poem1.txt`, and `poem2.txt`. LAL now handles TrackIR 5 specially: use an installed `TrackIR5.exe` next to `sgl.dat` (for example from `~/.wine/drive_c/Program Files (x86)/TrackIR5/`) and it runs the real extractor into `~/.config/linuxtrack/tir_firmware`.
+- **DCS UDP startup hardening**: `ltr_udp` no longer exits when the tracker is still initializing. It keeps sending neutral packets until Linuxtrack reaches `RUNNING`/`PAUSED`, so the Wine NPClient bridge receives frames immediately and games such as DCS do not drop TrackIR just because a fresh profile or camera startup is slow.
+- **TrackIR asset install guidance**: The runtime reads TrackIR assets from `~/.config/linuxtrack/tir_firmware`. For TrackIR 5.5.3, use **Misc → Reinstall TrackIR firmware** with the downloaded `TrackIR_5.5.3.exe`; the legacy Wine install flow runs the installer so the license flow is visible, then extracts the installed payloads. LAL's generic asset-store path is not the active TrackIR runtime path.
 - **Clean-install extractor directory fix**: `ltr_extractor --extract` now creates `~/.config/linuxtrack/tir_firmware` instead of failing when the directory does not exist yet.
 - **Wine bridge signature fallback**: If `poem1.txt`/`poem2.txt` are absent, the UDP NPClient bridge now uses the same default signatures returned by the official TrackIR 5.5.3 `NPClient64.dll` instead of failing signature setup outright.
 

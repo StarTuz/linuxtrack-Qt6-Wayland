@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  printf("ltr_udp v1.2.0 starting...\n");
+  printf("ltr_udp v1.2.1 starting...\n");
   printf("Protocol: %s\n", (protocol == PROTO_OPENTRACK) ? "OpenTrack (UDP)" : "FreeTrack");
   printf("Target:   %s:%d\n", target_ip, target_port);
   printf("Profile:  %s\n", profile_name ? profile_name : "Default");
@@ -131,38 +131,34 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // Wait for tracker to start
-  printf("ltr_udp: Waiting for tracker state RUNNING/PAUSED...\n");
-  int timeout = 0;
-  while (timeout < 50 && keep_running) {
-    state = linuxtrack_get_tracking_state();
-    if (state == RUNNING || state == PAUSED) {
-      printf("ltr_udp: Tracker IS ACTIVE! (State: %d)\n", state);
-      break;
-    }
-    usleep(200000); // 200ms
-    timeout++;
-  }
-
-  if (state != RUNNING && state != PAUSED) {
-    fprintf(stderr, "Tracker failed to start. Is ltr_server1 running?\n");
-    linuxtrack_shutdown();
-    return 1;
-  }
-
   // Enable notifications so we get pose updates
   linuxtrack_notification_on();
   printf("ltr_udp: Notifications enabled, starting main loop.\n");
+  printf("ltr_udp: Sending neutral packets until tracker state RUNNING/PAUSED.\n");
 
   // Main Loop
   long frame_count = 0;
+  linuxtrack_state_type last_state = STOPPED;
 
   while (keep_running) {
-    // Wait for frame (blocking wait to reduce CPU usage)
-    // Wait BEFORE getting data, match original osc_server cadence
-    linuxtrack_wait(10);
+    state = linuxtrack_get_tracking_state();
+    if (state != last_state) {
+      printf("ltr_udp: Tracker state changed: %s\n", linuxtrack_explain(state));
+      last_state = state;
+    }
 
-    int result = linuxtrack_get_pose_full(&pose, blobs, 10, &blobs_read);
+    int result = 0;
+    memset(&pose, 0, sizeof(pose));
+    blobs_read = 0;
+
+    if (state == RUNNING || state == PAUSED) {
+      // Wait for frame (blocking wait to reduce CPU usage)
+      // Wait BEFORE getting data, match original osc_server cadence
+      linuxtrack_wait(10);
+      result = linuxtrack_get_pose_full(&pose, blobs, 10, &blobs_read);
+    } else {
+      usleep(20000);
+    }
 
     // Debug: show result every 100 iterations
     static long debug_count = 0;
