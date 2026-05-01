@@ -24,6 +24,7 @@
 #include "log_view.h"
 #include "ltr_dev_help.h"
 #include "ltr_model.h"
+#include "ltr_profiles.h"
 #include "ltr_show.h"
 #include "ltr_tracking.h"
 #include "plugin_install.h"
@@ -98,6 +99,12 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
   helper->move(
       gui_settings->value(QString::fromUtf8("pos"), QPoint(0, 0)).toPoint());
   gui_settings->endGroup();
+  gui_settings->beginGroup(QString::fromUtf8("Profile"));
+  ps->selectProfile(
+      gui_settings
+          ->value(QString::fromUtf8("LastProfile"), QString::fromUtf8("Default"))
+          .toString());
+  gui_settings->endGroup();
   HelpViewer::LoadPrefs(*gui_settings);
 
   ui.LegacyPose->setChecked(ltr_int_use_alter());
@@ -117,7 +124,7 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
 
   // Initialize UDP Bridge
   udpBridge = new UdpBridge(this);
-  udpBridge->setProfile(QString::fromLatin1("Default"));
+  udpBridge->setProfile(PROFILE.getCurrentProfileName());
   QObject::connect(ps, &ProfileSelector::profileChanged, udpBridge,
                    &UdpBridge::setProfile);
   QObject::connect(udpBridge, &UdpBridge::commandReceived, this,
@@ -125,7 +132,7 @@ LinuxtrackGui::LinuxtrackGui(QWidget *parent, bool autostart)
                      if (cmd.startsWith(QString::fromLatin1("PROF"))) {
                        QString profile = cmd.mid(4).trimmed();
                        if (!profile.isEmpty()) {
-                         udpBridge->setProfile(profile);
+                         ps->selectProfile(profile, true);
                        }
                      } else if (cmd == QString::fromLatin1("RECN")) {
                        TRACKER.recenter();
@@ -239,6 +246,10 @@ void LinuxtrackGui::closeEvent(QCloseEvent *event) {
   gui_settings->setValue(QString::fromUtf8("size"), helper->size());
   gui_settings->setValue(QString::fromUtf8("pos"), helper->pos());
   gui_settings->endGroup();
+  gui_settings->beginGroup(QString::fromUtf8("Profile"));
+  gui_settings->setValue(QString::fromUtf8("LastProfile"),
+                         PROFILE.getCurrentProfileName());
+  gui_settings->endGroup();
   HelpViewer::StorePrefs(*gui_settings);
   showWindow->StorePrefs(*gui_settings);
   showWindow->allowCloseWindow();
@@ -259,7 +270,14 @@ void LinuxtrackGui::on_XplanePluginButton_pressed() {
   xpInstall->exec();
 }
 
-void LinuxtrackGui::on_SaveButton_pressed() { PREF.savePrefs(); }
+void LinuxtrackGui::on_SaveButton_pressed() {
+  PREF.savePrefs();
+  gui_settings->beginGroup(QString::fromUtf8("Profile"));
+  gui_settings->setValue(QString::fromUtf8("LastProfile"),
+                         PROFILE.getCurrentProfileName());
+  gui_settings->endGroup();
+  gui_settings->sync();
+}
 
 void LinuxtrackGui::on_ViewLogButton_pressed() { lv->show(); }
 

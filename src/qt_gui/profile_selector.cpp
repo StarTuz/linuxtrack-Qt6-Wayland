@@ -1,6 +1,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QSignalBlocker>
 #include <QTextStream>
 
 #include "ltr_gui_prefs.h"
@@ -23,7 +24,7 @@ ProfileSelector::ProfileSelector(QWidget *parent)
   initializing = false;
   connect(ui.Profiles, &QComboBox::currentIndexChanged, this,
           &ProfileSelector::profilesIndexChanged);
-  setCurrentProfile(QString::fromUtf8("Default"));
+  selectProfile(QString::fromUtf8("Default"));
 
   // Create ProfileSetup widget for initial profile so tab is not blank
   QString initialProfile = ui.Profiles->currentText();
@@ -52,14 +53,39 @@ void ProfileSelector::refresh() {
   setCurrentProfile(currentItem);
 }
 
-bool ProfileSelector::setCurrentProfile(QString prof) {
+bool ProfileSelector::setCurrentProfile(const QString &prof) {
   int index = ui.Profiles->findText(prof);
   if (index == -1) {
     // std::cout<<"Profile "<<prof.toStdString()<<" not found!!!\n";
     return false;
   }
   // std::cout<<"Profile "<<prof.toStdString()<<" found, setting it!!!\n";
+  QSignalBlocker blocker(ui.Profiles);
   ui.Profiles->setCurrentIndex(index);
+  return true;
+}
+
+bool ProfileSelector::selectProfile(const QString &profileName,
+                                    bool createIfMissing) {
+  if (profileName.isEmpty()) {
+    return false;
+  }
+  if (PROFILE.isProfile(profileName) < 0) {
+    if (!createIfMissing) {
+      return false;
+    }
+    PROFILE.addProfile(profileName);
+    refresh();
+  }
+  if (!setCurrentProfile(profileName)) {
+    refresh();
+    if (!setCurrentProfile(profileName)) {
+      return false;
+    }
+  }
+  if (!initializing) {
+    profilesIndexChanged(ui.Profiles->currentIndex());
+  }
   return true;
 }
 

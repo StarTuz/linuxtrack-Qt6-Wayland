@@ -12,12 +12,13 @@ public:
   ProfileSelector(QWidget *parent = 0);
   ~ProfileSelector();
   void refresh();
+  bool selectProfile(const QString &profileName, bool createIfMissing = false);
 
 private:
   Ui::ProfileSelectorForm ui;
   ProfileSetup *ps;
   bool initializing;
-  bool setCurrentProfile(QString prof);
+  bool setCurrentProfile(const QString &prof);
 signals:
   void profileChanged(const QString &profileName);
 public slots:
