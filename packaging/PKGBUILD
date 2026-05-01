@@ -1,0 +1,53 @@
+# Maintainer: Matt Johnson <matt.g.johnson101@gmail.com>
+# Contributor: Alexander Schnaidt <alexander.schnaidt@mailbox.org>
+
+pkgname=linuxtrack-qt6-wayland
+pkgver=1.4.9
+pkgrel=1
+pkgdesc="Head-tracking for Linux with Qt6/Wayland support and Proton/Steam Deck Wine bridge"
+arch=('x86_64')
+url="https://github.com/StarTuz/linuxtrack-Qt6-Wayland"
+license=('MIT')
+depends=(
+    'libusb'
+    'glu'
+    'nlohmann-json'
+    'mxml'
+    'qt6-base'
+    'qt6-tools'
+    'opencv'
+    'v4l-utils'
+    'liblo'
+    'lib32-gcc-libs'
+    'lib32-glibc'
+)
+makedepends=(
+    'cmake'
+    'git'
+    'flex'
+    'bison'
+    'mingw-w64-gcc'
+    'xplane-sdk-devel'
+)
+optdepends=(
+    'wine: Windows game / DCS TrackIR support via Wine bridge'
+)
+source=("git+https://github.com/StarTuz/linuxtrack-Qt6-Wayland.git#tag=v${pkgver}")
+b2sums=('SKIP')
+
+build() {
+    cd "linuxtrack-Qt6-Wayland"
+    cmake -S . -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_WINE_BRIDGE=ON \
+        -DBUILD_MICKEY=OFF \
+        -DBUILD_NEURALNET_TRACKER=OFF
+    cmake --build build
+}
+
+package() {
+    cd "linuxtrack-Qt6-Wayland"
+    DESTDIR="${pkgdir}" cmake --install build
+    install -Dm644 LICENSE.md "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
