@@ -52,7 +52,7 @@ Options:
 Examples:
   scripts/setup_linuxtrack.sh --mode install --prefix /opt/linuxtrack
   scripts/setup_linuxtrack.sh --mode upgrade --prefix /opt/linuxtrack
-  scripts/setup_linuxtrack.sh --mode full --prefix /usr/local --yes
+  scripts/setup_linuxtrack.sh --mode full --yes
   scripts/setup_linuxtrack.sh --mode integrate --with-mickey
 EOF
 }
@@ -200,12 +200,24 @@ is_appimage_mount_prefix() {
     esac
 }
 
+is_system_prefix() {
+    case "$1" in
+        /usr|/usr/local|/usr/local/|/usr/)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
 is_valid_install_prefix() {
     local path="$1"
     if [ -z "$path" ]; then
         return 1
     fi
     if is_appimage_mount_prefix "$path"; then
+        return 1
+    fi
+    if is_system_prefix "$path"; then
         return 1
     fi
     return 0
@@ -255,7 +267,11 @@ read_path_prefix() {
         return 0
     fi
     PATH_GUI="$(readlink -f "$path_gui" 2>/dev/null || printf '%s' "$path_gui")"
-    PATH_PREFIX="$(normalize_prefix_root "$(dirname "$(dirname "$PATH_GUI")")")"
+    local candidate
+    candidate="$(normalize_prefix_root "$(dirname "$(dirname "$PATH_GUI")")")"
+    if is_valid_install_prefix "$candidate"; then
+        PATH_PREFIX="$candidate"
+    fi
 }
 
 describe_binary() {
@@ -271,7 +287,7 @@ scan_installations() {
     FOUND_INSTALLS=()
     read_active_prefix
     read_path_prefix
-    local search_paths=("/opt/linuxtrack" "/usr/local" "/usr" "$HOME/.local")
+    local search_paths=("/opt/linuxtrack" "$HOME/.local")
     local path
     for path in "${search_paths[@]}"; do
         if [ -x "$path/bin/ltr_gui" ]; then
