@@ -1,5 +1,8 @@
-https://s3.amazonaws.com/naturalpoint/trackir/software/TrackIR_5.4.2.exe
-https://s3.amazonaws.com/naturalpoint/trackir/software/TrackIR_5.4.1.exe
-https://s3.amazonaws.com/naturalpoint/trackir/software/TrackIR_5.4.0.exe
-https://s3.amazonaws.com/naturalpoint/trackir/software/TrackIR_5.3.0.exe
-
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.5.3.exe
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.5.2.exe
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.5.1.exe
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.5.0.exe
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.4.2.exe
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.4.1.exe
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.4.0.exe
+https://d2mzlempwep3hb.cloudfront.net/TrackIR5/TrackIR_5.3.0.exe
