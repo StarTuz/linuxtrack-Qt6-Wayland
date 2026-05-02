@@ -119,7 +119,7 @@ export ARCH=x86_64
 # Set Qt environment for proper plugin discovery
 # We explicitly list common problematic plugins to ensure they are picked up
 # For Qt6 on Arch/modern distros, wayland is split into -egl and -generic
-export EXTRA_QT_PLUGINS="platforms/libqxcb.so platforms/libqwayland-egl.so platforms/libqwayland-generic.so wayland-graphics-integration-client/libqt-wayland-compositor-share-egl-server.so tls/libqopensslbackend.so tls/libqcertonlybackend.so"
+export EXTRA_QT_PLUGINS="platforms/libqxcb.so;platforms/libqwayland-egl.so;platforms/libqwayland-generic.so;wayland-graphics-integration-client/libqt-wayland-compositor-share-egl-server.so;tls/libqopensslbackend.so;tls/libqcertonlybackend.so"
 
 export STRIP=${STRIP:-true}
 
@@ -146,6 +146,15 @@ for wl_lib in libwayland-client libwayland-cursor libwayland-egl libxkbcommon; d
     LIB_PATH=$(ldconfig -p | grep "$wl_lib.so.0" | head -n 1 | awk '{print $4}')
     if [ -n "$LIB_PATH" ]; then
         echo "--> Bundling $wl_lib from $LIB_PATH"
+        LIBRARY_FLAGS="$LIBRARY_FLAGS --library $LIB_PATH"
+    fi
+done
+
+# Explicitly bundle OpenSSL libraries as Qt network loads them dynamically (dlopen)
+for ssl_lib in libssl libcrypto; do
+    LIB_PATH=$(ldconfig -p | grep "$ssl_lib.so" | head -n 1 | awk '{print $4}')
+    if [ -n "$LIB_PATH" ]; then
+        echo "--> Bundling $ssl_lib from $LIB_PATH"
         LIBRARY_FLAGS="$LIBRARY_FLAGS --library $LIB_PATH"
     fi
 done
