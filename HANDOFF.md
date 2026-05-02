@@ -1,10 +1,10 @@
 # Linuxtrack Modernization - Handoff Document
 
-**Last Updated:** 2026-04-30
+**Last Updated:** 2026-05-01
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.11
+**Current Version:** 1.4.9
 
 ---
 
@@ -1153,11 +1153,28 @@ When you install the UDP Bridge to a Wine prefix, the current hotkey settings ar
 
 ### Repository Status
 
-**Branch:** `master`
-**Current Version:** `1.4.11`
-**Status:** 1 commit ahead of origin/master (2ad9aea — "Installer: prefer persistent prefix for source upgrades"); push pending.
+**Branch:** `master`  
+**Current Version:** `1.4.9`  
+**Status:** All commits pushed to origin/master. Last release tag: `v1.4.9`.
 
-Notable tags since v1.1.12 milestone: v1.4.4 (encryption key fix), v1.4.6 (extractor robustness), v1.4.7 (registry path rewrite), v1.4.8 (UDP startup hardening, prefix parser, hotkey routing, game profile handoff), v1.4.9 (profile persistence, polish), v1.4.10 (AppImage prefix guard), v1.4.11 (upgrade PATH fallback).
+**Released tags:**  
+v1.4.4 (encryption key fix), v1.4.5 (Wine hotkey Alt+Tab), v1.4.6 (extractor robustness), v1.4.7 (registry path rewrite), v1.4.8 (UDP startup hardening, prefix parser, hotkey routing, game profile handoff), v1.4.9 (profile persistence, polish) — AppImage + .deb + .rpm + macOS DMG released on GitHub.
+
+**Tags removed:** v1.4.10 was deleted — it was an unauthorized installer-only version bump. The installer changes it contained are on master but carry no release tag.
+
+**Master is ahead of v1.4.9 tag with installer/CI/packaging fixes (no AppImage change):**
+
+- `184f7c8` — Installer: refuse AppImage runtime prefixes  
+- `2ad9aea` — Installer: prefer persistent prefix for source upgrades  
+- `7e4494a` — Installer: block system prefixes; roll back version to 1.4.9 (critical: fixes /usr mass-install bug)  
+- `469a487` — CI: fix test-appimage workflow (assets[0] was RPM not AppImage)  
+- `81d8bfb` — Wine tester: replace symlinks with real files (fixes source tarball builds)  
+- `faa1db6` — Installer: list X-Plane SDK as required for X-Plane support  
+- `49356da` — Packaging: add PKGBUILD for AUR  
+
+**Version discipline (enforced going forward):** Version bumps only for changes that affect AppImage binaries/behavior visible to end users. Installer-script, CI, docs, and packaging changes do NOT get version bumps.
+
+**AUR package:** `packaging/PKGBUILD` added. AUR submission pending (package name: `linuxtrack-qt6-wayland`).
 
 ---
 

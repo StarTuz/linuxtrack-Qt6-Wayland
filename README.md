@@ -26,19 +26,13 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## Recent in 1.4.11
+## What's New in 1.4.9
 
-- **Source upgrade chooses the real install when launched from an AppImage**: `scripts/setup_linuxtrack.sh --mode upgrade` now ignores active `/tmp/.mount_*` AppImage runtime prefixes and then prefers the persistent `ltr_gui` found on `PATH`, for example `/opt/linuxtrack/bin/ltr_gui`, before showing an install-selection prompt. Health mode also reports that source upgrades will use that PATH prefix.
-
-## Recent in 1.4.10
-
-- **Source installer no longer targets AppImage mounts**: `scripts/setup_linuxtrack.sh --mode upgrade` now ignores active config prefixes under `/tmp/.mount_*`, because those are read-only AppImage runtime mounts, not real install prefixes. `install`, `upgrade --prefix ...`, and `full` also refuse explicit AppImage mount prefixes before configuring or building, so failed upgrades do not waste time compiling first.
-
-## Recent in 1.4.9
-
-- **UDP bridge install note cleanup**: Fixed mojibake in the success dialog for builds that do not include the optional 32-bit Wine bridge DLL. The note now explains plainly that `NPClientUDP.dll.so` is optional and only needed for legacy 32-bit games.
-- **Profile selection persistence restored**: The GUI again remembers the last selected tracking profile after Save/exit/relaunch. Automatic Wine game profile creation also updates the visible **Profile Name** selection, not only the hidden `ltr_udp` runtime profile.
-- **Wine hotkey and game profile handoff**: Wine Pause/Recenter hotkeys now talk directly to the in-game bridge on UDP `4242`, while game profile notifications use the persistent GUI listener on `4243`.
+- **DCS / Wine game fix:** AppImage prefix parser now accepts `Prefix="/path"` (no spaces) — fixes `ltr_server1` launch failure that caused TrackIR not to be detected in DCS when running from an AppImage.
+- **ltr_udp keep-alive:** Removed startup timeout; `ltr_udp` now sends neutral frames while the tracker initialises instead of giving up after 10 seconds.
+- **Wine hotkeys:** Recenter/pause hotkeys now route directly to the UDP bridge (port 4242) — works reliably regardless of GUI state.
+- **Profile sync:** Active tracking profile is persisted across restarts and automatically reflected in the Wine game profile selector.
+- **TrackIR firmware installer:** Multiple reliability fixes — clean install fallback, license flow, complete bundle validation, and GUI feedback on reinstall completion.
 
 ## Recent in 1.4.8
 
@@ -87,7 +81,7 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 
 ## 📍 Platform Status
 
-- **Linux**: Fully maintained. Official support for AppImage, Ubuntu, and Arch Linux.
+- **Linux**: Fully maintained. AppImage for all distros, AUR package (`linuxtrack-qt6-wayland`) for Arch/Garuda/EndeavourOS/Manjaro, .deb and .rpm packages in each release.
 - **macOS**: Experimental but functional. Now includes simplified installation steps and bundled Qt dependencies. See the [MACOS_ROADMAP.md](doc/MACOS_ROADMAP.md) for future integration plans.
 
 ## 🔧 Hardware Setup (TrackIR/SmartNav)
@@ -333,7 +327,7 @@ Current progress is tracked in [MODERNIZATION_ROADMAP.md](MODERNIZATION_ROADMAP.
 **Upcoming:**
 
 - [ ] Native UI for model scaling/offsets.
-- [-] AppImage/Flatpak distribution (Arch AppImage verified).
+- [x] AppImage distribution (Arch AppImage verified, AUR PKGBUILD available).
 
 ---
 
