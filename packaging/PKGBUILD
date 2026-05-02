@@ -2,7 +2,7 @@
 # Contributor: Alexander Schnaidt <alexander.schnaidt@mailbox.org>
 
 pkgname=linuxtrack-qt6-wayland
-pkgver=1.4.9
+pkgver=1.4.10
 pkgrel=1
 pkgdesc="Head-tracking for Linux with Qt6/Wayland support and Proton/Steam Deck Wine bridge"
 arch=('x86_64')

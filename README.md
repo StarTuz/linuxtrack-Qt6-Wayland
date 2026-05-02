@@ -26,7 +26,13 @@ Unlike other legacy forks, this version addresses deep technical debt to ensure 
 - ✅ **X-Plane 12** (Native Plugin + seamless camera toggle, run `ltr_gui` for One Euro filter)
 - ✅ **X4 Foundations** (Via ltr_udp)
 
-## What's New in 1.4.9
+## What's New in 1.4.10
+
+- **AppImage TLS fix:** Corrected `EXTRA_QT_PLUGINS` delimiter and explicitly bundled OpenSSL (`libssl` and `libcrypto`) into the AppImage. The "Reinstall TrackIR firmware" download button now successfully initializes TLS inside the AppImage sandbox.
+- **TrackIR Firmware Links:** Updated download URLs to modern TrackIR CloudFront distribution links, resolving 404 errors during firmware downloads.
+- **Firmware Extractor Wine Hang Fix:** Prevented infinite loops during extraction scanning by explicitly avoiding Wine symlink recursion (`QDir::NoSymLinks`). Firmware extraction from `.exe` installers completes reliably.
+
+## Recent in 1.4.9
 
 - **DCS / Wine game fix:** AppImage prefix parser now accepts `Prefix="/path"` (no spaces) — fixes `ltr_server1` launch failure that caused TrackIR not to be detected in DCS when running from an AppImage.
 - **ltr_udp keep-alive:** Removed startup timeout; `ltr_udp` now sends neutral frames while the tracker initialises instead of giving up after 10 seconds.

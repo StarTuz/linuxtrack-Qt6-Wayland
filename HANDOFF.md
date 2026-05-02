@@ -4,7 +4,7 @@
 **Author:** Antigravity AI Assistant
 **Project:** Linuxtrack Head Tracking Software
 **Repository:** /home/startux/Code/linuxtrackfixed/linuxtrack
-**Current Version:** 1.4.9
+**Current Version:** 1.4.10
 
 ---
 
@@ -275,6 +275,13 @@ The project now compiles successfully on modern Linux with:
 - **Source upgrade no longer installs into AppImage runtime mounts (fix):** [scripts/setup_linuxtrack.sh](scripts/setup_linuxtrack.sh) now treats prefixes under `/tmp/.mount_*` as volatile AppImage runtime mounts. Health mode still reports the active config prefix, but marks AppImage mounts as non-upgradeable and excludes them from the detected persistent install list. Upgrade mode ignores the active AppImage prefix and prompts for a real install such as `/opt/linuxtrack` or `/usr`; if no persistent install exists, it falls back to the normal default prefix.
 
 - **Install/upgrade/full modes fail before building on bad prefixes:** The same guard is enforced by `perform_install()`, so `--mode install`, `--mode upgrade --prefix ...`, `--mode full`, or an explicit `--prefix /tmp/.mount_.../usr` fail immediately with a clear message instead of configuring, compiling, prompting for sudo, and then dying during `cmake --install`. `--mode upgrade --prefix PATH` now honors the explicit prefix instead of always selecting a detected install first.
+
+**Recent Additions (2026-05-02) [v1.4.10 — AppImage TLS & Extractor Fixes]:**
+
+- **Version Bump:** Project version advanced to `1.4.10`.
+- **AppImage TLS fix:** Corrected `EXTRA_QT_PLUGINS` delimiter and explicitly bundled OpenSSL into the AppImage, fixing TLS initialization errors.
+- **TrackIR Firmware Links:** Updated download URLs to modern TrackIR CloudFront distribution links.
+- **Firmware Extractor Wine Hang Fix:** Prevented infinite loops during extraction scanning by using `QDir::NoSymLinks`.
 
 **Recent Additions (2026-05-01) [v1.4.9 — profile persistence and release polish]:**
 
@@ -1154,8 +1161,8 @@ When you install the UDP Bridge to a Wine prefix, the current hotkey settings ar
 ### Repository Status
 
 **Branch:** `master`  
-**Current Version:** `1.4.9`  
-**Status:** All commits pushed to origin/master. Last release tag: `v1.4.9`.
+**Current Version:** `1.4.10`  
+**Status:** All commits pushed to origin/master. Last release tag: `v1.4.10`.
 
 **Released tags:**  
 v1.4.4 (encryption key fix), v1.4.5 (Wine hotkey Alt+Tab), v1.4.6 (extractor robustness), v1.4.7 (registry path rewrite), v1.4.8 (UDP startup hardening, prefix parser, hotkey routing, game profile handoff), v1.4.9 (profile persistence, polish) — AppImage + .deb + .rpm + macOS DMG released on GitHub.
