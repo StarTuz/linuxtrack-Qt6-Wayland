@@ -119,7 +119,7 @@ export ARCH=x86_64
 # Set Qt environment for proper plugin discovery
 # We explicitly list common problematic plugins to ensure they are picked up
 # For Qt6 on Arch/modern distros, wayland is split into -egl and -generic
-export EXTRA_QT_PLUGINS="platforms/libqxcb.so platforms/libqwayland-egl.so platforms/libqwayland-generic.so wayland-graphics-integration-client/libqt-wayland-compositor-share-egl-server.so"
+export EXTRA_QT_PLUGINS="platforms/libqxcb.so platforms/libqwayland-egl.so platforms/libqwayland-generic.so wayland-graphics-integration-client/libqt-wayland-compositor-share-egl-server.so tls/libqopensslbackend.so tls/libqcertonlybackend.so"
 
 export STRIP=${STRIP:-true}
 
@@ -221,11 +221,17 @@ copy_if_exists "/usr/lib/libwayland-cursor.so.0" "${APP_DIR}/usr/lib/"
 copy_if_exists "/usr/lib/libwayland-egl.so.1" "${APP_DIR}/usr/lib/"
 copy_if_exists "/usr/lib/libxkbcommon.so.0" "${APP_DIR}/usr/lib/"
 
+# Bundle OpenSSL libraries for Qt network access
+for ssl_lib in /usr/lib/x86_64-linux-gnu/libssl.so* /usr/lib/x86_64-linux-gnu/libcrypto.so* /usr/lib/libssl.so* /usr/lib/libcrypto.so*; do
+    copy_if_exists "$ssl_lib" "${APP_DIR}/usr/lib/"
+done
+
 QT_PLUGINS_DIR=$($QMAKE -query QT_INSTALL_PLUGINS)
 if [ -d "$QT_PLUGINS_DIR" ]; then
     mkdir -p "$APP_DIR/usr/plugins/platforms"
     mkdir -p "$APP_DIR/usr/plugins/xcbglintegrations"
     mkdir -p "$APP_DIR/usr/plugins/wayland-graphics-integration-client"
+    mkdir -p "$APP_DIR/usr/plugins/tls"
     
     echo "    Copying from $QT_PLUGINS_DIR..."
     cp -v "$QT_PLUGINS_DIR/platforms/libqxcb.so" "$APP_DIR/usr/plugins/platforms/" 2>/dev/null || true
@@ -233,6 +239,7 @@ if [ -d "$QT_PLUGINS_DIR" ]; then
     cp -v "$QT_PLUGINS_DIR/platforms/libqwayland-generic.so" "$APP_DIR/usr/plugins/platforms/" 2>/dev/null || true
     cp -v "$QT_PLUGINS_DIR/xcbglintegrations/"*.so "$APP_DIR/usr/plugins/xcbglintegrations/" 2>/dev/null || true
     cp -v "$QT_PLUGINS_DIR/wayland-graphics-integration-client/"*.so "$APP_DIR/usr/plugins/wayland-graphics-integration-client/" 2>/dev/null || true
+    cp -v "$QT_PLUGINS_DIR/tls/"*.so "$APP_DIR/usr/plugins/tls/" 2>/dev/null || true
 else
     echo "Warning: Could not locate Qt6 plugins directory via qmake."
 fi

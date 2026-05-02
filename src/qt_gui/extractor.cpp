@@ -92,26 +92,34 @@ void TirFwExtractThread::analyzeFile(const QString fname) {
   qDebug() << QString::fromUtf8("Analyzing ") << fname;
   FastHash hash;
   QStringList msgs;
-  char val;
+  char buf[32768];
+  qint64 bytesRead;
+  qint64 offset = 0;
   uint16_t res;
   targets_iterator_t it;
   std::pair<targets_iterator_t, targets_iterator_t> range;
-  int cntr = 0;
-  while (file.read(&val, 1) > 0) {
-    ++cntr;
-    res = hash.hash(val);
-    range = targets->equal_range(res);
-    for (it = range.first; it != range.second; ++it) {
-      // qDebug()<<cntr<<qPrintable("Checking against ")<<file.pos() <<res
-      // <<(it->second.getFname());
-      msgs.clear();
-      it->second.isBlock(file, destPath, msgs);
-      if (!msgs.isEmpty()) {
-        for (int i = 0; i < msgs.size(); ++i) {
-          emit progress(msgs[i]);
+  
+  while ((bytesRead = file.read(buf, sizeof(buf))) > 0) {
+    for (qint64 i = 0; i < bytesRead; ++i) {
+      char val = buf[i];
+      res = hash.hash(val);
+      range = targets->equal_range(res);
+      if (range.first != range.second) {
+        qint64 current_pos = offset + i + 1;
+        file.seek(current_pos);
+        for (it = range.first; it != range.second; ++it) {
+          msgs.clear();
+          it->second.isBlock(file, destPath, msgs);
+          if (!msgs.isEmpty()) {
+            for (int j = 0; j < msgs.size(); ++j) {
+              emit progress(msgs[j]);
+            }
+          }
         }
+        file.seek(offset + bytesRead);
       }
     }
+    offset += bytesRead;
   }
   file.close();
 }
@@ -162,7 +170,7 @@ bool TirFwExtractThread::findCandidates(QString name) {
   }
 
   QFileInfoList subdirs = dir.entryInfoList(
-      QDir::AllDirs | QDir::NoDotAndDotDot);
+      QDir::AllDirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
   QString dirname;
   for (i = 0; i < subdirs.size(); ++i) {
     dirname = subdirs[i].canonicalFilePath();
@@ -345,7 +353,7 @@ static bool containsTrackIrPayload(const QString &path) {
   }
 
   QFileInfoList subdirs =
-      dir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
+      dir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
   for (const QFileInfo &subdir : subdirs) {
     if (containsTrackIrPayload(subdir.canonicalFilePath())) {
       return true;
