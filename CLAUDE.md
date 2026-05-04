@@ -159,6 +159,8 @@ Uses mINI library for INI file parsing. Config files stored in `~/.config/linuxt
 - `README.md` - User-facing setup and troubleshooting guide
 - `MODERNIZATION_ROADMAP.md` - Future improvements
 - `.agent/workflows/critical-rules.md` - Read before starting any non-trivial work session
+- `doc/GAZE_TRACKING_ROADMAP.md` - **Single source of truth** for gaze-tracking work (phases, decisions, checklist). Supersedes `GAZE_TRACKING_PROPOSAL.md` and `eyeware_beam_*` docs.
+- `doc/GAZE_TRACKING_ARCHITECTURE.md` - Companion to the roadmap: data flow, ABI rules, IPC layer, model options, calibration math.
 
 ## Related Projects
 

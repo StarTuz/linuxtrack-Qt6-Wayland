@@ -46,6 +46,14 @@ static XPLMDataRef head_the_out = NULL;
 static XPLMDataRef head_roll_out = NULL;
 static XPLMDataRef enable_view_control = NULL;
 
+// Phase 0 destination prototype: gaze DataRefs.
+// See doc/GAZE_TRACKING_ROADMAP.md. Real values land in Phase 3 via
+// linuxtrack_get_gaze(); for now LTR_GAZE_MOCK feeds a slow sine wave so
+// DataRefEditor / Lua scripts can confirm the publish path works.
+#define LTR_GAZE_MOCK 1
+static XPLMDataRef gaze_yaw_out = NULL;
+static XPLMDataRef gaze_pitch_out = NULL;
+
 static float  GetHeadDataRefCB(void* inRefcon);
 static int    GetHeadCtrlRefCB(void* inRefcon);
 static void   SetHeadCtrlRefCB(void* inRefcon, int outValue);
@@ -58,6 +66,12 @@ static float current_head_heading;
 static float current_head_pitch;
 static float current_head_roll;
 static int   head_control_enable;
+
+static float current_gaze_yaw = 0.0f;
+static float current_gaze_pitch = 0.0f;
+#if LTR_GAZE_MOCK
+static float mock_gaze_phase = 0.0f;
+#endif
 
 static XPLMMenuID  setupMenu = NULL;
 
@@ -285,6 +299,28 @@ PLUGIN_API int XPluginStart(char *outName,
                       NULL, NULL,                                    // Raw data accessors
                       (void*)&head_control_enable, (void*)&head_control_enable); // Refcons not used
   head_control_enable = 1;
+
+  gaze_yaw_out = XPLMRegisterDataAccessor(
+                      "linuxtrack/gaze_yaw",
+                      xplmType_Float, 0,
+                      NULL, NULL,
+                      GetHeadDataRefCB, NULL,
+                      NULL, NULL,
+                      NULL, NULL,
+                      NULL, NULL,
+                      NULL, NULL,
+                      (void*)&current_gaze_yaw, (void*)&current_gaze_yaw);
+
+  gaze_pitch_out = XPLMRegisterDataAccessor(
+                      "linuxtrack/gaze_pitch",
+                      xplmType_Float, 0,
+                      NULL, NULL,
+                      GetHeadDataRefCB, NULL,
+                      NULL, NULL,
+                      NULL, NULL,
+                      NULL, NULL,
+                      NULL, NULL,
+                      (void*)&current_gaze_pitch, (void*)&current_gaze_pitch);
   
   if((head_x == NULL)  ||(head_y == NULL) || (head_z == NULL) ||
      (head_psi == NULL) || (head_the == NULL) || (head_roll == NULL) ||
@@ -399,6 +435,8 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID inFromWho,
               XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)"linuxtrack/pilots_head_the");
               XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)"linuxtrack/pilots_head_roll");
               XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)"linuxtrack/enable_head_control");
+              XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)"linuxtrack/gaze_yaw");
+              XPLMSendMessageToPlugin(PluginID, MSG_ADD_DATAREF, (void*)"linuxtrack/gaze_pitch");
 	      drefsPublished = true;
             }
 	  }
@@ -486,11 +524,22 @@ static float xlinuxtrackCallback(float inElapsedSinceLastCall,
                               int   inCounter,    
                               void *inRefcon)
 {
-  (void) inElapsedSinceLastCall;
   (void) inElapsedTimeSinceLastFlightLoop;
   (void) inCounter;
   (void) inRefcon;
-  
+
+#if LTR_GAZE_MOCK
+  // Phase 0 destination prototype: drive gaze DataRefs from a slow sine wave
+  // so DataRefEditor / Lua scripts can confirm the publish path. Yaw and
+  // pitch use different periods to make them visually distinguishable.
+  // Replaced by linuxtrack_get_gaze() in Phase 3.
+  mock_gaze_phase += inElapsedSinceLastCall * 0.5f;  // ~0.5 rad/s
+  current_gaze_yaw = 30.0f * sinf(mock_gaze_phase);          // ±30°
+  current_gaze_pitch = 15.0f * cosf(mock_gaze_phase * 0.7f); // ±15°
+#else
+  (void) inElapsedSinceLastCall;
+#endif
+
   int currentView = XPLMGetDatai(view);
   bool view_transitioning = (currentView != lastView);  // View changed THIS frame
   bool not_in_cockpit = (currentView != 1026);

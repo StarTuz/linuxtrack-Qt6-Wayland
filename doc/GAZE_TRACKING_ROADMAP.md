@@ -33,7 +33,15 @@ These are non-negotiable. Any plan that violates them is rejected on contact.
 
 The phases below are deliberately ordered so that each phase produces something useful on its own, even if later phases never ship.
 
-### Phase 0 — Pick destination protocol *(prerequisite, no code in 1–4 lands until this is done)*
+### Phase 0 — Pick destination protocol *(prototype landed; real-data validation pending)*
+
+**Status (2026-05-03):** Option A (X-Plane plugin DataRefs) chosen. Mock-data prototype committed:
+- DataRefs `linuxtrack/gaze_yaw` and `linuxtrack/gaze_pitch` registered in [src/xlinuxtrack9.c](../src/xlinuxtrack9.c) and advertised to DataRefEditor.
+- Mock sine-wave generator gated by `#define LTR_GAZE_MOCK 1` at the top of the same file. Set to 0 once Phase 3 wires `linuxtrack_get_gaze()`.
+- Source-level invariant test guards register/publish symmetry: [src/tests/test_xlinuxtrack9_datarefs.cpp](../src/tests/test_xlinuxtrack9_datarefs.cpp) (`ctest -R xlinuxtrack9_datarefs`).
+- Live-test FlyWithLua snippet for in-sim verification: [doc/gaze_phase0_test.lua](gaze_phase0_test.lua).
+
+**Phase 0 still open until** the live mock is observed working in X-Plane on the target machine. Once confirmed, this section flips to "complete" and Phase 1 unlocks.
 
 The single most important decision. Without it, everything else outputs to `/dev/null`.
 

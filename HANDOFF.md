@@ -771,6 +771,42 @@ Added `src/tests/test_webcam_info.cpp` (Catch2 v3 amalgamated) — 12 test cases
 
 ---
 
+### 3.21 Gaze Tracking — Phase 0 Destination Prototype (2026-05-03)
+
+**Status:** Prototype committed; awaiting live X-Plane validation on target hardware.
+
+**Authoritative docs (read these first):**
+
+- [doc/GAZE_TRACKING_ROADMAP.md](doc/GAZE_TRACKING_ROADMAP.md) — phases, decisions, checklist. Supersedes `GAZE_TRACKING_PROPOSAL.md` and the `eyeware_beam_*` docs.
+- [doc/GAZE_TRACKING_ARCHITECTURE.md](doc/GAZE_TRACKING_ARCHITECTURE.md) — data flow, ABI rules, IPC layer, model options, calibration math.
+
+**Why Phase 0 exists:** Earlier proposals built inference and IPC transport before identifying any consumer of gaze data. Without a destination protocol, gaze data outputs to `/dev/null`. Phase 0 picks and prototypes the destination *before* any ML or filtering work begins.
+
+**Decision:** Option A — X-Plane plugin DataRefs. We already own [src/xlinuxtrack9.c](src/xlinuxtrack9.c); no protocol negotiation, no Tobii legal/auth uncertainty. Tobii Stream Engine shim (option B) deferred until A and the OpenTrack-extension path (option C) validate the rest of the pipeline.
+
+**What landed:**
+
+- [src/xlinuxtrack9.c](src/xlinuxtrack9.c): two new DataRefs `linuxtrack/gaze_yaw` and `linuxtrack/gaze_pitch`, advertised to DataRefEditor. Mock sine-wave generator gated by `#define LTR_GAZE_MOCK 1` (yaw ±30°, pitch ±15°, distinct periods). Mock fires at the top of `xlinuxtrackCallback` before any early-return so DataRefs animate even when tracking is suspended or in non-cockpit views — easier diagnostic.
+- [src/tests/test_xlinuxtrack9_datarefs.cpp](src/tests/test_xlinuxtrack9_datarefs.cpp): source-level Catch2 invariant test. Parses `xlinuxtrack9.c` and asserts every `XPLMRegisterDataAccessor("linuxtrack/X")` has a matching `MSG_ADD_DATAREF` advertisement. The plugin can't be unit-tested directly (links the X-Plane SDK), so this is pure text-parsing — guards the most common drift bug (register a DataRef but forget to publish it). Runs in CI via `ctest -R xlinuxtrack9_datarefs`.
+- [doc/gaze_phase0_test.lua](doc/gaze_phase0_test.lua): FlyWithLua snippet for live in-sim verification. Logs PASS/FAIL every two seconds with bounds and stuck-value checks.
+
+**What this does NOT do:**
+
+- No IPC. No `liblinuxtrack` calls for gaze. No ML. The mock lives entirely in the plugin so destination plumbing can be validated independently of every later phase. When Phase 3 wires `linuxtrack_get_gaze()`, flip `LTR_GAZE_MOCK` to 0.
+
+**ABI / IPC notes for future work:**
+
+- `linuxtrack_pose_t` and `linuxtrack_abs_pose_t` in [src/linuxtrack.h](src/linuxtrack.h) are **frozen** for the 1.x line — adding fields breaks every binary linked against the public C API. Phase 3 must use a sibling getter `linuxtrack_get_gaze()` instead.
+- The internal IPC struct `linuxtrack_full_pose_t` in [src/ltlib.h](src/ltlib.h) **may grow** — slaves rebuild together each release. Append `gaze_yaw`/`gaze_pitch` floats there in Phase 3, **not** in the wire bloblist (the "4th blob" idea is technically possible because `MAX_BLOBS=10` but semantically wrong; see Architecture §4.4).
+
+**Phase 0 exit criteria:**
+
+1. Install rebuilt `xlinuxtrack9.so`, load X-Plane, confirm both DataRefs visible in DataRefEditor and animating.
+2. Optional: drop in `gaze_phase0_test.lua` and watch `Log.txt` for PASS lines.
+3. Phase 1 (UDP input driver) unlocks once Phase 0 is observed working.
+
+---
+
 ### 3.20 TrackIR Regression From Webcam Blob Scaling (2026-03-11)
 
 **Status:** ✅ COMPLETE

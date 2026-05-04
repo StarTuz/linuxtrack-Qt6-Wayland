@@ -204,3 +204,27 @@ target_include_directories(test_wc_driver_prefs PRIVATE
 )
 
 add_test(NAME test_wc_driver_prefs COMMAND test_wc_driver_prefs)
+
+# -------------------------------------------------------------------------
+# test_xlinuxtrack9_datarefs — Phase 0 invariant for X-Plane plugin gaze work
+# -------------------------------------------------------------------------
+# Source-level test that parses xlinuxtrack9.c and asserts the
+# DataRef registration / DataRefEditor publish sets stay in sync.
+# Cannot link the X-Plane SDK, so this is pure text-parsing. See
+# doc/GAZE_TRACKING_ROADMAP.md for the work this guards.
+set(XLINUXTRACK9_DATAREFS_TEST_SOURCES
+    test_xlinuxtrack9_datarefs.cpp
+    catch2/catch_amalgamated.cpp
+)
+
+add_executable(test_xlinuxtrack9_datarefs ${XLINUXTRACK9_DATAREFS_TEST_SOURCES})
+
+target_include_directories(test_xlinuxtrack9_datarefs PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_compile_definitions(test_xlinuxtrack9_datarefs PRIVATE
+    XLINUXTRACK9_SOURCE_PATH="${CMAKE_SOURCE_DIR}/src/xlinuxtrack9.c"
+)
+
+add_test(NAME test_xlinuxtrack9_datarefs COMMAND test_xlinuxtrack9_datarefs)
